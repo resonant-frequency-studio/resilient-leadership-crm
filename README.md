@@ -1,4 +1,4 @@
-# Resilient Leadership CRM
+# Insight Loop CRM
 
 A modern, elegant Customer Relationship Management (CRM) application built with Next.js and Firebase, designed to help you manage contacts and relationships effectively.
 
@@ -49,6 +49,22 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 - Filter by tags (multiple selection)
 - Clear filters option
 
+### Gmail Integration
+- **Automatic Email Sync** - Sync email threads from your Gmail account
+- **Incremental Sync** - Only syncs new messages since last sync
+- **Contact Matching** - Automatically matches emails to existing contacts
+- **Thread Tracking** - Tracks conversation threads per contact
+- **Scheduled Sync** - Automatic background synchronization
+
+### Action Items
+- **AI-Generated Action Items** - Extract action items from email conversations
+- **Manage Tasks** - Track and manage follow-up tasks for each contact
+- **Import from Text** - Create action items from plain text
+
+### White-Labeling
+- **Customizable CRM Name** - Configure the application name via environment variables
+- **Brand Identity** - Easy to rebrand for different organizations
+
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
@@ -78,6 +94,7 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 │   ├── useNewContactPage.ts
 │   └── useFilterContacts.ts
 ├── lib/                    # Library utilities
+│   ├── app-config.ts       # Application configuration (white-labeling)
 │   ├── firebase-client.ts
 │   ├── firebase-admin.ts
 │   ├── firestore-crud.ts
@@ -96,14 +113,17 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 
 - Node.js 18+ and npm
 - Firebase project with Firestore and Authentication enabled
-- Google OAuth credentials configured
+- Google Cloud Console project with:
+  - OAuth 2.0 credentials configured for Gmail access
+  - Google API Key with Gemini API enabled (for AI features)
+  - Gmail API enabled
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/resonant-frequency-studio/resilient-leadership-crm.git
-cd resilient-leadership-crm
+git clone https://github.com/resonant-frequency-studio/insight-loop-crm.git
+cd insight-loop-crm
 ```
 
 2. Install dependencies:
@@ -111,17 +131,19 @@ cd resilient-leadership-crm
 npm install
 ```
 
-3. Set up Firebase configuration:
-   - Create a `.env.local` file in the root directory
-   - Add your Firebase configuration:
+3. Set up environment configuration:
+   - Copy `env.example` to `.env.local`:
+   ```bash
+   cp env.example .env.local
    ```
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   ```
+   - Edit `.env.local` and fill in your configuration values:
+     - **Required**: Firebase client configuration (for authentication and database)
+     - **Required**: Firebase Admin configuration (for server-side operations)
+     - **Required**: Google OAuth credentials (for Gmail sync)
+     - **Required**: Google API Key (for AI/Gemini features)
+     - **Optional**: CRM name customization (defaults to "Insight Loop CRM")
+     - **Optional**: Cron secret and logging settings
+   - See `env.example` for detailed comments on each variable
 
 4. Configure Firestore security rules:
    - Ensure users can only read/write their own contacts
@@ -152,6 +174,17 @@ npm run dev
 - Charts update automatically as you add or modify contacts
 - Hover over chart elements for detailed information
 
+### Gmail Sync
+- Navigate to "Sync Status" to view sync progress and history
+- Click "Sync Now" to manually trigger a sync
+- Gmail sync automatically runs in the background on a schedule
+- First sync may take longer depending on your email volume
+
+### Managing Action Items
+- Action items are automatically extracted from email conversations using AI
+- View all action items on the "Action Items" page
+- Filter and manage tasks across all contacts
+
 ## CSV Import Format
 
 ### Required Columns
@@ -166,6 +199,26 @@ npm run dev
 - `NextTouchpointDate`, `NextTouchpointMessage` - Future actions
 - Other CRM fields as needed
 
+## White-Labeling & Customization
+
+The CRM name can be easily customized for your organization:
+
+1. Open your `.env.local` file
+2. Set the `NEXT_PUBLIC_CRM_NAME` variable:
+   ```
+   NEXT_PUBLIC_CRM_NAME=Your Company CRM
+   ```
+3. Restart your development server
+
+The custom name will appear in:
+- Page titles and metadata
+- Login page heading
+- Sidebar navigation
+- FAQ page descriptions
+- All other UI locations
+
+**Note**: If `NEXT_PUBLIC_CRM_NAME` is not set, it defaults to "Insight Loop CRM".
+
 ## Architecture Highlights
 
 ### Separation of Concerns
@@ -179,6 +232,40 @@ npm run dev
 - Type-safe throughout with TypeScript
 - Reusable utility functions
 - Clean separation between UI and business logic
+
+## Environment Variables
+
+### Required Variables
+
+**Firebase Client** (Public, exposed to browser):
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+
+**Firebase Admin** (Server-side only):
+- `FIREBASE_ADMIN_PROJECT_ID`
+- `FIREBASE_ADMIN_CLIENT_EMAIL`
+- `FIREBASE_ADMIN_PRIVATE_KEY`
+
+**Google OAuth** (Server-side only):
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `GOOGLE_OAUTH_SCOPES`
+
+**Google API**:
+- `GOOGLE_API_KEY` (for Gemini/AI features)
+
+### Optional Variables
+
+- `NEXT_PUBLIC_CRM_NAME` - Customize the application name (default: "Insight Loop CRM")
+- `CRON_SECRET` - Secret for securing scheduled sync endpoints
+- `ENABLE_FIRESTORE_LOGGING` - Enable/disable Firestore operation logging (default: false)
+
+See `env.example` for a complete template with all variables.
 
 ## License
 

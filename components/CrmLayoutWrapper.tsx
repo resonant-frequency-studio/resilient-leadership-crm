@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase-client";
 import HamburgerMenu from "@/components/HamburgerMenu";
 import Loading from "@/components/Loading";
 import { Button } from "@/components/Button";
+import { appConfig } from "@/lib/app-config";
 
 export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -159,7 +160,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <h2 className="text-xl font-semibold mb-8 text-white">Resilient Leadership CRM</h2>
+        <h2 className="text-xl font-semibold mb-8 text-white">{appConfig.crmName}</h2>
 
         <ul className="space-y-2 flex-1">
           <li>

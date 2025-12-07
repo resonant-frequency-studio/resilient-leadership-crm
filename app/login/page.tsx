@@ -5,6 +5,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/Button";
+import { appConfig } from "@/lib/app-config";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -72,7 +73,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            Resilient Leadership CRM
+            {appConfig.crmName}
           </h1>
           <p className="text-gray-600 text-lg">
             Manage your contacts and relationships with ease
