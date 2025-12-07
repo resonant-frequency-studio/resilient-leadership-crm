@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { THREAD_SUMMARY_PROMPT } from "@/lib/gemini/prompts";
 import { getUserId } from "@/lib/auth-utils";
+import { importActionItemsFromArray } from "@/lib/action-items";
 
 interface ThreadSummary {
   summary: string;
@@ -62,7 +63,7 @@ export async function GET() {
 
       // 3. Call Gemini
       const result = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro:generateContent?key=" +
+        "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=" +
           process.env.GOOGLE_API_KEY,
         {
           method: "POST",
@@ -80,7 +81,29 @@ export async function GET() {
 
       summaries.push({ threadId, parsed });
 
-      // 4. Store summary in Firestore
+      // 4. Get thread document to find contactId
+      const threadDoc = await threadCol.doc(threadId).get();
+      const threadData = threadDoc.data();
+      const contactId = threadData?.contactId;
+
+      // 5. Convert action items to subcollection format if contactId exists
+      if (contactId && parsed.actionItems && parsed.actionItems.length > 0) {
+        try {
+          await importActionItemsFromArray(
+            userId,
+            contactId,
+            parsed.actionItems
+          );
+        } catch (error) {
+          console.error(
+            `Error importing action items for contact ${contactId}:`,
+            error
+          );
+          // Don't fail the summary if action item import fails
+        }
+      }
+
+      // 6. Store summary in Firestore (actionItems remain in summary for reference)
       await threadCol.doc(threadId).update({
         summary: parsed,
         needsSummary: false,

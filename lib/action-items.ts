@@ -264,3 +264,48 @@ export async function importActionItemsFromText(
   return createdIds;
 }
 
+/**
+ * Import action items from an array of strings (for Gemini-extracted action items)
+ * Skips duplicates by checking existing action items with the same text
+ */
+export async function importActionItemsFromArray(
+  userId: string,
+  contactId: string,
+  actionItemsArray: string[]
+): Promise<string[]> {
+  if (!actionItemsArray || actionItemsArray.length === 0) {
+    return [];
+  }
+
+  // Filter out empty strings
+  const validItems = actionItemsArray
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  if (validItems.length === 0) {
+    return [];
+  }
+
+  // Get existing action items to avoid duplicates
+  const existingActionItems = await getActionItemsForContact(userId, contactId);
+  const existingTexts = new Set(
+    existingActionItems.map((item) => item.text.trim().toLowerCase())
+  );
+
+  const createdIds: string[] = [];
+
+  for (const itemText of validItems) {
+    // Skip if duplicate (case-insensitive comparison)
+    if (existingTexts.has(itemText.trim().toLowerCase())) {
+      continue;
+    }
+
+    const id = await createActionItem(userId, contactId, {
+      text: itemText,
+    });
+    createdIds.push(id);
+  }
+
+  return createdIds;
+}
+

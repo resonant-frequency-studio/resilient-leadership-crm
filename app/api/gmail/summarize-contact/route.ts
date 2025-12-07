@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { aggregateContactSummaries } from "@/lib/gmail/aggregate-contact";
 import { getUserId } from "@/lib/auth-utils";
+import { importActionItemsFromArray } from "@/lib/action-items";
 
 export async function GET() {
   const userId = await getUserId();
@@ -22,9 +23,26 @@ export async function GET() {
 
     if (!aggregated) continue;
 
+    // Convert action items to subcollection format (for backward compatibility with old summaries)
+    if (aggregated.actionItems && aggregated.actionItems.length > 0) {
+      try {
+        await importActionItemsFromArray(
+          userId,
+          contactId,
+          aggregated.actionItems
+        );
+      } catch (error) {
+        console.error(
+          `Error importing action items for contact ${contactId}:`,
+          error
+        );
+        // Don't fail the aggregation if action item import fails
+      }
+    }
+
+    // Update contact with aggregated data (excluding actionItems since they're now in subcollection)
     await contactsCol.doc(contactId).update({
       summary: aggregated.summary,
-      actionItems: aggregated.actionItems,
       sentiment: aggregated.sentiment,
       relationshipInsights: aggregated.relationshipInsights,
       painPoints: aggregated.painPoints,
