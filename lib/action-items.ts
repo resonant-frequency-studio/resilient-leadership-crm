@@ -2,6 +2,8 @@ import { adminDb } from "@/lib/firebase-admin";
 import { ActionItem } from "@/types/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
+import { convertTimestamp } from "@/util/timestamp-utils-server";
+import { unstable_cache } from "next/cache";
 
 /**
  * Get action items path for a contact
@@ -15,12 +17,9 @@ export const actionItemDoc = (
 ) => `users/${userId}/contacts/${contactId}/actionItems/${actionItemId}`;
 
 /**
- * Get all action items for a contact
- * 
- * NOTE: This function makes Firestore reads. Use sparingly to avoid quota exhaustion.
- * Consider caching results or using real-time listeners for frequently accessed data.
+ * Internal function to fetch action items for a contact (uncached)
  */
-export async function getActionItemsForContact(
+async function getActionItemsForContactUncached(
   userId: string,
   contactId: string
 ): Promise<ActionItem[]> {
@@ -79,26 +78,29 @@ export async function getActionItemsForContact(
 }
 
 /**
- * Convert Firestore Timestamp to ISO string for JSON serialization
+ * Get all action items for a contact (cached)
+ * 
+ * NOTE: This function makes Firestore reads. Use sparingly to avoid quota exhaustion.
+ * Consider caching results or using real-time listeners for frequently accessed data.
  */
-function convertTimestamp(value: unknown): unknown {
-  if (value && typeof value === "object" && "toDate" in value) {
-    const timestamp = value as { toDate: () => Date };
-    return timestamp.toDate().toISOString();
-  }
-  if (value && typeof value === "object" && "toMillis" in value) {
-    const timestamp = value as { toMillis: () => number };
-    return new Date(timestamp.toMillis()).toISOString();
-  }
-  return value;
+export async function getActionItemsForContact(
+  userId: string,
+  contactId: string
+): Promise<ActionItem[]> {
+  return unstable_cache(
+    async () => getActionItemsForContactUncached(userId, contactId),
+    [`action-items-${userId}-${contactId}`],
+    {
+      tags: [`action-items`, `action-items-${userId}`, `action-items-${userId}-${contactId}`],
+      revalidate: 300, // 5 minutes
+    }
+  )();
 }
 
 /**
- * Get all action items for a user (across all contacts)
- * OPTIMIZED: Uses parallel queries without delays for better performance
- * Returns action items with contactId included and timestamps converted to ISO strings
+ * Internal function to fetch all action items for a user (uncached)
  */
-export async function getAllActionItemsForUser(
+async function getAllActionItemsForUserUncached(
   userId: string
 ): Promise<Array<ActionItem & { contactId: string }>> {
   // Get all contacts first
@@ -116,7 +118,7 @@ export async function getAllActionItemsForUser(
   const allPromises = contactDocs.map(async (contactDoc) => {
     const contactId = contactDoc.id;
     try {
-      const actionItems = await getActionItemsForContact(userId, contactId);
+      const actionItems = await getActionItemsForContactUncached(userId, contactId);
       // Add contactId and convert timestamps to ISO strings for each action item
       return actionItems.map((item) => ({
         ...item,
@@ -152,6 +154,24 @@ export async function getAllActionItemsForUser(
       : 0;
     return bTime - aTime;
   });
+}
+
+/**
+ * Get all action items for a user (across all contacts) (cached)
+ * OPTIMIZED: Uses parallel queries without delays for better performance
+ * Returns action items with contactId included and timestamps converted to ISO strings
+ */
+export async function getAllActionItemsForUser(
+  userId: string
+): Promise<Array<ActionItem & { contactId: string }>> {
+  return unstable_cache(
+    async () => getAllActionItemsForUserUncached(userId),
+    [`action-items-all-${userId}`],
+    {
+      tags: [`action-items`, `action-items-${userId}`],
+      revalidate: 300, // 5 minutes
+    }
+  )();
 }
 
 /**

@@ -3,6 +3,7 @@ import { getUserId } from "@/lib/auth-utils";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
+import { revalidateTag } from "next/cache";
 
 /**
  * PATCH /api/contacts/[contactId]/touchpoint-status
@@ -51,6 +52,12 @@ export async function PATCH(
       .collection("contacts")
       .doc(contactId)
       .update(updates);
+
+    // Invalidate cache
+    revalidateTag("contacts");
+    revalidateTag(`contacts-${userId}`);
+    revalidateTag(`contact-${userId}-${contactId}`);
+    revalidateTag(`dashboard-stats-${userId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

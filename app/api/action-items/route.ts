@@ -7,6 +7,7 @@ import {
   getActionItemsForContact,
 } from "@/lib/action-items";
 import { reportException } from "@/lib/error-reporting";
+import { revalidateTag } from "next/cache";
 
 /**
  * GET /api/action-items?contactId=xxx
@@ -75,6 +76,11 @@ export async function POST(req: Request) {
       dueDate: dueDate || null,
     });
 
+    // Invalidate cache
+    revalidateTag("action-items");
+    revalidateTag(`action-items-${userId}`);
+    revalidateTag(`action-items-${userId}-${contactId}`);
+
     return NextResponse.json({
       success: true,
       actionItemId,
@@ -120,6 +126,11 @@ export async function PATCH(req: Request) {
       dueDate,
     });
 
+    // Invalidate cache
+    revalidateTag("action-items");
+    revalidateTag(`action-items-${userId}`);
+    revalidateTag(`action-items-${userId}-${contactId}`);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     reportException(error, {
@@ -154,6 +165,11 @@ export async function DELETE(req: Request) {
     }
 
     await deleteActionItem(userId, contactId, actionItemId);
+
+    // Invalidate cache
+    revalidateTag("action-items");
+    revalidateTag(`action-items-${userId}`);
+    revalidateTag(`action-items-${userId}-${contactId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ActionItem } from "@/types/firestore";
+import { ActionItem, Contact } from "@/types/firestore";
 import { formatContactDate } from "@/util/contact-utils";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Button } from "./Button";
@@ -19,6 +19,10 @@ interface ActionItemCardProps {
   onEdit: (text: string, dueDate?: string | null) => void;
   disabled?: boolean;
   compact?: boolean; // If true, hide contact info (for use on contact detail page)
+  // Pre-computed values (optional for backward compatibility)
+  isOverdue?: boolean;
+  displayName?: string;
+  initials?: string;
 }
 
 export default function ActionItemCard({
@@ -33,21 +37,27 @@ export default function ActionItemCard({
   onEdit,
   disabled = false,
   compact = false,
+  isOverdue: preComputedIsOverdue,
+  displayName: preComputedDisplayName,
+  initials: preComputedInitials,
 }: ActionItemCardProps) {
+  // Use pre-computed values if provided, otherwise compute on client (for backward compatibility)
   const isOverdue =
-    actionItem.status === "pending" &&
-    actionItem.dueDate
-      ? (() => {
-          const dueDate = actionItem.dueDate;
-          if (!dueDate) return false;
-          if (dueDate instanceof Date) return dueDate < new Date();
-          if (typeof dueDate === "string") return new Date(dueDate) < new Date();
-          if (typeof dueDate === "object" && "toDate" in dueDate) {
-            return (dueDate as { toDate: () => Date }).toDate() < new Date();
-          }
-          return false;
-        })()
-      : false;
+    preComputedIsOverdue !== undefined
+      ? preComputedIsOverdue
+      : actionItem.status === "pending" &&
+        actionItem.dueDate
+        ? (() => {
+            const dueDate = actionItem.dueDate;
+            if (!dueDate) return false;
+            if (dueDate instanceof Date) return dueDate < new Date();
+            if (typeof dueDate === "string") return new Date(dueDate) < new Date();
+            if (typeof dueDate === "object" && "toDate" in dueDate) {
+              return (dueDate as { toDate: () => Date }).toDate() < new Date();
+            }
+            return false;
+          })()
+        : false;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(actionItem.text);
@@ -61,15 +71,38 @@ export default function ActionItemCard({
       : ""
   );
 
-  // Create a contact-like object for utility functions
-  const contactForUtils = {
-    firstName: contactFirstName,
-    lastName: contactLastName,
-    primaryEmail: contactEmail || "",
-  };
+  // Use pre-computed values if provided, otherwise compute on client
+  const displayName =
+    preComputedDisplayName !== undefined
+      ? preComputedDisplayName
+      : contactName ||
+        (() => {
+          const contactForUtils: Contact = {
+            contactId: contactId,
+            firstName: contactFirstName,
+            lastName: contactLastName,
+            primaryEmail: contactEmail || "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return getDisplayName(contactForUtils);
+        })();
 
-  const displayName = contactName || getDisplayName(contactForUtils);
-  const initials = getInitials(contactForUtils);
+  const initials =
+    preComputedInitials !== undefined
+      ? preComputedInitials
+      : (() => {
+          const contactForUtils: Contact = {
+            contactId: contactId,
+            firstName: contactFirstName,
+            lastName: contactLastName,
+            primaryEmail: contactEmail || "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return getInitials(contactForUtils);
+        })();
+
   const email = contactEmail || "";
 
   const getVariantStyles = () => {
@@ -320,7 +353,7 @@ export default function ActionItemCard({
                       />
                     </svg>
                     <span>
-                      Due: {String(formatContactDate(actionItem.dueDate, { relative: true }))}
+                      Due: {formatContactDate(actionItem.dueDate, { relative: true })}
                       {isOverdue ? " (Overdue)" : null}
                     </span>
                   </p>
@@ -341,11 +374,11 @@ export default function ActionItemCard({
                       />
                     </svg>
                     <span>
-                      Completed: {String(formatContactDate(actionItem.completedAt, { relative: true }))}
+                      Completed: {formatContactDate(actionItem.completedAt, { relative: true })}
                     </span>
                   </p>
                 ) : null}
-                {actionItem.createdAt && (
+                {actionItem.createdAt != null && (
                   <p className="text-xs text-gray-400 flex items-center gap-1">
                     <svg
                       className="w-3 h-3 shrink-0"
@@ -361,7 +394,7 @@ export default function ActionItemCard({
                       />
                     </svg>
                     <span>
-                      Created: {String(formatContactDate(actionItem.createdAt, { relative: true }))}
+                      Created: {formatContactDate(actionItem.createdAt, { relative: true })}
                     </span>
                   </p>
                 )}

@@ -1,8 +1,8 @@
 "use client";
 
-import { doc, updateDoc, deleteDoc, Timestamp, collection, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Contact } from "@/types/firestore";
 import Modal from "@/components/Modal";
@@ -46,9 +46,20 @@ interface ContactEditorProps {
   contact: Contact;
   contactDocumentId: string;
   userId: string;
+  // Pre-fetched data (for SSR)
+  initialActionItems?: import("@/types/firestore").ActionItem[];
+  initialContact?: Contact;
+  uniqueSegments?: string[];
 }
 
-export default function ContactEditor({ contact, contactDocumentId, userId }: ContactEditorProps) {
+export default function ContactEditor({
+  contact,
+  contactDocumentId,
+  userId,
+  initialActionItems,
+  initialContact,
+  uniqueSegments = [],
+}: ContactEditorProps) {
   const [form, setForm] = useState<Contact>(contact);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -57,24 +68,7 @@ export default function ContactEditor({ contact, contactDocumentId, userId }: Co
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const router = useRouter();
-
-  // Fetch all contacts to get unique segments
-  useEffect(() => {
-    const contactsRef = collection(db, `users/${userId}/contacts`);
-    const unsub = onSnapshot(contactsRef, (snapshot) => {
-      const contactsData = snapshot.docs.map((d) => d.data() as Contact);
-      setAllContacts(contactsData);
-    });
-
-    return () => unsub();
-  }, [userId]);
-
-  // Get unique segments from all contacts
-  const uniqueSegments = useMemo(() => {
-    return Array.from(new Set(allContacts.map((c) => c.segment).filter(Boolean) as string[])).sort();
-  }, [allContacts]);
 
   const updateField = (field: string, value: string | string[] | null) => {
     setForm({ ...form, [field]: value });
@@ -651,6 +645,8 @@ export default function ContactEditor({ contact, contactDocumentId, userId }: Co
                 onActionItemUpdate={() => {
                   // Trigger a refresh if needed
                 }}
+                initialActionItems={initialActionItems}
+                initialContact={initialContact || contact}
               />
             </div>
 

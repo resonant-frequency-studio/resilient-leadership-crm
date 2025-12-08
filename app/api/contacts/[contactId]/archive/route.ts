@@ -3,6 +3,7 @@ import { getUserId } from "@/lib/auth-utils";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
+import { revalidateTag } from "next/cache";
 
 /**
  * PATCH /api/contacts/[contactId]/archive
@@ -35,6 +36,11 @@ export async function PATCH(
         archived: archived,
         updatedAt: FieldValue.serverTimestamp(),
       });
+
+    // Invalidate cache
+    revalidateTag("contacts");
+    revalidateTag(`contacts-${userId}`);
+    revalidateTag(`contact-${userId}-${contactId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

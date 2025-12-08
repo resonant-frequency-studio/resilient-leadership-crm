@@ -3,6 +3,7 @@ import { getUserId } from "@/lib/auth-utils";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
+import { revalidateTag } from "next/cache";
 
 /**
  * POST /api/contacts/bulk-archive
@@ -64,6 +65,16 @@ export async function POST(req: Request) {
           errors++;
           errorDetails.push(`${result.contactId}: ${result.error}`);
         }
+      });
+    }
+
+    // Invalidate cache if any updates succeeded
+    if (success > 0) {
+      revalidateTag("contacts");
+      revalidateTag(`contacts-${userId}`);
+      // Invalidate individual contact caches
+      contactIds.forEach((contactId: string) => {
+        revalidateTag(`contact-${userId}-${contactId}`);
       });
     }
 

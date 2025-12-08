@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ActionItem } from "@/types/firestore";
 import ActionItemCard from "./ActionItemCard";
 import { Button } from "./Button";
 import { ErrorMessage, extractApiError, extractErrorMessage } from "./ErrorMessage";
 import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
+import { getInitials, getDisplayName } from "@/util/contact-utils";
+import { Contact } from "@/types/firestore";
 
 interface ActionItemsListProps {
   userId: string;
@@ -15,6 +18,9 @@ interface ActionItemsListProps {
   contactFirstName?: string;
   contactLastName?: string;
   onActionItemUpdate?: () => void;
+  // Pre-fetched action items (for SSR)
+  initialActionItems?: ActionItem[];
+  initialContact?: Contact;
 }
 
 type FilterStatus = "all" | "pending" | "completed";
@@ -27,9 +33,12 @@ export default function ActionItemsList({
   contactFirstName,
   contactLastName,
   onActionItemUpdate,
+  initialActionItems,
+  initialContact,
 }: ActionItemsListProps) {
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [actionItems, setActionItems] = useState<ActionItem[]>(initialActionItems || []);
+  const [loading, setLoading] = useState(!initialActionItems); // Only loading if no initial data
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [isAdding, setIsAdding] = useState(false);
   const [newText, setNewText] = useState("");
@@ -47,6 +56,12 @@ export default function ActionItemsList({
   });
 
   useEffect(() => {
+    // If initialActionItems provided, skip fetching (SSR mode)
+    if (initialActionItems) {
+      setLoading(false);
+      return;
+    }
+
     if (!userId || !contactId) {
       setLoading(false);
       return;
@@ -58,7 +73,7 @@ export default function ActionItemsList({
       return;
     }
 
-    // Fetch action items via API route (uses session auth)
+    // Fetch action items via API route (uses session auth) - only if no initial data
     const fetchActionItems = async () => {
       try {
         const response = await fetch(
@@ -161,7 +176,12 @@ export default function ActionItemsList({
       setNewDueDate("");
       setIsAdding(false);
       setAddError(null);
-      onActionItemUpdate?.();
+      // Refresh from server or call callback
+      if (initialActionItems) {
+        router.refresh();
+      } else {
+        onActionItemUpdate?.();
+      }
     } catch (error) {
       reportException(error, {
         context: "Adding action item",
@@ -214,8 +234,12 @@ export default function ActionItemsList({
       }
 
       setUpdateError(null);
-      // Trigger callback to refresh from server (for proper timestamps)
-      onActionItemUpdate?.();
+      // Refresh from server or call callback
+      if (initialActionItems) {
+        router.refresh();
+      } else {
+        onActionItemUpdate?.();
+      }
     } catch (error) {
       // Revert optimistic update on error
       setActionItems((prevItems) =>
@@ -267,8 +291,12 @@ export default function ActionItemsList({
       }
 
       setUpdateError(null);
-      // Trigger callback to refresh from server (for proper state sync)
-      onActionItemUpdate?.();
+      // Refresh from server or call callback
+      if (initialActionItems) {
+        router.refresh();
+      } else {
+        onActionItemUpdate?.();
+      }
     } catch (error) {
       // Revert optimistic update on error - restore the deleted item
       setActionItems((prevItems) => [...prevItems, itemToDelete]);
@@ -309,7 +337,12 @@ export default function ActionItemsList({
       }
 
       setUpdateError(null);
-      onActionItemUpdate?.();
+      // Refresh from server or call callback
+      if (initialActionItems) {
+        router.refresh();
+      } else {
+        onActionItemUpdate?.();
+      }
     } catch (error) {
       reportException(error, {
         context: "Updating action item",
@@ -503,24 +536,56 @@ export default function ActionItemsList({
         </p>
       ) : (
         <div className="space-y-2">
-          {filteredItems.map((item) => (
-            <ActionItemCard
-              key={item.actionItemId}
-              actionItem={item}
-              contactId={contactId}
-              contactName={contactName}
-              contactEmail={contactEmail}
-              contactFirstName={contactFirstName}
-              contactLastName={contactLastName}
-              onComplete={() => handleComplete(item.actionItemId)}
-              onDelete={() => handleDelete(item.actionItemId)}
-              onEdit={(text, dueDate) =>
-                handleEdit(item.actionItemId, text, dueDate ?? null)
-              }
-              disabled={updating === item.actionItemId}
-              compact={true}
-            />
-          ))}
+          {filteredItems.map((item) => {
+            // Pre-compute values if we have initialContact, otherwise let ActionItemCard compute
+            const contactForUtils: Contact = initialContact || {
+              contactId: contactId,
+              firstName: contactFirstName,
+              lastName: contactLastName,
+              primaryEmail: contactEmail || "",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            
+            const displayName = contactName || getDisplayName(contactForUtils);
+            const initials = getInitials(contactForUtils);
+            // Compute isOverdue on client (ActionItemCard will also compute if not provided)
+            const isOverdue =
+              item.status === "pending" && item.dueDate
+                ? (() => {
+                    const dueDate = item.dueDate;
+                    if (!dueDate) return false;
+                    if (dueDate instanceof Date) return dueDate < new Date();
+                    if (typeof dueDate === "string") return new Date(dueDate) < new Date();
+                    if (typeof dueDate === "object" && "toDate" in dueDate) {
+                      return (dueDate as { toDate: () => Date }).toDate() < new Date();
+                    }
+                    return false;
+                  })()
+                : false;
+
+            return (
+              <ActionItemCard
+                key={item.actionItemId}
+                actionItem={item}
+                contactId={contactId}
+                contactName={contactName}
+                contactEmail={contactEmail}
+                contactFirstName={contactFirstName}
+                contactLastName={contactLastName}
+                onComplete={() => handleComplete(item.actionItemId)}
+                onDelete={() => handleDelete(item.actionItemId)}
+                onEdit={(text, dueDate) =>
+                  handleEdit(item.actionItemId, text, dueDate ?? null)
+                }
+                disabled={updating === item.actionItemId}
+                compact={true}
+                isOverdue={isOverdue}
+                displayName={displayName}
+                initials={initials}
+              />
+            );
+          })}
         </div>
       )}
     </div>
