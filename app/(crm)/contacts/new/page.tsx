@@ -3,7 +3,7 @@
 import { useNewContactPage } from "@/hooks/useNewContactPage";
 import Loading from "@/components/Loading";
 import Card from "@/components/Card";
-import ContactsLink from "../_components/ContactsLink";
+import ContactsLink from "@/app/(crm)/_components/ContactsLink";
 import { Button } from "@/components/Button";
 
 export default function NewContactPage() {

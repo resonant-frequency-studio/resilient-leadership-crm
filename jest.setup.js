@@ -3,6 +3,7 @@ import '@testing-library/jest-dom'
 
 // Polyfill TextEncoder/TextDecoder for Next.js unstable_cache
 if (typeof global.TextEncoder === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { TextEncoder, TextDecoder } = require('util');
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
@@ -10,7 +11,7 @@ if (typeof global.TextEncoder === 'undefined') {
 
 // Mock next/cache to avoid Web API dependencies in tests
 jest.mock('next/cache', () => ({
-  unstable_cache: (fn, keyParts, options) => {
+  unstable_cache: (fn) => {
     // In tests, just return the function directly without caching
     return fn;
   },
@@ -78,4 +79,7 @@ jest.mock('recharts', () => ({
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
 }));
+
+// Mock fetch globally
+global.fetch = jest.fn();
 

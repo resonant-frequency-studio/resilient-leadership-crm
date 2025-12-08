@@ -6,7 +6,7 @@ import { useActionItems } from "@/hooks/useActionItems";
 import { useQuery } from "@tanstack/react-query";
 import { convertTimestampToISO } from "@/util/timestamp-utils-server";
 import ContactDetailPageClient from "../ContactDetailPageClient";
-import { ActionItem, Contact } from "@/types/firestore";
+import { ActionItem } from "@/types/firestore";
 
 interface ContactDetailPageClientWrapperProps {
   contactId: string;
@@ -46,7 +46,8 @@ export default function ContactDetailPageClientWrapper({
     notFound();
   }
 
-  // Convert Firestore Timestamps to ISO strings for serialization
+  // Action items are already converted to ISO strings on the server
+  // This is just a safety check in case any timestamps slipped through
   const serializedActionItems: ActionItem[] = actionItems.map((item) => ({
     ...item,
     dueDate: convertTimestampToISO(item.dueDate),

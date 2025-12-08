@@ -30,10 +30,18 @@ async function getActionItemsForContactUncached(
       .orderBy("createdAt", "desc")
       .get();
 
-    const items = snapshot.docs.map((doc) => ({
-      ...(doc.data() as ActionItem),
-      actionItemId: doc.id,
-    }));
+    const items = snapshot.docs.map((doc) => {
+      const data = doc.data() as ActionItem;
+      // Convert Firestore Timestamps to ISO strings for serialization
+      return {
+        ...data,
+        actionItemId: doc.id,
+        createdAt: convertTimestamp(data.createdAt) as string,
+        updatedAt: convertTimestamp(data.updatedAt) as string,
+        completedAt: data.completedAt ? (convertTimestamp(data.completedAt) as string | null) : null,
+        dueDate: data.dueDate ? (convertTimestamp(data.dueDate) as string | null) : null,
+      };
+    });
 
     return items;
   } catch (error) {
@@ -46,27 +54,33 @@ async function getActionItemsForContactUncached(
           .collection(actionItemsPath(userId, contactId))
           .get();
 
-        const items = snapshot.docs.map((doc) => ({
-          ...(doc.data() as ActionItem),
-          actionItemId: doc.id,
-        }));
+        const items = snapshot.docs.map((doc) => {
+          const data = doc.data() as ActionItem;
+          // Convert Firestore Timestamps to ISO strings for serialization
+          return {
+            ...data,
+            actionItemId: doc.id,
+            createdAt: convertTimestamp(data.createdAt) as string,
+            updatedAt: convertTimestamp(data.updatedAt) as string,
+            completedAt: data.completedAt ? (convertTimestamp(data.completedAt) as string | null) : null,
+            dueDate: data.dueDate ? (convertTimestamp(data.dueDate) as string | null) : null,
+          };
+        });
 
         // Sort by createdAt in memory (newest first)
         return items.sort((a, b) => {
-          const aTime =
-            a.createdAt && typeof a.createdAt === "object" && "toMillis" in a.createdAt
-              ? (a.createdAt as { toMillis: () => number }).toMillis()
-              : a.createdAt && typeof a.createdAt === "number"
-              ? a.createdAt
-              : 0;
-          const bTime =
-            b.createdAt && typeof b.createdAt === "object" && "toMillis" in b.createdAt
-              ? (b.createdAt as { toMillis: () => number }).toMillis()
-              : b.createdAt && typeof b.createdAt === "number"
-              ? b.createdAt
-              : 0;
-        return bTime - aTime;
-      });
+          const aTime = a.createdAt && typeof a.createdAt === "string"
+            ? new Date(a.createdAt).getTime()
+            : a.createdAt && typeof a.createdAt === "number"
+            ? a.createdAt
+            : 0;
+          const bTime = b.createdAt && typeof b.createdAt === "string"
+            ? new Date(b.createdAt).getTime()
+            : b.createdAt && typeof b.createdAt === "number"
+            ? b.createdAt
+            : 0;
+          return bTime - aTime;
+        });
     } catch {
       // If fallback also fails, throw the original error
       throw error;
@@ -119,14 +133,11 @@ async function getAllActionItemsForUserUncached(
     const contactId = contactDoc.id;
     try {
       const actionItems = await getActionItemsForContactUncached(userId, contactId);
-      // Add contactId and convert timestamps to ISO strings for each action item
+      // Action items already have timestamps converted to ISO strings
+      // Just add contactId
       return actionItems.map((item) => ({
         ...item,
         contactId,
-        createdAt: convertTimestamp(item.createdAt),
-        updatedAt: convertTimestamp(item.updatedAt),
-        completedAt: item.completedAt ? convertTimestamp(item.completedAt) : null,
-        dueDate: item.dueDate ? convertTimestamp(item.dueDate) : null,
       }));
     } catch (error) {
       reportException(error, {
@@ -188,9 +199,15 @@ export async function getActionItem(
 
   if (!doc.exists) return null;
 
+  const data = doc.data() as ActionItem;
+  // Convert Firestore Timestamps to ISO strings for serialization
   return {
-    ...(doc.data() as ActionItem),
+    ...data,
     actionItemId: doc.id,
+    createdAt: convertTimestamp(data.createdAt) as string,
+    updatedAt: convertTimestamp(data.updatedAt) as string,
+    completedAt: data.completedAt ? (convertTimestamp(data.completedAt) as string | null) : null,
+    dueDate: data.dueDate ? (convertTimestamp(data.dueDate) as string | null) : null,
   };
 }
 
