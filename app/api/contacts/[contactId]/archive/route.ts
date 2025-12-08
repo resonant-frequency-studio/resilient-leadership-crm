@@ -38,15 +38,15 @@ export async function PATCH(
       });
 
     // Invalidate cache
-    revalidateTag("contacts");
-    revalidateTag(`contacts-${userId}`);
-    revalidateTag(`contact-${userId}-${contactId}`);
+    revalidateTag("contacts", "max");
+    revalidateTag(`contacts-${userId}`, "max");
+    revalidateTag(`contact-${userId}-${contactId}`, "max");
 
     return NextResponse.json({ success: true });
   } catch (error) {
     reportException(error, {
       context: "Archiving contact",
-      tags: { component: "archive-contact-api", contactId: contactIdParam },
+      tags: { component: "archive-contact-api" },
     });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to archive contact" },

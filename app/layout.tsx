@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CrmLayoutWrapper } from "@/components/CrmLayoutWrapper";
 import { appConfig } from "@/lib/app-config";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <CrmLayoutWrapper>{children}</CrmLayoutWrapper>
+        <Providers>
+          <CrmLayoutWrapper>{children}</CrmLayoutWrapper>
+        </Providers>
       </body>
     </html>
   );

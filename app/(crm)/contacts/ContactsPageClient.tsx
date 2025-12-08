@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Contact } from "@/types/firestore";
 import ExportContactsButton from "@/components/ExportContactsButton";
@@ -15,6 +14,9 @@ import { Button } from "@/components/Button";
 import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
 import { bulkUpdateContactSegments } from "@/lib/firestore-crud";
 import { useAuth } from "@/hooks/useAuth";
+import { useContacts } from "@/hooks/useContacts";
+import { useBulkArchiveContacts } from "@/hooks/useContactMutations";
+import { getInitials, getDisplayName } from "@/util/contact-utils";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -30,15 +32,35 @@ export default function ContactsPageClient({
   initialContacts,
 }: ContactsPageClientProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [showBulkSegmentModal, setShowBulkSegmentModal] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkUpdateProgress, setBulkUpdateProgress] = useState({ completed: 0, total: 0 });
   const [selectedNewSegment, setSelectedNewSegment] = useState<string>("");
 
+  // Use React Query hook for contacts (will use cached data if available)
+  const { data: contactsData = [] } = useContacts(user?.uid || "");
+  
+  // Map contacts to include id, displayName, and initials
+  const contacts: ContactWithId[] = (contactsData.length > 0 ? contactsData : initialContacts).map((contact) => {
+    const contactForUtils: Contact = {
+      ...contact,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    return {
+      ...contact,
+      id: contact.contactId,
+      displayName: getDisplayName(contactForUtils),
+      initials: getInitials(contactForUtils),
+    };
+  });
+
+  // Use mutation hook for bulk archive
+  const bulkArchiveMutation = useBulkArchiveContacts(user?.uid);
+
   // Use filtering hook
-  const filterContacts = useFilterContacts(initialContacts);
+  const filterContacts = useFilterContacts(contacts);
   const {
     filteredContacts,
     hasActiveFilters,
@@ -125,8 +147,7 @@ export default function ContactsPageClient({
       setSelectedContactIds(new Set());
       setShowBulkSegmentModal(false);
       setSelectedNewSegment("");
-      // Refresh from server
-      router.refresh();
+      // React Query will automatically refetch contacts after mutation
     } catch (error) {
       reportException(error, {
         context: "Bulk segment update",
@@ -147,21 +168,10 @@ export default function ContactsPageClient({
 
     try {
       const contactIdsArray = Array.from(selectedContactIds);
-      const response = await fetch("/api/contacts/bulk-archive", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactIds: contactIdsArray,
-          archived: archived,
-        }),
+      const result = await bulkArchiveMutation.mutateAsync({
+        contactIds: contactIdsArray,
+        archived: archived,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to archive contacts");
-      }
-
-      const result = await response.json();
 
       if (result.errors > 0) {
         alert(
@@ -175,8 +185,7 @@ export default function ContactsPageClient({
         // Success - clear selection
         setSelectedContactIds(new Set());
       }
-      // Refresh from server
-      router.refresh();
+      // React Query will automatically invalidate and refetch contacts
     } catch (error) {
       reportException(error, {
         context: "Bulk archiving contacts",

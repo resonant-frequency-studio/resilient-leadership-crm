@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import Card from "@/components/Card";
@@ -15,6 +14,7 @@ import ContactCard from "@/components/ContactCard";
 import { reportException } from "@/lib/error-reporting";
 import { DashboardStats } from "@/hooks/useDashboardStats";
 import { Contact } from "@/types/firestore";
+import { useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
 
 interface ContactWithTouchpoint extends Contact {
   id: string;
@@ -37,10 +37,9 @@ export default function DashboardPageClient({
   recentContacts,
 }: DashboardPageClientProps) {
   const { user } = useAuth();
-  const router = useRouter();
-  const [, startTransition] = useTransition();
   const [selectedTouchpointIds, setSelectedTouchpointIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const updateTouchpointStatusMutation = useUpdateTouchpointStatus(user?.uid);
 
   const toggleTouchpointSelection = (contactId: string) => {
     setSelectedTouchpointIds((prev) => {
@@ -61,17 +60,11 @@ export default function DashboardPageClient({
     setBulkUpdating(true);
 
     try {
+      // Use mutation hook for each update
       const updates = selectedIds.map((contactId) =>
-        fetch(`/api/contacts/${encodeURIComponent(contactId)}/touchpoint-status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        }).then(async (res) => {
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.error || "Update failed");
-          }
-          return res;
+        updateTouchpointStatusMutation.mutateAsync({
+          contactId,
+          status,
         })
       );
 
@@ -87,10 +80,7 @@ export default function DashboardPageClient({
           `Updated ${successCount} of ${selectedIds.length} touchpoints. Some updates failed.`
         );
       }
-      // Refresh from server
-      startTransition(() => {
-        router.refresh();
-      });
+      // React Query will automatically invalidate and refetch contacts and dashboard stats
     } catch (error) {
       reportException(error, {
         context: "Bulk updating touchpoint status",
@@ -356,10 +346,7 @@ export default function DashboardPageClient({
                     needsReminder={contact.needsReminder}
                     showTouchpointActions={true}
                     onTouchpointStatusUpdate={() => {
-                      // Refresh from server
-                      startTransition(() => {
-                        router.refresh();
-                      });
+                      // React Query will automatically invalidate and refetch
                     }}
                   />
                 );
@@ -518,10 +505,7 @@ export default function DashboardPageClient({
                     needsReminder={false}
                     showTouchpointActions={true}
                     onTouchpointStatusUpdate={() => {
-                      // Refresh from server
-                      startTransition(() => {
-                        router.refresh();
-                      });
+                      // React Query will automatically invalidate and refetch
                     }}
                   />
                 );

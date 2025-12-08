@@ -54,16 +54,16 @@ export async function PATCH(
       .update(updates);
 
     // Invalidate cache
-    revalidateTag("contacts");
-    revalidateTag(`contacts-${userId}`);
-    revalidateTag(`contact-${userId}-${contactId}`);
-    revalidateTag(`dashboard-stats-${userId}`);
+    revalidateTag("contacts", "max");
+    revalidateTag(`contacts-${userId}`, "max");
+    revalidateTag(`contact-${userId}-${contactId}`, "max");
+    revalidateTag(`dashboard-stats-${userId}`, "max");
 
     return NextResponse.json({ success: true });
   } catch (error) {
     reportException(error, {
       context: "Updating touchpoint status",
-      tags: { component: "touchpoint-status-api", contactId: contactIdParam },
+      tags: { component: "touchpoint-status-api" },
     });
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

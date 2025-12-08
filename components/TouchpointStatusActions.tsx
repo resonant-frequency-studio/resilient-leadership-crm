@@ -48,7 +48,7 @@ export default function TouchpointStatusActions({
       reportException(error, {
         context: "Updating touchpoint status",
         tags: { component: "TouchpointStatusActions", contactId },
-        extra: { status: newStatus },
+        extra: { status },
       });
       alert(error instanceof Error ? error.message : "Failed to update touchpoint status");
     } finally {

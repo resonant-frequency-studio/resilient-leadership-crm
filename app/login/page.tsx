@@ -2,13 +2,13 @@
 
 import { auth, googleProvider } from "@/lib/firebase-client";
 import { signInWithPopup } from "firebase/auth";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/Button";
 import { appConfig } from "@/lib/app-config";
 import { reportException } from "@/lib/error-reporting";
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const expired = searchParams?.get("expired") === "true";
   const [loading, setLoading] = useState(false);
@@ -194,5 +194,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-radial from-neutral-200 via-neutral-100 to-blue-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

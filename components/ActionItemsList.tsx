@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { ActionItem } from "@/types/firestore";
 import ActionItemCard from "./ActionItemCard";
 import { Button } from "./Button";
@@ -9,6 +8,7 @@ import { ErrorMessage, extractApiError, extractErrorMessage } from "./ErrorMessa
 import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Contact } from "@/types/firestore";
+import { useCreateActionItem, useUpdateActionItem, useDeleteActionItem } from "@/hooks/useActionItemMutations";
 
 interface ActionItemsListProps {
   userId: string;
@@ -36,7 +36,9 @@ export default function ActionItemsList({
   initialActionItems,
   initialContact,
 }: ActionItemsListProps) {
-  const router = useRouter();
+  const createActionItemMutation = useCreateActionItem(userId);
+  const updateActionItemMutation = useUpdateActionItem(userId);
+  const deleteActionItemMutation = useDeleteActionItem(userId);
   const [actionItems, setActionItems] = useState<ActionItem[]>(initialActionItems || []);
   const [loading, setLoading] = useState(!initialActionItems); // Only loading if no initial data
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -157,29 +159,18 @@ export default function ActionItemsList({
     setSaving(true);
     setAddError(null);
     try {
-      const response = await fetch("/api/action-items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId,
-          text: newText.trim(),
-          dueDate: newDueDate || null,
-        }),
+      await createActionItemMutation.mutateAsync({
+        contactId,
+        text: newText.trim(),
+        dueDate: newDueDate || null,
       });
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
 
       setNewText("");
       setNewDueDate("");
       setIsAdding(false);
       setAddError(null);
-      // Refresh from server or call callback
-      if (initialActionItems) {
-        router.refresh();
-      } else {
+      // React Query will automatically invalidate and refetch, or call callback
+      if (!initialActionItems) {
         onActionItemUpdate?.();
       }
     } catch (error) {
@@ -219,25 +210,15 @@ export default function ActionItemsList({
     );
 
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${contactId}&actionItemId=${actionItemId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
+      await updateActionItemMutation.mutateAsync({
+        contactId,
+        actionItemId,
+        updates: { status: newStatus },
+      });
 
       setUpdateError(null);
-      // Refresh from server or call callback
-      if (initialActionItems) {
-        router.refresh();
-      } else {
+      // React Query will automatically invalidate and refetch, or call callback
+      if (!initialActionItems) {
         onActionItemUpdate?.();
       }
     } catch (error) {
@@ -278,23 +259,14 @@ export default function ActionItemsList({
     setUpdateError(null);
 
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${contactId}&actionItemId=${actionItemId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
+      await deleteActionItemMutation.mutateAsync({
+        contactId,
+        actionItemId,
+      });
 
       setUpdateError(null);
-      // Refresh from server or call callback
-      if (initialActionItems) {
-        router.refresh();
-      } else {
+      // React Query will automatically invalidate and refetch, or call callback
+      if (!initialActionItems) {
         onActionItemUpdate?.();
       }
     } catch (error) {
@@ -319,28 +291,18 @@ export default function ActionItemsList({
     setUpdating(actionItemId);
     setUpdateError(null);
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${contactId}&actionItemId=${actionItemId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text.trim(),
-            dueDate: dueDate || null,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
+      await updateActionItemMutation.mutateAsync({
+        contactId,
+        actionItemId,
+        updates: {
+          text: text.trim(),
+          dueDate: dueDate || null,
+        },
+      });
 
       setUpdateError(null);
-      // Refresh from server or call callback
-      if (initialActionItems) {
-        router.refresh();
-      } else {
+      // React Query will automatically invalidate and refetch, or call callback
+      if (!initialActionItems) {
         onActionItemUpdate?.();
       }
     } catch (error) {

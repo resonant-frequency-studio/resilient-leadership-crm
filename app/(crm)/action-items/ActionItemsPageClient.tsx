@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Card from "@/components/Card";
-import { ErrorMessage, extractApiError, extractErrorMessage } from "@/components/ErrorMessage";
+import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
 import { ActionItem, Contact } from "@/types/firestore";
 import { reportException } from "@/lib/error-reporting";
 import ActionItemCard from "@/components/ActionItemCard";
+import { useUpdateActionItem, useDeleteActionItem } from "@/hooks/useActionItemMutations";
+import { useAuth } from "@/hooks/useAuth";
 
 type FilterStatus = "all" | "pending" | "completed";
 type FilterDate = "all" | "overdue" | "today" | "thisWeek" | "upcoming";
@@ -32,9 +33,13 @@ export default function ActionItemsPageClient({
   initialActionItems,
   contacts,
 }: ActionItemsPageClientProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-  const [actionItems, setActionItems] = useState(initialActionItems);
+  const { user } = useAuth();
+  const updateActionItemMutation = useUpdateActionItem(user?.uid);
+  const deleteActionItemMutation = useDeleteActionItem(user?.uid);
+  
+  // Use enriched action items from wrapper (which uses React Query)
+  const actionItems = initialActionItems;
+  
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterDate, setFilterDate] = useState<FilterDate>("all");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
@@ -49,58 +54,17 @@ export default function ActionItemsPageClient({
     setCompleting(item.actionItemId);
     setCompleteError(null);
 
-    // Optimistic update
     const newStatus = item.status === "completed" ? "pending" : "completed";
-    const previousStatus = item.status;
-    const now = Date.now();
-
-    setActionItems((prevItems) =>
-      prevItems.map((prevItem) =>
-        prevItem.actionItemId === item.actionItemId
-          ? {
-              ...prevItem,
-              status: newStatus,
-              completedAt: newStatus === "completed" ? now : null,
-              isOverdue: newStatus === "pending" ? prevItem.isOverdue : false,
-            }
-          : prevItem
-      )
-    );
 
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${item.contactId}&actionItemId=${item.actionItemId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
-      setCompleteError(null);
-      // Refresh from server
-      startTransition(() => {
-        router.refresh();
+      await updateActionItemMutation.mutateAsync({
+        contactId: item.contactId,
+        actionItemId: item.actionItemId,
+        updates: { status: newStatus },
       });
+      setCompleteError(null);
+      // React Query will automatically invalidate and refetch
     } catch (error) {
-      // Revert optimistic update
-      setActionItems((prevItems) =>
-        prevItems.map((prevItem) =>
-          prevItem.actionItemId === item.actionItemId
-            ? {
-                ...prevItem,
-                status: previousStatus,
-                completedAt: previousStatus === "completed" ? item.completedAt : null,
-                isOverdue: prevItem.isOverdue,
-              }
-            : prevItem
-        )
-      );
-
       reportException(error, {
         context: "Completing action item",
         tags: { component: "ActionItemsPageClient", actionItemId: item.actionItemId },
@@ -119,24 +83,13 @@ export default function ActionItemsPageClient({
     setCompleting(item.actionItemId);
     setCompleteError(null);
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${item.contactId}&actionItemId=${item.actionItemId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, dueDate }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
-      setCompleteError(null);
-      // Refresh from server
-      startTransition(() => {
-        router.refresh();
+      await updateActionItemMutation.mutateAsync({
+        contactId: item.contactId,
+        actionItemId: item.actionItemId,
+        updates: { text, dueDate },
       });
+      setCompleteError(null);
+      // React Query will automatically invalidate and refetch
     } catch (error) {
       reportException(error, {
         context: "Editing action item",
@@ -153,35 +106,17 @@ export default function ActionItemsPageClient({
       return;
     }
 
-    // Optimistic update
-    const itemToDelete = item;
-    setActionItems((prevItems) =>
-      prevItems.filter((prevItem) => prevItem.actionItemId !== item.actionItemId)
-    );
     setDeleting(item.actionItemId);
     setDeleteError(null);
 
     try {
-      const response = await fetch(
-        `/api/action-items?contactId=${item.contactId}&actionItemId=${item.actionItemId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        const errorMessage = await extractApiError(response);
-        throw new Error(errorMessage);
-      }
-      setDeleteError(null);
-      // Refresh from server
-      startTransition(() => {
-        router.refresh();
+      await deleteActionItemMutation.mutateAsync({
+        contactId: item.contactId,
+        actionItemId: item.actionItemId,
       });
+      setDeleteError(null);
+      // React Query will automatically invalidate and refetch
     } catch (error) {
-      // Revert optimistic update
-      setActionItems((prevItems) => [...prevItems, itemToDelete]);
-
       reportException(error, {
         context: "Deleting action item",
         tags: { component: "ActionItemsPageClient", actionItemId: item.actionItemId },

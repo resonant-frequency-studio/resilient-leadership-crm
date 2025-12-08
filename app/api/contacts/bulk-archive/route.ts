@@ -70,11 +70,11 @@ export async function POST(req: Request) {
 
     // Invalidate cache if any updates succeeded
     if (success > 0) {
-      revalidateTag("contacts");
-      revalidateTag(`contacts-${userId}`);
+      revalidateTag("contacts", "max");
+      revalidateTag(`contacts-${userId}`, "max");
       // Invalidate individual contact caches
       contactIds.forEach((contactId: string) => {
-        revalidateTag(`contact-${userId}-${contactId}`);
+        revalidateTag(`contact-${userId}-${contactId}`, "max");
       });
     }
 

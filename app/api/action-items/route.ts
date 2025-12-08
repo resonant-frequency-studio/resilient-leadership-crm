@@ -77,9 +77,9 @@ export async function POST(req: Request) {
     });
 
     // Invalidate cache
-    revalidateTag("action-items");
-    revalidateTag(`action-items-${userId}`);
-    revalidateTag(`action-items-${userId}-${contactId}`);
+    revalidateTag("action-items", "max");
+    revalidateTag(`action-items-${userId}`, "max");
+    revalidateTag(`action-items-${userId}-${contactId}`, "max");
 
     return NextResponse.json({
       success: true,
@@ -127,9 +127,9 @@ export async function PATCH(req: Request) {
     });
 
     // Invalidate cache
-    revalidateTag("action-items");
-    revalidateTag(`action-items-${userId}`);
-    revalidateTag(`action-items-${userId}-${contactId}`);
+    revalidateTag("action-items", "max");
+    revalidateTag(`action-items-${userId}`, "max");
+    revalidateTag(`action-items-${userId}-${contactId}`, "max");
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -167,9 +167,9 @@ export async function DELETE(req: Request) {
     await deleteActionItem(userId, contactId, actionItemId);
 
     // Invalidate cache
-    revalidateTag("action-items");
-    revalidateTag(`action-items-${userId}`);
-    revalidateTag(`action-items-${userId}-${contactId}`);
+    revalidateTag("action-items", "max");
+    revalidateTag(`action-items-${userId}`, "max");
+    revalidateTag(`action-items-${userId}-${contactId}`, "max");
 
     return NextResponse.json({ success: true });
   } catch (error) {

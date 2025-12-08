@@ -4,6 +4,8 @@ import { doc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Contact } from "@/types/firestore";
 import Modal from "@/components/Modal";
 import Card from "@/components/Card";
@@ -69,6 +71,8 @@ export default function ContactEditor({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const updateField = (field: string, value: string | string[] | null) => {
     setForm({ ...form, [field]: value });
@@ -83,6 +87,13 @@ export default function ContactEditor({
         updatedAt: new Date(),
       });
       setSaveError(null);
+      
+      // Invalidate React Query cache
+      if (user?.uid) {
+        queryClient.invalidateQueries({ queryKey: ["contacts", user.uid] });
+        queryClient.invalidateQueries({ queryKey: ["contact", user.uid, contactDocumentId] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats", user.uid] });
+      }
     } catch (error) {
       reportException(error, {
         context: "Updating contact",
@@ -99,6 +110,15 @@ export default function ContactEditor({
     setDeleteError(null);
     try {
       await deleteDoc(doc(db, `users/${userId}/contacts/${contactDocumentId}`));
+      
+      // Invalidate React Query cache before redirecting
+      if (user?.uid) {
+        queryClient.invalidateQueries({ queryKey: ["contacts", user.uid] });
+        queryClient.invalidateQueries({ queryKey: ["contact", user.uid, contactDocumentId] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats", user.uid] });
+        queryClient.invalidateQueries({ queryKey: ["action-items", user.uid] });
+      }
+      
       router.push("/contacts");
     } catch (error) {
       reportException(error, {
@@ -123,6 +143,13 @@ export default function ContactEditor({
       if (!response.ok) {
         const errorMessage = await extractApiError(response);
         throw new Error(errorMessage);
+      }
+
+      // Invalidate React Query cache (mutation hook should handle this, but ensure it's done)
+      if (user?.uid) {
+        queryClient.invalidateQueries({ queryKey: ["contacts", user.uid] });
+        queryClient.invalidateQueries({ queryKey: ["contact", user.uid, contactDocumentId] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats", user.uid] });
       }
 
       // Redirect to contacts page after archiving
@@ -806,6 +833,7 @@ function OutreachDraftEditor({
   const [outreachDraft, setOutreachDraft] = useState(contact.outreachDraft || "");
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftHasChanges, setDraftHasChanges] = useState(false);
+  const queryClient = useQueryClient();
 
   // Update local state when contact changes (only if we don't have unsaved changes)
   useEffect(() => {
@@ -828,6 +856,12 @@ function OutreachDraftEditor({
         outreachDraft: outreachDraft || null,
         updatedAt: new Date(),
       });
+      
+      // Invalidate React Query cache
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["contacts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["contact", userId, contactDocumentId] });
+      }
       setDraftHasChanges(false);
     } catch (error) {
       reportException(error, {
