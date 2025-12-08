@@ -71,6 +71,7 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4
 - **Backend**: Firebase (Firestore, Authentication)
+- **Data Fetching**: TanStack Query (React Query) v5
 - **Charts**: Recharts
 - **CSV Parsing**: PapaParse
 
@@ -79,22 +80,27 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 ```
 ├── app/
 │   ├── (crm)/              # Protected CRM routes
+│   │   ├── _components/   # Server components with SSR data prefetching
 │   │   ├── contacts/       # Contact management pages
 │   │   └── page.tsx        # Dashboard
 │   ├── login/              # Authentication page
-│   └── layout.tsx          # Root layout
+│   ├── layout.tsx          # Root layout
+│   └── providers.tsx       # React Query provider setup
 ├── components/
 │   ├── charts/             # Data visualization components
 │   └── ...                 # UI components
-├── hooks/                  # Custom React hooks
+├── hooks/                  # Custom React hooks (React Query)
 │   ├── useAuth.ts
-│   ├── useDashboardStats.ts
-│   ├── useContactImportPage.ts
-│   ├── useContactDetailPage.ts
-│   ├── useNewContactPage.ts
-│   └── useFilterContacts.ts
+│   ├── useContacts.ts      # React Query hook for contacts
+│   ├── useDashboardStats.ts # React Query hook for dashboard
+│   ├── useActionItems.ts   # React Query hook for action items
+│   ├── useSyncJobs.ts      # React Query hook for sync jobs
+│   └── ...                 # Other hooks
 ├── lib/                    # Library utilities
 │   ├── app-config.ts       # Application configuration (white-labeling)
+│   ├── query-client.ts     # React Query client for SSR
+│   ├── contacts-server.ts  # Server-side data fetching
+│   ├── dashboard-stats-server.ts # Server-side stats fetching
 │   ├── firebase-client.ts
 │   ├── firebase-admin.ts
 │   ├── firestore-crud.ts
@@ -221,17 +227,48 @@ The custom name will appear in:
 
 ## Architecture Highlights
 
+### Server-Side Rendering (SSR) & React Query
+The application is optimized for performance using Next.js App Router's server-side rendering combined with TanStack Query (React Query):
+
+- **Server-Side Data Prefetching**: All major pages prefetch data on the server before rendering
+  - Dashboard stats, contacts, action items, and sync jobs are fetched server-side
+  - Data is fetched directly from Firestore using Firebase Admin SDK
+  - Prevents client-side loading states and improves initial page load performance
+
+- **React Query Integration**: 
+  - Server-prefetched data is hydrated into React Query's cache using `HydrationBoundary`
+  - Client components use React Query hooks (`useQuery`) that automatically use prefetched data
+  - Optimized query configuration:
+    - 10-minute stale time (data considered fresh for 10 minutes)
+    - 30-minute garbage collection time
+    - No automatic refetching on window focus, mount, or reconnect
+    - Reduces unnecessary API calls and improves performance
+
+- **Query Client Pattern**:
+  - Uses React's `cache()` function to ensure one QueryClient per request
+  - Prevents data leakage between requests in SSR
+  - Consistent query state across server and client
+
+- **Benefits**:
+  - Faster initial page loads with server-rendered content
+  - Reduced client-side data fetching
+  - Better SEO with fully rendered pages
+  - Improved user experience with instant data display
+  - Efficient caching and data synchronization
+
 ### Separation of Concerns
-- **UI Components** - Pure presentation components
-- **Custom Hooks** - Business logic and state management
+- **Server Components** - Handle data prefetching and SSR
+- **Client Components** - Interactive UI using React Query hooks
+- **Custom Hooks** - React Query-based data fetching with automatic caching
 - **Utility Functions** - Reusable data transformations
-- **Library Functions** - Firestore operations and data access
+- **Library Functions** - Server-side Firestore operations and data access
 
 ### Code Organization
-- Modular hook-based architecture
+- Modular hook-based architecture with React Query
 - Type-safe throughout with TypeScript
 - Reusable utility functions
-- Clean separation between UI and business logic
+- Clean separation between server-side data fetching and client-side state management
+- Server/client component pattern for optimal performance
 
 ## Environment Variables
 
