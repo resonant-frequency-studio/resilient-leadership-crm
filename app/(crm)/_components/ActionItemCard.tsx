@@ -143,10 +143,12 @@ export default function ActionItemCard({
   };
 
   return (
-    <div className={`rounded-lg p-4 transition-all duration-200 ${getVariantStyles()}`}>
+    <div className={`rounded-lg p-3 sm:p-4 transition-all duration-200 min-w-0 overflow-hidden ${getVariantStyles()}`}>
       {isEditing ? (
         <div className="space-y-3">
           <textarea
+            id={`action-item-edit-text-${actionItem.actionItemId}`}
+            name={`action-item-edit-text-${actionItem.actionItemId}`}
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
@@ -180,73 +182,84 @@ export default function ActionItemCard({
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-3">
-          {/* Checkbox */}
-          <button
-            onClick={onComplete}
-            disabled={disabled}
-            className={`mt-0.5 w-5 h-5 p-0 rounded border-2 flex items-center justify-center shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed ${
-              actionItem.status === "completed"
-                ? "bg-green-500 border-green-500 hover:bg-green-600"
-                : "border-gray-300 hover:border-green-500 bg-transparent"
-            }`}
-            title={
-              actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"
-            }
-            aria-label={actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"}
-          >
-            {actionItem.status === "completed" && (
-              <svg
-                className="w-3 h-3 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={3}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            )}
-          </button>
+        <div className="flex flex-col gap-3 min-w-0 overflow-hidden">
+          {/* Top Row: Checkbox, Edit, Delete */}
+          <div className="flex items-center gap-2">
+            {/* Checkbox */}
+            <button
+              onClick={onComplete}
+              disabled={disabled}
+              className={`w-5 h-5 p-0 rounded border-2 flex items-center justify-center shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+                actionItem.status === "completed"
+                  ? "bg-green-500 border-green-500 hover:bg-green-600"
+                  : "border-gray-300 hover:border-green-500 bg-transparent"
+              }`}
+              title={
+                actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"
+              }
+              aria-label={actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"}
+            >
+              {actionItem.status === "completed" && (
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={3}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </button>
 
-          {/* Contact Info Section - Only show if not in compact mode */}
-          <div className="flex-1 min-w-0">
+            {/* Contact Info Section - Only show if not in compact mode */}
             {!compact && (
               <Link
                 href={`/contacts/${contactId}`}
-                className="block group"
+                className="flex items-center gap-2 group flex-1 min-w-0"
               >
-                <div className="flex items-start gap-3 mb-3">
-                  {/* Avatar */}
-                  <div className="shrink-0">
-                    <div className={`w-10 h-10 ${getAvatarStyles()} rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm`}>
-                      {initials}
-                    </div>
+                {/* Avatar */}
+                <div className="shrink-0">
+                  <div className={`w-8 h-8 ${getAvatarStyles()} rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-sm`}>
+                    {initials}
                   </div>
+                </div>
 
-                  {/* Contact Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`text-sm font-semibold group-hover:text-gray-700 transition-colors ${
-                      actionItem.status === "completed" ? "text-gray-500" : "text-gray-900"
+                {/* Contact Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className={`text-sm font-semibold group-hover:text-gray-700 transition-colors truncate ${
+                    actionItem.status === "completed" ? "text-gray-500" : "text-gray-900"
+                  }`}>
+                    {displayName}
+                  </h3>
+                  {email && (
+                    <p className={`text-xs truncate mt-0.5 ${
+                      actionItem.status === "completed" ? "text-gray-400" : "text-gray-500"
                     }`}>
-                      {displayName}
-                    </h3>
-                    {email && (
-                      <p className={`text-xs truncate mt-0.5 ${
-                        actionItem.status === "completed" ? "text-gray-400" : "text-gray-500"
-                      }`}>
-                        {email}
-                      </p>
-                    )}
-                  </div>
+                      {email}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            )}
 
-                  {/* Arrow Icon */}
-                  <div className="hidden lg:block shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Action Buttons - Edit and Delete */}
+            {actionItem.status === "pending" && (
+              <div className="flex gap-1 shrink-0 ml-auto">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  disabled={disabled}
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 text-gray-400 hover:text-blue-600"
+                  title="Edit"
+                  icon={
                     <svg
-                      className="w-5 h-5 text-gray-400"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -255,92 +268,62 @@ export default function ActionItemCard({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M9 5l7 7-7 7"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* Action Item Content */}
-            <div className={compact ? "" : "ml-0 lg:ml-12"}>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <p
-                  className={`text-sm font-medium flex-1 ${
-                    actionItem.status === "completed"
-                      ? "text-gray-500 line-through"
-                      : "text-gray-900"
-                  }`}
+                  }
                 >
-                  {actionItem.text}
-                </p>
-                {actionItem.status === "pending" && (
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      onClick={() => setIsEditing(true)}
-                      disabled={disabled}
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 text-gray-400 hover:text-blue-600"
-                      title="Edit"
-                      icon={
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      }
+                  <span className="sr-only">Edit</span>
+                </Button>
+                <Button
+                  onClick={onDelete}
+                  disabled={disabled}
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 text-gray-400 hover:text-red-600"
+                  title="Delete"
+                  icon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      onClick={onDelete}
-                      disabled={disabled}
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 text-gray-400 hover:text-red-600"
-                      title="Delete"
-                      icon={
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      }
-                    >
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  }
+                >
+                  <span className="sr-only">Delete</span>
+                </Button>
               </div>
+            )}
+          </div>
+
+          {/* Bottom Row: Action Item Text */}
+          <div className="min-w-0">
+            <p
+              className={`text-sm font-medium wrap-break-word mb-2 ${
+                actionItem.status === "completed"
+                  ? "text-gray-500 line-through"
+                  : "text-gray-900"
+              }`}
+            >
+              {actionItem.text}
+            </p>
 
               {/* Date Info */}
-              <div className="flex flex-col gap-0.5">
-                {actionItem.dueDate ? (
-                  <p
-                    className={`text-xs flex items-center gap-1 ${
-                      isOverdue ? "text-red-600 font-medium" : "text-gray-500"
-                    }`}
-                  >
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {actionItem.status === "pending" && actionItem.dueDate ? (
+                  <p className={`text-xs flex items-center gap-1 ${
+                    isOverdue ? "text-red-600 font-medium" : "text-gray-500"
+                  }`}>
                     <svg
-                      className="w-3 h-3 shrink-0"
+                      className="w-3.5 h-3.5 shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -359,9 +342,9 @@ export default function ActionItemCard({
                   </p>
                 ) : null}
                 {actionItem.status === "completed" && actionItem.completedAt ? (
-                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
                     <svg
-                      className="w-3 h-3 shrink-0"
+                      className="w-3.5 h-3.5 shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -381,7 +364,7 @@ export default function ActionItemCard({
                 {actionItem.createdAt != null && (
                   <p className="text-xs text-gray-400 flex items-center gap-1">
                     <svg
-                      className="w-3 h-3 shrink-0"
+                      className="w-3.5 h-3.5 shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -401,8 +384,7 @@ export default function ActionItemCard({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useContact } from "@/hooks/useContact";
 import BasicInfoCard from "./contact-cards/BasicInfoCard";
 import TagsClassificationCard from "./contact-cards/TagsClassificationCard";
+import ActionItemsCard from "./contact-cards/ActionItemsCard";
 import NotesCard from "./contact-cards/NotesCard";
 import NextTouchpointCard from "./contact-cards/NextTouchpointCard";
 import OutreachDraftCard from "./contact-cards/OutreachDraftCard";
@@ -50,17 +51,22 @@ export default function ContactEditor({
             userId={userId}
             uniqueSegments={uniqueSegments}
           />
-          <NotesCard contactId={contactDocumentId} userId={userId} />
-          <NextTouchpointCard contactId={contactDocumentId} userId={userId} />
-          <OutreachDraftCard contactId={contactDocumentId} userId={userId} />
-        </div>
-
-        {/* Sidebar - Right Column (1/3) */}
-        <div className="space-y-6">
-          <ContactInsightsCard
+          <ActionItemsCard
             contactId={contactDocumentId}
             userId={userId}
             initialActionItems={initialActionItems}
+            initialContact={contact || undefined}
+          />
+          <NextTouchpointCard contactId={contactDocumentId} userId={userId} />
+          <OutreachDraftCard contactId={contactDocumentId} userId={userId} />
+          <NotesCard contactId={contactDocumentId} userId={userId} />
+        </div>
+
+        {/* Sidebar - Right Column (1/3) */}
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+          <ContactInsightsCard
+            contactId={contactDocumentId}
+            userId={userId}
             initialContact={initialContact}
           />
           <ActivityCard contactId={contactDocumentId} userId={userId} />

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ActionItem } from "@/types/firestore";
 import ActionItemCard from "./ActionItemCard";
 import { Button } from "@/components/Button";
-import { ErrorMessage, extractApiError, extractErrorMessage } from "@/components/ErrorMessage";
-import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
+import Modal from "@/components/Modal";
+import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
+import { reportException } from "@/lib/error-reporting";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Contact } from "@/types/firestore";
+import { useActionItems } from "@/hooks/useActionItems";
 import { useCreateActionItem, useUpdateActionItem, useDeleteActionItem } from "@/hooks/useActionItemMutations";
 
 interface ActionItemsListProps {
@@ -36,11 +38,10 @@ export default function ActionItemsList({
   initialActionItems,
   initialContact,
 }: ActionItemsListProps) {
-  const createActionItemMutation = useCreateActionItem(userId);
-  const updateActionItemMutation = useUpdateActionItem(userId);
-  const deleteActionItemMutation = useDeleteActionItem(userId);
-  const [actionItems, setActionItems] = useState<ActionItem[]>(initialActionItems || []);
-  const [loading, setLoading] = useState(!initialActionItems); // Only loading if no initial data
+  const { data: actionItems = [], isLoading } = useActionItems(userId, contactId, initialActionItems);
+  const createActionItemMutation = useCreateActionItem();
+  const updateActionItemMutation = useUpdateActionItem();
+  const deleteActionItemMutation = useDeleteActionItem();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [isAdding, setIsAdding] = useState(false);
   const [newText, setNewText] = useState("");
@@ -49,136 +50,40 @@ export default function ActionItemsList({
   const [updating, setUpdating] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
-  const [quotaExceeded, setQuotaExceeded] = useState(() => {
-    // Check localStorage for persisted quota status
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("firestoreQuotaExceeded") === "true";
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    // If initialActionItems provided, skip fetching (SSR mode)
-    if (initialActionItems) {
-      setLoading(false);
-      return;
-    }
-
-    if (!userId || !contactId) {
-      setLoading(false);
-      return;
-    }
-
-    // Don't fetch if quota is already exceeded - prevents repeated failed requests
-    if (quotaExceeded) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch action items via API route (uses session auth) - only if no initial data
-    const fetchActionItems = async () => {
-      try {
-        const response = await fetch(
-          `/api/action-items?contactId=${encodeURIComponent(contactId)}`
-        );
-        
-        // Check for quota errors BEFORE trying to parse response
-        if (response.status === 429) {
-          setQuotaExceeded(true);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("firestoreQuotaExceeded", "true");
-          }
-          setUpdateError("Database quota exceeded. Please wait a few hours or upgrade your plan.");
-          setActionItems([]);
-          setLoading(false);
-          return; // Stop here, don't throw
-        }
-        
-        if (!response.ok) {
-          const errorMessage = await extractApiError(response);
-          // Check if it's a quota error
-          if (errorMessage.includes("Quota exceeded") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
-            setQuotaExceeded(true);
-            if (typeof window !== "undefined") {
-              localStorage.setItem("firestoreQuotaExceeded", "true");
-            }
-            setUpdateError("Database quota exceeded. Please wait a few hours or upgrade your plan.");
-            setActionItems([]);
-            setLoading(false);
-            return; // Stop here, don't throw
-          }
-          throw new Error(errorMessage);
-        }
-        const data = await response.json();
-        setActionItems(data.actionItems || []);
-        setLoading(false);
-        // Reset quota status if successful
-        setQuotaExceeded(false);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("firestoreQuotaExceeded");
-        }
-      } catch (error) {
-        reportException(error, {
-          context: "Fetching action items",
-          tags: { component: "ActionItemsList", contactId },
-        });
-        const errorMessage = extractErrorMessage(error);
-        // Check for quota errors in catch block too
-        if (errorMessage.includes("Quota exceeded") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
-          setQuotaExceeded(true);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("firestoreQuotaExceeded", "true");
-          }
-          setUpdateError("Database quota exceeded. Please wait a few hours or upgrade your plan.");
-          setActionItems([]);
-          setLoading(false);
-          return; // Stop here
-        }
-        // Don't show error if it's a permissions issue - just show empty list
-        if (errorMessage.includes("Permission") || errorMessage.includes("Authentication")) {
-          reportMessage("Action items require proper authentication. Please ensure you're logged in.", ErrorLevel.WARNING, {
-            tags: { component: "ActionItemsList" },
-          });
-        }
-        setActionItems([]);
-        setLoading(false);
-      }
-    };
-
-    fetchActionItems();
-
-    // No polling - only fetch on mount and when contactId changes
-    // Updates will be triggered manually via onActionItemUpdate callback
-    // Note: quotaExceeded is NOT in dependencies to prevent infinite loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, contactId]);
+  const [deleteConfirmItemId, setDeleteConfirmItemId] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!newText.trim()) return;
 
     setSaving(true);
     setAddError(null);
+    
+    const textToSave = newText.trim();
+    const dueDateToSave = newDueDate;
+    
+    setNewText("");
+    setNewDueDate("");
+    setIsAdding(false);
+    
     try {
       await createActionItemMutation.mutateAsync({
         contactId,
-        text: newText.trim(),
-        dueDate: newDueDate || null,
+        text: textToSave,
+        dueDate: dueDateToSave || null,
       });
 
-      setNewText("");
-      setNewDueDate("");
-      setIsAdding(false);
       setAddError(null);
-      // React Query will automatically invalidate and refetch, or call callback
-      if (!initialActionItems) {
-        onActionItemUpdate?.();
-      }
+      onActionItemUpdate?.();
     } catch (error) {
       reportException(error, {
         context: "Adding action item",
         tags: { component: "ActionItemsList", contactId },
       });
       setAddError(extractErrorMessage(error));
+      // Restore the form state so user can try again
+      setNewText(textToSave);
+      setNewDueDate(dueDateToSave);
+      setIsAdding(true);
     } finally {
       setSaving(false);
     }
@@ -188,26 +93,10 @@ export default function ActionItemsList({
     setUpdating(actionItemId);
     setUpdateError(null);
     
-    // Find the current item to toggle its status
     const currentItem = actionItems.find(item => item.actionItemId === actionItemId);
     if (!currentItem) return;
     
-    // Optimistic update: immediately update the UI
     const newStatus = currentItem.status === "completed" ? "pending" : "completed";
-    const previousStatus = currentItem.status;
-    const now = Date.now();
-    
-    setActionItems((prevItems) =>
-      prevItems.map((prevItem) =>
-        prevItem.actionItemId === actionItemId
-          ? {
-              ...prevItem,
-              status: newStatus,
-              completedAt: newStatus === "completed" ? now : null,
-            }
-          : prevItem
-      )
-    );
 
     try {
       await updateActionItemMutation.mutateAsync({
@@ -217,24 +106,8 @@ export default function ActionItemsList({
       });
 
       setUpdateError(null);
-      // React Query will automatically invalidate and refetch, or call callback
-      if (!initialActionItems) {
-        onActionItemUpdate?.();
-      }
+      onActionItemUpdate?.();
     } catch (error) {
-      // Revert optimistic update on error
-      setActionItems((prevItems) =>
-        prevItems.map((prevItem) =>
-          prevItem.actionItemId === actionItemId
-            ? {
-                ...prevItem,
-                status: previousStatus,
-                completedAt: previousStatus === "completed" ? currentItem.completedAt : null,
-              }
-            : prevItem
-        )
-      );
-      
       reportException(error, {
         context: "Completing action item",
         tags: { component: "ActionItemsList", contactId, actionItemId },
@@ -245,37 +118,30 @@ export default function ActionItemsList({
     }
   };
 
-  const handleDelete = async (actionItemId: string) => {
-    if (!confirm("Are you sure you want to delete this action item?")) {
-      return;
-    }
+  const handleDeleteClick = (actionItemId: string) => {
+    setDeleteConfirmItemId(actionItemId);
+    setUpdateError(null);
+  };
 
-    // Optimistic update: immediately remove from UI
-    const itemToDelete = actionItems.find(item => item.actionItemId === actionItemId);
-    if (!itemToDelete) return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmItemId) return;
 
-    setActionItems((prevItems) => prevItems.filter(item => item.actionItemId !== actionItemId));
-    setUpdating(actionItemId);
+    setUpdating(deleteConfirmItemId);
     setUpdateError(null);
 
     try {
       await deleteActionItemMutation.mutateAsync({
         contactId,
-        actionItemId,
+        actionItemId: deleteConfirmItemId,
       });
 
       setUpdateError(null);
-      // React Query will automatically invalidate and refetch, or call callback
-      if (!initialActionItems) {
-        onActionItemUpdate?.();
-      }
+      setDeleteConfirmItemId(null);
+      onActionItemUpdate?.();
     } catch (error) {
-      // Revert optimistic update on error - restore the deleted item
-      setActionItems((prevItems) => [...prevItems, itemToDelete]);
-      
       reportException(error, {
         context: "Deleting action item",
-        tags: { component: "ActionItemsList", contactId, actionItemId },
+        tags: { component: "ActionItemsList", contactId },
       });
       setUpdateError(extractErrorMessage(error));
     } finally {
@@ -301,10 +167,7 @@ export default function ActionItemsList({
       });
 
       setUpdateError(null);
-      // React Query will automatically invalidate and refetch, or call callback
-      if (!initialActionItems) {
-        onActionItemUpdate?.();
-      }
+      onActionItemUpdate?.();
     } catch (error) {
       reportException(error, {
         context: "Updating action item",
@@ -326,7 +189,7 @@ export default function ActionItemsList({
     (i) => i.status === "completed"
   ).length;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-4">
         <p className="text-sm text-gray-500">Loading action items...</p>
@@ -334,19 +197,49 @@ export default function ActionItemsList({
     );
   }
 
-  if (quotaExceeded) {
-    return (
-      <div className="text-center py-4">
-        <ErrorMessage
-          message="Database quota exceeded. Action items cannot be loaded. Please wait a few hours or upgrade your plan."
-          dismissible={false}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
+    <>
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteConfirmItemId !== null}
+        onClose={() => {
+          if (!deleteActionItemMutation.isPending) {
+            setDeleteConfirmItemId(null);
+            setUpdateError(null);
+          }
+        }}
+        title="Delete Action Item"
+        closeOnBackdropClick={!deleteActionItemMutation.isPending}
+      >
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete this action item? This action cannot be undone.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button
+            onClick={() => {
+              setDeleteConfirmItemId(null);
+              setUpdateError(null);
+            }}
+            disabled={deleteActionItemMutation.isPending}
+            variant="secondary"
+            size="sm"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            disabled={deleteActionItemMutation.isPending}
+            loading={deleteActionItemMutation.isPending}
+            variant="danger"
+            size="sm"
+            error={updateError}
+          >
+            Delete
+          </Button>
+        </div>
+      </Modal>
+
+      <div className="space-y-4 min-w-0 overflow-hidden">
       {/* Header with filters */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -355,20 +248,20 @@ export default function ActionItemsList({
           </h3>
         </div>
         
-        {/* Filter tabs - segmented control style */}
-        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="tablist">
+        {/* Filter tabs - segmented control style with responsive design */}
+        <div className="flex flex-wrap gap-2" role="tablist">
           <button
             onClick={() => setFilterStatus("all")}
             role="tab"
             aria-selected={filterStatus === "all"}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+            className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 border ${
               filterStatus === "all"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-gray-900 shadow-sm border-gray-300"
+                : "text-gray-600 hover:text-gray-900 bg-gray-50 border-gray-200 hover:bg-gray-100"
             }`}
           >
             All
-            <span className={`ml-1.5 ${
+            <span className={`ml-1 ${
               filterStatus === "all" ? "text-gray-600" : "text-gray-400"
             }`}>
               ({actionItems.length})
@@ -378,14 +271,14 @@ export default function ActionItemsList({
             onClick={() => setFilterStatus("pending")}
             role="tab"
             aria-selected={filterStatus === "pending"}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+            className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 border ${
               filterStatus === "pending"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-gray-900 shadow-sm border-gray-300"
+                : "text-gray-600 hover:text-gray-900 bg-gray-50 border-gray-200 hover:bg-gray-100"
             }`}
           >
             Pending
-            <span className={`ml-1.5 ${
+            <span className={`ml-1 ${
               filterStatus === "pending" ? "text-gray-600" : "text-gray-400"
             }`}>
               ({pendingCount})
@@ -395,14 +288,14 @@ export default function ActionItemsList({
             onClick={() => setFilterStatus("completed")}
             role="tab"
             aria-selected={filterStatus === "completed"}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+            className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 border ${
               filterStatus === "completed"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-gray-900 shadow-sm border-gray-300"
+                : "text-gray-600 hover:text-gray-900 bg-gray-50 border-gray-200 hover:bg-gray-100"
             }`}
           >
             Completed
-            <span className={`ml-1.5 ${
+            <span className={`ml-1 ${
               filterStatus === "completed" ? "text-gray-600" : "text-gray-400"
             }`}>
               ({completedCount})
@@ -415,6 +308,8 @@ export default function ActionItemsList({
       {isAdding ? (
         <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
           <textarea
+            id="action-item-new-text"
+            name="action-item-new-text"
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             placeholder="Enter action item..."
@@ -497,7 +392,7 @@ export default function ActionItemsList({
             : `No ${filterStatus} action items`}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0 overflow-hidden">
           {filteredItems.map((item) => {
             // Pre-compute values if we have initialContact, otherwise let ActionItemCard compute
             const contactForUtils: Contact = initialContact || {
@@ -536,7 +431,7 @@ export default function ActionItemsList({
                 contactFirstName={contactFirstName}
                 contactLastName={contactLastName}
                 onComplete={() => handleComplete(item.actionItemId)}
-                onDelete={() => handleDelete(item.actionItemId)}
+                onDelete={() => handleDeleteClick(item.actionItemId)}
                 onEdit={(text, dueDate) =>
                   handleEdit(item.actionItemId, text, dueDate ?? null)
                 }
@@ -550,7 +445,8 @@ export default function ActionItemsList({
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -21,30 +21,14 @@ export default function DashboardPageClientWrapper({ userId }: { userId: string 
   // Only fallback to client auth if userId prop is empty (E2E mode)
   const effectiveUserId = userId || (!authLoading && user?.uid ? user.uid : "");
   
-  // Debug: Always log to diagnose the issue
-  console.log("[DashboardPageClientWrapper] RENDER - userId prop:", userId, "effectiveUserId:", effectiveUserId, "authLoading:", authLoading, "user:", user?.uid);
-  
-  const { data: contacts = [], isLoading: contactsLoading } = useContacts(effectiveUserId);
-  const { data: stats, isLoading: statsLoading, status: statsStatus } = useDashboardStats(effectiveUserId);
-  
-  // Debug: log hook status
-  console.log("[DashboardPageClientWrapper] HOOKS - statsStatus:", statsStatus, "statsLoading:", statsLoading, "hasStats:", !!stats, "hasContacts:", contacts.length, "effectiveUserId:", effectiveUserId);
+  const { data: contacts = [] } = useContacts(effectiveUserId);
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(effectiveUserId);
 
   // Show loading if we don't have userId yet OR if stats are loading
   // In production, this should only be true briefly during initial render
-  if (!effectiveUserId) {
-    console.log("[DashboardPageClientWrapper] RETURNING NULL - no effectiveUserId");
+  if (!effectiveUserId || (statsLoading && !stats)) {
     return null; // Suspense will handle loading
   }
-  
-  // If hooks are enabled but stats are loading, show loading
-  // But if we have prefetched data, it should be available immediately
-  if (statsLoading && !stats) {
-    console.log("[DashboardPageClientWrapper] RETURNING NULL - statsLoading:", statsLoading, "hasStats:", !!stats);
-    return null; // Suspense will handle loading
-  }
-  
-  console.log("[DashboardPageClientWrapper] RENDERING - effectiveUserId:", effectiveUserId, "hasStats:", !!stats, "hasContacts:", contacts.length);
 
   // Use consistent server time for all calculations
   const serverTime = new Date();
@@ -84,7 +68,6 @@ export default function DashboardPageClientWrapper({ userId }: { userId: string 
     .map((contact) => {
       const touchpointDate = getTouchpointDate(contact.nextTouchpointDate)!;
       const daysUntil = getDaysUntilTouchpoint(contact.nextTouchpointDate, serverTime) || 0;
-      const needsReminder = daysUntil <= 7 && daysUntil >= 0;
 
       return {
         ...contact,

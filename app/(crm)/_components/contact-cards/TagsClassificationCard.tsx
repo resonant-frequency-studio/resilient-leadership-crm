@@ -5,11 +5,12 @@ import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
+import InfoPopover from "@/components/InfoPopover";
 import SavingIndicator from "./SavingIndicator";
 import SegmentSelect from "../SegmentSelect";
 import { reportException } from "@/lib/error-reporting";
-import { Button } from "@/components/Button";
 import { Contact } from "@/types/firestore";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -19,33 +20,6 @@ interface TagsClassificationCardProps {
   uniqueSegments?: string[];
 }
 
-function InfoPopover({ content, children }: { content: string; children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="relative inline-block">
-      <Button
-        type="button"
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onClick={() => setIsOpen(!isOpen)}
-        variant="ghost"
-        size="sm"
-        className="inline-flex items-center justify-center w-4 h-4 p-0 text-gray-400 hover:text-gray-600"
-      >
-        {children}
-      </Button>
-      {isOpen && (
-        <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-white border border-gray-200 text-gray-900 text-[14px] rounded-lg shadow-xl z-50">
-          <p className="leading-relaxed lowercase">{content}</p>
-          <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-          <div className="absolute left-4 top-full -mt-px w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-200"></div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function TagsClassificationCard({
   contactId,
   userId,
@@ -53,6 +27,8 @@ export default function TagsClassificationCard({
 }: TagsClassificationCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `tags-classification-${contactId}`;
   
   const prevContactIdRef = useRef<Contact | null>(null);
   
@@ -61,6 +37,14 @@ export default function TagsClassificationCard({
   const [segment, setSegment] = useState<string | null>(null);
   const [leadSource, setLeadSource] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
   
   // Reset form state when contactId changes (different contact loaded)
   // Using contactId prop as dependency ensures we only update when switching contacts
@@ -135,7 +119,7 @@ export default function TagsClassificationCard({
 
   return (
     <Card padding="md">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <svg
             className="w-5 h-5 text-gray-400"
@@ -154,25 +138,14 @@ export default function TagsClassificationCard({
         </h2>
         <SavingIndicator status={saveStatus} />
       </div>
+      <p className="text-sm text-gray-600 mb-4">
+        Organize and categorize your contacts using tags, segments, and lead sources to better track relationships and tailor your communication strategies.
+      </p>
       <div className="space-y-4">
         <div>
           <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
             Tags
-            <InfoPopover content="Tags are labels you can assign to contacts to organize and categorize them. Use tags to group contacts by characteristics like industry, role, project, or any custom classification that helps you manage your relationships.">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </InfoPopover>
+            <InfoPopover content="Tags are labels you can assign to contacts to organize and categorize them. Use tags to group contacts by characteristics like industry, role, project, or any custom classification that helps you manage your relationships." />
           </label>
           <input
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
@@ -202,21 +175,7 @@ export default function TagsClassificationCard({
           <div>
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
               Segment
-              <InfoPopover content="A segment categorizes contacts into distinct groups based on shared characteristics such as company size, industry, customer type, or market segment. This helps you tailor your communication and sales strategies to different groups.">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </InfoPopover>
+              <InfoPopover content="A segment categorizes contacts into distinct groups based on shared characteristics such as company size, industry, customer type, or market segment. This helps you tailor your communication and sales strategies to different groups." />
             </label>
             <div onBlur={handleBlur}>
               <SegmentSelect
@@ -230,21 +189,7 @@ export default function TagsClassificationCard({
           <div>
             <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
               Lead Source
-              <InfoPopover content="The original source or channel where this contact was first acquired. This helps track which marketing channels or referral sources are most effective for your business.">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </InfoPopover>
+              <InfoPopover content="The original source or channel where this contact was first acquired. This helps track which marketing channels or referral sources are most effective for your business." />
             </label>
             <input
               type="text"

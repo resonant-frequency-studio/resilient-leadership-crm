@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useContact } from "@/hooks/useContact";
 import { useArchiveContact } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
 import { Button } from "@/components/Button";
-import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
+import { extractErrorMessage } from "@/components/ErrorMessage";
 import { reportException } from "@/lib/error-reporting";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 interface ArchiveContactCardProps {
   contactId: string;
   userId: string;
@@ -20,8 +22,40 @@ export default function ArchiveContactCard({
   const { data: contact } = useContact(userId, contactId);
   const archiveContactMutation = useArchiveContact(userId);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `archive-${contactId}`;
 
+  const prevContactIdRef = useRef<string | null>(null);
+  const [isArchived, setIsArchived] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+  
+  // Reset state ONLY when contactId changes (switching to a different contact)
+  // We don't update when updatedAt changes because that would reset our local state
+  // during optimistic updates and refetches. The local state is the source of truth
+  // until we switch to a different contact.
+  useEffect(() => {
+    if (!contact) return;
+    
+    // Only update if we're switching to a different contact
+    if (prevContactIdRef.current !== contact.contactId) {
+      prevContactIdRef.current = contact.contactId;
+      // Batch state updates to avoid cascading renders
+      setIsArchived(contact.archived === true);
+      setSaveStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.contactId]);
+  
   const archiveContact = (archived: boolean) => {
+    setIsArchived(archived);
     setArchiveError(null);
     archiveContactMutation.mutate(
       {
@@ -29,7 +63,10 @@ export default function ArchiveContactCard({
         archived,
       },
       {
-        onSuccess: () => {},
+        onSuccess: () => {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        },
         onError: (error) => {
           reportException(error, {
             context: "Archiving contact in ArchiveContactCard",
@@ -53,9 +90,7 @@ export default function ArchiveContactCard({
     <Card padding="md">
       <Button
         onClick={() => {
-          // Explicitly handle undefined as false (not archived)
-          const currentlyArchived = contact.archived === true;
-          archiveContact(!currentlyArchived);
+          archiveContact(!isArchived);
         }}
         disabled={archiveContactMutation.isPending}
         loading={archiveContactMutation.isPending}
@@ -63,7 +98,7 @@ export default function ArchiveContactCard({
         fullWidth
         error={archiveError}
         icon={
-          contact.archived === true ? (
+          isArchived ? (
             <svg
               className="w-4 h-4"
               fill="none"
@@ -95,15 +130,8 @@ export default function ArchiveContactCard({
         }
         className="mb-3"
       >
-        {contact.archived === true ? "Unarchive Contact" : "Archive Contact"}
+        {isArchived ? "Unarchive Contact" : "Archive Contact"}
       </Button>
-      {archiveError && (
-        <ErrorMessage
-          message={archiveError}
-          dismissible
-          onDismiss={() => setArchiveError(null)}
-        />
-      )}
     </Card>
   );
 }

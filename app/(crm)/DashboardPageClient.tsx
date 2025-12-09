@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import DashboardStatsCards from "./_components/DashboardStatsCards";
-import DashboardCharts from "./_components/DashboardCharts";
 import DashboardTouchpoints from "./_components/DashboardTouchpoints";
 import { DashboardStats } from "@/hooks/useDashboardStats";
 
@@ -27,8 +26,8 @@ export default function DashboardPageClient({ userId, initialStats }: DashboardP
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header Section - Static, renders immediately */}
+    <div className="space-y-6">
+      {/* Header Section */}
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
           Welcome back, {user?.displayName?.split(" ")[0] || "User"}!
@@ -38,14 +37,11 @@ export default function DashboardPageClient({ userId, initialStats }: DashboardP
         </p>
       </div>
 
-      {/* Stats Grid - Pass prefetched stats to avoid loading state */}
+      {/* Stats Grid */}
       <DashboardStatsCards userId={userId} initialStats={initialStats} />
 
-      {/* Touchpoints Section - Only dynamic data is suspended */}
+      {/* Touchpoints Section - Already uses Card internally */}
       <DashboardTouchpoints userId={userId} />
-
-      {/* Charts Section - Pass prefetched stats to avoid loading state */}
-      <DashboardCharts userId={userId} initialStats={initialStats} />
     </div>
   );
 }

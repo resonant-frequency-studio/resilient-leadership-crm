@@ -1,8 +1,8 @@
 "use client";
 
-import { Timestamp } from "firebase/firestore";
 import { useContact } from "@/hooks/useContact";
 import Card from "@/components/Card";
+import { formatContactDate } from "@/util/contact-utils";
 
 interface ActivityCardProps {
   contactId: string;
@@ -29,11 +29,7 @@ export default function ActivityCard({ contactId, userId }: ActivityCardProps) {
           <div>
             <p className="font-medium text-gray-900">Last updated</p>
             <p className="text-gray-500">
-              {contact.updatedAt instanceof Timestamp
-                ? contact.updatedAt.toDate().toLocaleString()
-                : contact.updatedAt
-                ? String(contact.updatedAt)
-                : "N/A"}
+              {formatContactDate(contact.updatedAt, { includeTime: true })}
             </p>
           </div>
         </div>
@@ -43,11 +39,7 @@ export default function ActivityCard({ contactId, userId }: ActivityCardProps) {
             <div>
               <p className="font-medium text-gray-900">Created</p>
               <p className="text-gray-500">
-                {contact.createdAt instanceof Timestamp
-                  ? contact.createdAt.toDate().toLocaleString()
-                  : typeof contact.createdAt === "string"
-                  ? contact.createdAt
-                  : "N/A"}
+                {formatContactDate(contact.createdAt, { includeTime: true })}
               </p>
             </div>
           </div>

@@ -8,6 +8,7 @@ import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -19,12 +20,22 @@ interface NotesCardProps {
 export default function NotesCard({ contactId, userId }: NotesCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `notes-${contactId}`;
   
   const prevContactIdRef = useRef<Contact | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [notes, setNotes] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
   
   // Reset form state when contactId changes (different contact loaded)
   // Using contactId prop as dependency ensures we only update when switching contacts
@@ -111,6 +122,8 @@ export default function NotesCard({ contactId, userId }: NotesCardProps) {
         <SavingIndicator status={saveStatus} />
       </div>
       <textarea
+        id="contact-notes"
+        name="contact-notes"
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
         rows={6}
         value={notes}

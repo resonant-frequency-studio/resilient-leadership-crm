@@ -1,51 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import { useContact } from "@/hooks/useContact";
 import Card from "@/components/Card";
-import ActionItemsList from "../ActionItemsList";
+import InfoPopover from "@/components/InfoPopover";
 import { formatContactDate } from "@/util/contact-utils";
-import { Button } from "@/components/Button";
-import type { ActionItem, Contact } from "@/types/firestore";
+import type { Contact } from "@/types/firestore";
 
 interface ContactInsightsCardProps {
   contactId: string;
   userId: string;
-  initialActionItems?: ActionItem[];
   initialContact?: Contact;
-}
-
-function InfoPopover({ content, children }: { content: string; children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="relative inline-block">
-      <Button
-        type="button"
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onClick={() => setIsOpen(!isOpen)}
-        variant="ghost"
-        size="sm"
-        className="inline-flex items-center justify-center w-4 h-4 p-0 text-gray-400 hover:text-gray-600"
-      >
-        {children}
-      </Button>
-      {isOpen && (
-        <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-white border border-gray-200 text-gray-900 text-[14px] rounded-lg shadow-xl z-50">
-          <p className="leading-relaxed lowercase">{content}</p>
-          <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
-          <div className="absolute left-4 top-full -mt-px w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-200"></div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ContactInsightsCard({
   contactId,
   userId,
-  initialActionItems,
   initialContact,
 }: ContactInsightsCardProps) {
   const { data: contact } = useContact(userId, contactId);
@@ -63,17 +32,34 @@ export default function ContactInsightsCard({
     <Card padding="md">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Contact Insights</h2>
       <div className="space-y-6">
-        {/* Quick Info Section */}
+        {/* AI Summary Section */}
         {displayContact.summary && (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-              AI Summary
-            </label>
-            <div className="px-3 py-2 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
-              {displayContact.summary}
+          <div className="border-l-4 border-indigo-500 pl-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg
+                className="w-4 h-4 text-indigo-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                AI Summary
+              </h3>
             </div>
+            <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+              {displayContact.summary}
+            </p>
           </div>
         )}
+
+        {/* Engagement Score Section */}
         {(() => {
           const engagementScore = Number(displayContact.engagementScore);
           const isValidScore =
@@ -81,57 +67,10 @@ export default function ContactInsightsCard({
             engagementScore !== null &&
             engagementScore !== undefined;
           return isValidScore ? (
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                Engagement Score
-                <InfoPopover content="A numerical score (0-100) that measures how actively engaged this contact is with your communications. Higher scores indicate more frequent interactions, email opens, responses, and overall engagement with your content.">
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </InfoPopover>
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full"
-                    style={{ width: `${Math.min(engagementScore, 100)}%` }}
-                  ></div>
-                </div>
-                <span className="text-sm font-medium text-gray-900">
-                  {Math.round(engagementScore)}
-                </span>
-              </div>
-            </div>
-          ) : null;
-        })()}
-        {displayContact.threadCount && displayContact.threadCount > 0 && (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-              Email Threads
-            </label>
-            <p className="text-sm font-medium text-gray-900">
-              {displayContact.threadCount}
-            </p>
-          </div>
-        )}
-
-        {/* Insights Section */}
-        {displayContact.lastEmailDate != null && (
-          <div className="border-t border-gray-200 pt-6">
-            <div className="border-l-4 border-blue-500 pl-4">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="border-l-4 border-teal-500 pl-4">
+              <div className="flex items-center gap-2 mb-2">
                 <svg
-                  className="w-4 h-4 text-blue-600"
+                  className="w-4 h-4 text-teal-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -140,20 +79,110 @@ export default function ContactInsightsCard({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                   />
                 </svg>
                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Last Email Date
+                  Engagement Score
                 </h3>
+                <InfoPopover content="A numerical score (0-100) that measures how actively engaged this contact is with your communications. Higher scores indicate more frequent interactions, email opens, responses, and overall engagement with your content." />
               </div>
-              <p className="text-sm font-semibold text-gray-900">
-                {formatContactDate(displayContact.lastEmailDate, { relative: true })}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {formatContactDate(displayContact.lastEmailDate, { includeTime: true })}
-              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-teal-600 h-2 rounded-full"
+                    style={{ width: `${Math.min(engagementScore, 100)}%` }}
+                  ></div>
+                </div>
+                <span className="text-sm font-semibold text-gray-900">
+                  {Math.round(engagementScore)}
+                </span>
+              </div>
             </div>
+          ) : null;
+        })()}
+
+        {/* Email Threads Section */}
+        {displayContact.threadCount && displayContact.threadCount > 0 && (
+          <div className="border-l-4 border-cyan-500 pl-4">
+            <div className="flex items-center gap-2 mb-1">
+              <svg
+                className="w-4 h-4 text-cyan-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Email Threads
+              </h3>
+            </div>
+            <p className="text-sm font-semibold text-gray-900">
+              {displayContact.threadCount}
+            </p>
+          </div>
+        )}
+
+        {/* Last Email Date Section */}
+        {displayContact.lastEmailDate != null && (
+          <div className="border-l-4 border-blue-500 pl-4">
+            <div className="flex items-center gap-2 mb-1">
+              <svg
+                className="w-4 h-4 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Last Email Date
+              </h3>
+            </div>
+            <p className="text-sm font-semibold text-gray-900">
+              {formatContactDate(displayContact.lastEmailDate, { relative: true })}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {formatContactDate(displayContact.lastEmailDate, { includeTime: true })}
+            </p>
+          </div>
+        )}
+
+        {/* Pain Points Section */}
+        {displayContact.painPoints && (
+          <div className="border-l-4 border-red-500 pl-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg
+                className="w-4 h-4 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Pain Points
+              </h3>
+            </div>
+            <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+              {displayContact.painPoints}
+            </p>
           </div>
         )}
 
@@ -188,71 +217,6 @@ export default function ContactInsightsCard({
             >
               {displayContact.sentiment}
             </span>
-          </div>
-        )}
-
-        {/* Action Items Section */}
-        <div className="border-l-4 border-amber-500 pl-4">
-          <div className="flex items-center gap-2 mb-3">
-            <svg
-              className="w-4 h-4 text-amber-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              Action Items
-            </h3>
-          </div>
-          <ActionItemsList
-            userId={userId}
-            contactId={contactId}
-            contactName={
-              displayContact.firstName || displayContact.lastName
-                ? `${displayContact.firstName || ""} ${displayContact.lastName || ""}`.trim()
-                : displayContact.primaryEmail.split("@")[0]
-            }
-            contactEmail={displayContact.primaryEmail}
-            contactFirstName={displayContact.firstName || undefined}
-            contactLastName={displayContact.lastName || undefined}
-            onActionItemUpdate={() => {
-              // Trigger a refresh if needed
-            }}
-            initialActionItems={initialActionItems}
-            initialContact={displayContact}
-          />
-        </div>
-
-        {displayContact.painPoints && (
-          <div className="border-l-4 border-red-500 pl-4">
-            <div className="flex items-center gap-2 mb-2">
-              <svg
-                className="w-4 h-4 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Pain Points
-              </h3>
-            </div>
-            <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
-              {displayContact.painPoints}
-            </p>
           </div>
         )}
       </div>

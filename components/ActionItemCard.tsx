@@ -265,9 +265,9 @@ export default function ActionItemCard({
 
             {/* Action Item Content */}
             <div className={compact ? "" : "ml-0 lg:ml-12"}>
-              <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
                 <p
-                  className={`text-sm font-medium flex-1 ${
+                  className={`text-sm font-medium flex-1 min-w-0 break-words ${
                     actionItem.status === "completed"
                       ? "text-gray-500 line-through"
                       : "text-gray-900"

@@ -223,6 +223,8 @@ export default function NewContactPage() {
               Notes
             </h2>
             <textarea
+              id="new-contact-notes"
+              name="new-contact-notes"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
               rows={6}
               value={form.notes || ""}
@@ -266,6 +268,8 @@ export default function NewContactPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
                 <textarea
+                  id="new-contact-next-touchpoint-message"
+                  name="new-contact-next-touchpoint-message"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
                   rows={4}
                   value={form.nextTouchpointMessage || ""}

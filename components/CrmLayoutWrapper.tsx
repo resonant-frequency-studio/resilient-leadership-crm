@@ -7,15 +7,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import HamburgerMenu from "@/components/HamburgerMenu";
-import Loading from "@/components/Loading";
 import { Button } from "@/components/Button";
 import { appConfig } from "@/lib/app-config";
 import { reportException } from "@/lib/error-reporting";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isSaving } = useSavingState();
   const isLoginPage = pathname === "/login";
   const showUserElements = user && !loading;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -161,8 +162,25 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const handleLinkClick = () => {
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isSaving) {
+      e.preventDefault();
+      return;
+    }
     setIsMobileMenuOpen(false);
+  };
+  
+  // Helper to get link classes with disabled state styling
+  const getLinkClasses = (isActive: boolean, isSaving: boolean) => {
+    const baseClasses = "flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium";
+    if (isSaving) {
+      // Darker gray when saving - gray-600 on mobile (darker than normal gray-700), gray-500 on desktop (darker than normal gray-300)
+      return `${baseClasses} text-gray-600 lg:text-gray-500 cursor-not-allowed pointer-events-none`;
+    }
+    if (isActive) {
+      return `${baseClasses} bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white`;
+    }
+    return `${baseClasses} text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white`;
   };
 
   return (
@@ -191,11 +209,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
             <Link
               href="/"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"
@@ -217,11 +231,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
             <Link
               href="/contacts"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/contacts") && !pathname?.startsWith("/contacts/import")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/contacts") && !pathname?.startsWith("/contacts/import"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"
@@ -243,11 +253,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
             <Link
               href="/contacts/import"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/contacts/import")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/contacts/import"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"
@@ -269,11 +275,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
             <Link
               href="/action-items"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/action-items")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/action-items"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"
@@ -293,13 +295,31 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
           </li>
           <li>
             <Link
+              href="/charts"
+              onClick={handleLinkClick}
+              className={getLinkClasses(isActive("/charts"), isSaving)}
+            >
+              <svg
+                className="w-5 h-5 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              Charts
+            </Link>
+          </li>
+          <li>
+            <Link
               href="/sync"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/sync")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/sync"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"
@@ -321,11 +341,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
             <Link
               href="/faq"
               onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium ${
-                isActive("/faq")
-                  ? "bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white"
-                  : "text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white"
-              }`}
+              className={getLinkClasses(isActive("/faq"), isSaving)}
             >
               <svg
                 className="w-5 h-5 mr-3"

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useContact } from "@/hooks/useContact";
-import { useUpdateContactDraft } from "@/hooks/useContactMutations";
+import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import Modal from "@/components/Modal";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -23,7 +24,9 @@ export default function OutreachDraftCard({
   userId,
 }: OutreachDraftCardProps) {
   const { data: contact } = useContact(userId, contactId);
-  const draftMutation = useUpdateContactDraft(userId);
+  const updateMutation = useUpdateContact(userId);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `outreach-draft-${contactId}`;
   
   const prevContactIdRef = useRef<Contact | null>(null);
   
@@ -31,6 +34,14 @@ export default function OutreachDraftCard({
   const [localDraft, setLocalDraft] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [modalContent, setModalContent] = useState<"no-email" | "no-draft" | null>(null);
+  
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
   
   // Reset form state when contactId changes (different contact loaded)
   // Using contactId prop as dependency ensures we only update when switching contacts
@@ -55,10 +66,10 @@ export default function OutreachDraftCard({
     if (!hasUnsavedChanges || !contact) return;
 
     setSaveStatus("saving");
-    draftMutation.mutate(
+    updateMutation.mutate(
       {
         contactId,
-        outreachDraft: localDraft || null,
+        updates: { outreachDraft: localDraft || null },
       },
       {
         onSuccess: () => {
@@ -99,10 +110,10 @@ export default function OutreachDraftCard({
     // Auto-save the draft before opening Gmail (if there are unsaved changes)
     if (hasUnsavedChanges) {
       setSaveStatus("saving");
-      draftMutation.mutate(
+      updateMutation.mutate(
         {
           contactId,
-          outreachDraft: localDraft || null,
+          updates: { outreachDraft: localDraft || null },
         },
         {
           onSuccess: () => {
@@ -174,7 +185,7 @@ export default function OutreachDraftCard({
       </Modal>
 
       <Card padding="md">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <svg
             className="w-5 h-5 text-gray-400"
@@ -220,6 +231,9 @@ export default function OutreachDraftCard({
           )}
         </div>
       </div>
+      <p className="text-sm text-gray-600 mb-4">
+        Draft and refine your email messages before sending. Your draft is automatically saved and can be opened directly in Gmail when ready to send.
+      </p>
       <textarea
         id="outreach-draft"
         name="outreach-draft"

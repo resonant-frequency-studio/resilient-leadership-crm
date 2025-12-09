@@ -3,8 +3,6 @@ import { ActionItem } from "@/types/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
 import { convertTimestamp } from "@/util/timestamp-utils-server";
-import { unstable_cache } from "next/cache";
-import { isTestMode } from "@/util/test-utils";
 
 /**
  * Get action items path for a contact
@@ -93,28 +91,16 @@ async function getActionItemsForContactUncached(
 }
 
 /**
- * Get all action items for a contact (cached)
+ * Get all action items for a contact
  * 
  * NOTE: This function makes Firestore reads. Use sparingly to avoid quota exhaustion.
- * Consider caching results or using real-time listeners for frequently accessed data.
+ * Cache removed to ensure React Query works properly with real-time updates.
  */
 export async function getActionItemsForContact(
   userId: string,
   contactId: string
 ): Promise<ActionItem[]> {
-  // In test mode, bypass cache to avoid stale data issues
-  if (isTestMode()) {
-    return getActionItemsForContactUncached(userId, contactId);
-  }
-
-  return unstable_cache(
-    async () => getActionItemsForContactUncached(userId, contactId),
-    [`action-items-${userId}-${contactId}`],
-    {
-      tags: [`action-items`, `action-items-${userId}`, `action-items-${userId}-${contactId}`],
-      revalidate: 300, // 5 minutes
-    }
-  )();
+  return getActionItemsForContactUncached(userId, contactId);
 }
 
 /**
@@ -174,21 +160,15 @@ async function getAllActionItemsForUserUncached(
 }
 
 /**
- * Get all action items for a user (across all contacts) (cached)
+ * Get all action items for a user (across all contacts)
  * OPTIMIZED: Uses parallel queries without delays for better performance
  * Returns action items with contactId included and timestamps converted to ISO strings
+ * Cache removed to ensure React Query works properly with real-time updates.
  */
 export async function getAllActionItemsForUser(
   userId: string
 ): Promise<Array<ActionItem & { contactId: string }>> {
-  return unstable_cache(
-    async () => getAllActionItemsForUserUncached(userId),
-    [`action-items-all-${userId}`],
-    {
-      tags: [`action-items`, `action-items-${userId}`],
-      revalidate: 300, // 5 minutes
-    }
-  )();
+  return getAllActionItemsForUserUncached(userId);
 }
 
 /**

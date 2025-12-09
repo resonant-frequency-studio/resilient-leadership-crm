@@ -8,6 +8,7 @@ import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -19,6 +20,8 @@ interface BasicInfoCardProps {
 export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `basic-info-${contactId}`;
   
   const prevContactIdRef = useRef<Contact | null>(null);
   
@@ -26,6 +29,14 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
   
 //   Reset form state when contactId changes (different contact loaded)
 //   Using contactId prop as dependency ensures we only update when switching contacts

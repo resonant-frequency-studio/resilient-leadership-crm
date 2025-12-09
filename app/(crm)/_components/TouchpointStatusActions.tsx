@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect, useRef } from "react";
 import { Contact } from "@/types/firestore";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/Button";
@@ -36,7 +36,10 @@ export default function TouchpointStatusActions({
   // Read contact directly from React Query cache for optimistic updates
   // Fall back to prop if contact isn't in cache (e.g., in ContactCard list view)
   const { data: contact } = useContact(effectiveUserId, contactId);
-  const currentStatus = contact?.touchpointStatus ?? fallbackStatus;
+  const prevContactIdRef = useRef<string | null>(null);
+  const [currentStatus, setCurrentStatus] = useState<Contact["touchpointStatus"]>(
+    contact?.touchpointStatus ?? fallbackStatus ?? null
+  );
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [reason, setReason] = useState("");
@@ -44,8 +47,26 @@ export default function TouchpointStatusActions({
 
   const mutation = useUpdateTouchpointStatus(effectiveUserId);
 
+  // Reset state ONLY when contactId changes (switching to a different contact)
+  // We don't update when updatedAt changes because that would reset our local state
+  // during optimistic updates and refetches. The local state is the source of truth
+  // until we switch to a different contact.
+  useEffect(() => {
+    if (!contact && !fallbackStatus) return;
+    
+    // Only update if we're switching to a different contact
+    if (prevContactIdRef.current !== contactId) {
+      prevContactIdRef.current = contactId;
+      const statusToUse = contact?.touchpointStatus ?? fallbackStatus ?? null;
+      // Batch state updates to avoid cascading renders
+      setCurrentStatus(statusToUse);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactId, fallbackStatus]);
+
   const handleUpdateStatus = async (status: "completed" | "cancelled" | null, reason?: string) => {
     setError(null);
+    setCurrentStatus(status);
     mutation.mutate(
       {
         contactId,

@@ -6,7 +6,7 @@ import { reportException } from "@/lib/error-reporting";
 /**
  * Mutation hook to create an action item
  */
-export function useCreateActionItem(userId?: string) {
+export function useCreateActionItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -33,8 +33,9 @@ export function useCreateActionItem(userId?: string) {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate by prefixes → guarantees matching all screen variations
-      queryClient.invalidateQueries({ queryKey: ["action-items"] });
+      // Invalidate and refetch all action items queries (both specific contact and all items)
+      queryClient.invalidateQueries({ queryKey: ["action-items"], exact: false });
+      queryClient.refetchQueries({ queryKey: ["action-items"], exact: false });
     },
     onError: (error) => {
       reportException(error, {
@@ -48,7 +49,7 @@ export function useCreateActionItem(userId?: string) {
 /**
  * Mutation hook to update an action item
  */
-export function useUpdateActionItem(userId?: string) {
+export function useUpdateActionItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -83,8 +84,9 @@ export function useUpdateActionItem(userId?: string) {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate by prefixes → guarantees matching all screen variations
-      queryClient.invalidateQueries({ queryKey: ["action-items"] });
+      // Invalidate and refetch all action items queries (both specific contact and all items)
+      queryClient.invalidateQueries({ queryKey: ["action-items"], exact: false });
+      queryClient.refetchQueries({ queryKey: ["action-items"], exact: false });
     },
     onError: (error) => {
       reportException(error, {
@@ -98,7 +100,7 @@ export function useUpdateActionItem(userId?: string) {
 /**
  * Mutation hook to delete an action item
  */
-export function useDeleteActionItem(userId?: string) {
+export function useDeleteActionItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -125,8 +127,9 @@ export function useDeleteActionItem(userId?: string) {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate by prefixes → guarantees matching all screen variations
-      queryClient.invalidateQueries({ queryKey: ["action-items"] });
+      // Invalidate and refetch all action items queries (both specific contact and all items)
+      queryClient.invalidateQueries({ queryKey: ["action-items"], exact: false });
+      queryClient.refetchQueries({ queryKey: ["action-items"], exact: false });
     },
     onError: (error) => {
       reportException(error, {

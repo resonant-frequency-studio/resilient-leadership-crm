@@ -10,7 +10,7 @@ import SavingIndicator from "./SavingIndicator";
 import TouchpointStatusActions from "../TouchpointStatusActions";
 import { formatContactDate } from "@/util/contact-utils";
 import { reportException } from "@/lib/error-reporting";
-import { Contact } from "@/types/firestore";
+import { useSavingState } from "@/contexts/SavingStateContext";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -25,20 +25,34 @@ export default function NextTouchpointCard({
 }: NextTouchpointCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
+  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const cardId = `next-touchpoint-${contactId}`;
   
-  const prevContactIdRef = useRef<Contact | null>(null);
+  const prevContactIdRef = useRef<string | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [nextTouchpointDate, setNextTouchpointDate] = useState<string>("");
   const [nextTouchpointMessage, setNextTouchpointMessage] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   
-  // Reset form state when contactId changes (different contact loaded)
-  // Using contactId prop as dependency ensures we only update when switching contacts
+  // Register/unregister save status with context
+  useEffect(() => {
+    registerSaveStatus(cardId, saveStatus);
+    return () => {
+      unregisterSaveStatus(cardId);
+    };
+  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+  
+  // Reset form state ONLY when contactId changes (switching to a different contact)
+  // We don't update when updatedAt changes because that would reset our local state
+  // during optimistic updates and refetches. The local state is the source of truth
+  // until we switch to a different contact.
   useEffect(() => {
     if (!contact) return;
-    if (prevContactIdRef.current !== contact) {
-      prevContactIdRef.current = contact;
+    
+    // Only update if we're switching to a different contact
+    if (prevContactIdRef.current !== contact.contactId) {
+      prevContactIdRef.current = contact.contactId;
       // Batch state updates to avoid cascading renders
       const dateValue =
         contact.nextTouchpointDate instanceof Timestamp
@@ -51,7 +65,7 @@ export default function NextTouchpointCard({
       setSaveStatus("idle");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId, contact?.updatedAt]);
+  }, [contact?.contactId]);
 
   // Track changes using useMemo instead of useEffect
   const hasUnsavedChanges = useMemo(() => {
@@ -115,7 +129,7 @@ export default function NextTouchpointCard({
 
   return (
     <Card padding="md">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <svg
             className="w-5 h-5 text-gray-400"
@@ -134,6 +148,9 @@ export default function NextTouchpointCard({
         </h2>
         <SavingIndicator status={saveStatus} />
       </div>
+      <p className="text-sm text-gray-600 mb-4">
+        Schedule and plan your next interaction with this contact. Set a date and add notes about what to discuss to maintain consistent, meaningful engagement.
+      </p>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -159,6 +176,8 @@ export default function NextTouchpointCard({
             Message
           </label>
           <textarea
+            id="next-touchpoint-message"
+            name="next-touchpoint-message"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
             rows={3}
             value={nextTouchpointMessage}
