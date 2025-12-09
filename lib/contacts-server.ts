@@ -106,15 +106,15 @@ export async function getContactForUser(
     [`contact-${userId}-${contactId}`],
     {
       tags: [`contacts`, `contacts-${userId}`, `contact-${userId}-${contactId}`],
-      revalidate: 300, // 5 minutes
     }
   )();
 }
 
 /**
- * Internal function to fetch all contacts (uncached)
+ * Fetch all contacts for a user (uncached - always fetches fresh from Firestore)
+ * Exported for API routes that need to bypass Next.js cache
  */
-async function getAllContactsForUserUncached(
+export async function getAllContactsForUserUncached(
   userId: string
 ): Promise<Contact[]> {
   try {
@@ -172,7 +172,6 @@ export async function getAllContactsForUser(
     [`contacts-${userId}`],
     {
       tags: [`contacts`, `contacts-${userId}`],
-      revalidate: 300, // 5 minutes
     }
   )();
 }
@@ -260,7 +259,6 @@ export async function getUniqueSegmentsForUser(
     [`segments-${userId}`],
     {
       tags: [`contacts`, `contacts-${userId}`],
-      revalidate: 300, // 5 minutes
     }
   )();
 }

@@ -7,7 +7,7 @@ import { Contact } from "@/types/firestore";
 /**
  * Mutation hook to create a new contact
  */
-export function useCreateContact(userId?: string) {
+export function useCreateContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -42,9 +42,23 @@ export function useCreateContact(userId?: string) {
 
 /**
  * Mutation hook to update a contact
+ * 
+ * 🔧 HARDENED VERSION:
+ * - Updates ALL contacts lists regardless of cache key shape
+ * - Handles contactId vs id vs _id mismatches
+ * - Works even if userId is not provided
  */
 export function useUpdateContact(userId?: string) {
   const queryClient = useQueryClient();
+
+  // Defensive contact matcher - handles contactId, id, or _id fields
+  const isSameContact = (c: Contact, contactId: string): boolean => {
+    return (
+      c.contactId === contactId ||
+      (c as Contact & { id?: string; _id?: string }).id === contactId ||
+      (c as Contact & { id?: string; _id?: string })._id === contactId
+    );
+  };
 
   return useMutation({
     mutationFn: async ({
@@ -65,15 +79,89 @@ export function useUpdateContact(userId?: string) {
         throw new Error(errorData.error || "Failed to update contact");
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.contact as Contact; // API now returns { contact: Contact }
     },
-    onSuccess: () => {
-      // Invalidate by prefixes → guarantees matching all screen variations
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    /**
+     * OPTIMISTIC UPDATE
+     * Immediately update both detail and ALL list caches so UI feels instant
+     */
+    onMutate: async ({ contactId, updates }: { contactId: string; updates: Partial<Contact> }) => {
+      // Cancel all related queries
+      await queryClient.cancelQueries({ queryKey: ["contact"], exact: false });
+      await queryClient.cancelQueries({ queryKey: ["contacts"], exact: false });
+
+      // Snapshot previous detail state (for this specific user+contact, if such a query exists)
+      const prevDetail = userId
+        ? queryClient.getQueryData<Contact>(["contact", userId, contactId])
+        : undefined;
+
+      // Snapshot ALL contacts lists (regardless of key shape)
+      const prevLists: Record<string, Contact[]> = {};
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ["contacts"], exact: false })
+        .forEach((q) => {
+          const key = JSON.stringify(q.queryKey);
+          const data = q.state.data as Contact[] | undefined;
+          if (data) prevLists[key] = data;
+        });
+
+      // Optimistically update detail (if userId provided)
+      if (userId) {
+        queryClient.setQueryData<Contact>(["contact", userId, contactId], (old) =>
+          old ? { ...old, ...updates } : old
+        );
+      }
+
+      // Optimistically update ALL contacts lists (regardless of key shape)
+      queryClient.setQueriesData<Contact[]>({ queryKey: ["contacts"], exact: false }, (old) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((c) => (isSameContact(c, contactId) ? { ...c, ...updates } : c));
+      });
+
+      return { prevDetail, prevLists };
     },
-    onError: (error) => {
+    /**
+     * SUCCESS — update detail only & delay list invalidation
+     * Firestore eventual consistency means list queries might not see the update immediately
+     * So we invalidate after a delay to let Firestore propagate the change
+     */
+    onSuccess: (updatedContact, variables) => {
+      const { contactId } = variables;
+
+      // Update detail cache with actual server result
+      if (userId) {
+        queryClient.setQueryData<Contact>(
+          ["contact", userId, contactId],
+          updatedContact
+        );
+      }
+
+      
+      queryClient.invalidateQueries({ queryKey: ["contacts"], exact: false });
+      // Invalidate dashboard stats to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"], exact: false });
+    },
+    /**
+     * Roll back if error
+     */
+    onError: (error, variables, context) => {
+      // Restore detail (if userId provided)
+      if (userId && context?.prevDetail) {
+        queryClient.setQueryData(
+          ["contact", userId, variables.contactId],
+          context.prevDetail
+        );
+      }
+
+      // Restore ALL contacts lists
+      if (context?.prevLists) {
+        for (const [key, data] of Object.entries(context.prevLists)) {
+          queryClient.setQueryData(JSON.parse(key), data);
+        }
+      }
+
       reportException(error, {
         context: "Updating contact",
         tags: { component: "useUpdateContact" },
@@ -84,9 +172,23 @@ export function useUpdateContact(userId?: string) {
 
 /**
  * Mutation hook to update contact outreach draft
+ * 
+ * 🔧 HARDENED VERSION:
+ * - Updates ALL contacts lists regardless of cache key shape
+ * - Handles contactId vs id vs _id mismatches
+ * - Works even if userId is not provided
  */
 export function useUpdateContactDraft(userId?: string) {
   const queryClient = useQueryClient();
+
+  // Defensive contact matcher - handles contactId, id, or _id fields
+  const isSameContact = (c: Contact, contactId: string): boolean => {
+    return (
+      c.contactId === contactId ||
+      (c as Contact & { id?: string; _id?: string }).id === contactId ||
+      (c as Contact & { id?: string; _id?: string })._id === contactId
+    );
+  };
 
   return useMutation({
     mutationFn: async ({
@@ -107,19 +209,102 @@ export function useUpdateContactDraft(userId?: string) {
         throw new Error(errorData.error || "Failed to update outreach draft");
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.contact as Contact; // API now returns { contact: Contact }
     },
-    onSuccess: () => {
-      // Invalidate by prefixes → guarantees matching all screen variations
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    /**
+     * OPTIMISTIC UPDATE
+     * Immediately update both detail and ALL list caches so UI feels instant
+     */
+    onMutate: async ({ contactId, outreachDraft }: { contactId: string; outreachDraft: string | null }) => {
+      // Cancel all related queries
+      await queryClient.cancelQueries({ queryKey: ["contact"], exact: false });
+      await queryClient.cancelQueries({ queryKey: ["contacts"], exact: false });
+
+      // Snapshot previous detail state (for this specific user+contact, if such a query exists)
+      const prevDetail = userId
+        ? queryClient.getQueryData<Contact>(["contact", userId, contactId])
+        : undefined;
+
+      // Snapshot ALL contacts lists (regardless of key shape)
+      const prevLists: Record<string, Contact[]> = {};
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ["contacts"], exact: false })
+        .forEach((q) => {
+          const key = JSON.stringify(q.queryKey);
+          const data = q.state.data as Contact[] | undefined;
+          if (data) prevLists[key] = data;
+        });
+
+      // Optimistically update detail (if userId provided)
+      if (userId) {
+        queryClient.setQueryData<Contact>(["contact", userId, contactId], (old) =>
+          old ? { ...old, outreachDraft } : old
+        );
+      }
+
+      // Optimistically update ALL contacts lists (regardless of key shape)
+      queryClient.setQueriesData<Contact[]>({ queryKey: ["contacts"], exact: false }, (old) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((c) => (isSameContact(c, contactId) ? { ...c, outreachDraft } : c));
+      });
+
+      return { prevDetail, prevLists };
     },
-    onError: (error) => {
+    /**
+     * Update cache with server response on success
+     */
+    onSuccess: (updatedContact, variables) => {
+      const { contactId } = variables;
+
+      // Update detail cache with server response (if userId provided)
+      if (userId) {
+        queryClient.setQueryData<Contact>(
+          ["contact", userId, contactId],
+          updatedContact
+        );
+      }
+
+      // Update ALL contacts lists with server response (regardless of key shape)
+      queryClient.setQueriesData<Contact[]>({ queryKey: ["contacts"], exact: false }, (old) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((c) =>
+          isSameContact(c, contactId) ? updatedContact : c
+        );
+      });
+    },
+    /**
+     * Roll back if error
+     */
+    onError: (error, variables, context) => {
+      // Restore detail (if userId provided)
+      if (userId && context?.prevDetail) {
+        queryClient.setQueryData(
+          ["contact", userId, variables.contactId],
+          context.prevDetail
+        );
+      }
+
+      // Restore ALL contacts lists
+      if (context?.prevLists) {
+        for (const [key, data] of Object.entries(context.prevLists)) {
+          queryClient.setQueryData(JSON.parse(key), data);
+        }
+      }
+
       reportException(error, {
         context: "Updating outreach draft",
         tags: { component: "useUpdateContactDraft" },
       });
+    },
+    /**
+     * Invalidate after success to ensure server consistency
+     */
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["contact"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"], exact: false });
     },
   });
 }
@@ -127,7 +312,7 @@ export function useUpdateContactDraft(userId?: string) {
 /**
  * Mutation hook to delete a contact
  */
-export function useDeleteContact(userId?: string) {
+export function useDeleteContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -166,7 +351,13 @@ export function useArchiveContact(userId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ contactId, archived }: { contactId: string; archived: boolean }) => {
+    mutationFn: async ({
+      contactId,
+      archived,
+    }: {
+      contactId: string;
+      archived: boolean;
+    }) => {
       const response = await fetch(`/api/contacts/${encodeURIComponent(contactId)}/archive`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -180,66 +371,55 @@ export function useArchiveContact(userId?: string) {
 
       return response.json();
     },
-
     /**
      * OPTIMISTIC UPDATE
+     * Immediately update the cache so UI feels instant
      */
-    onMutate: async ({ contactId, archived }) => {
-      // Cancel ALL queries that could overwrite optimistic state
-      await queryClient.cancelQueries({ queryKey: ["contact"], exact: false });
-      await queryClient.cancelQueries({ queryKey: ["contacts"], exact: false });
+    onMutate: async ({ contactId, archived }: { contactId: string; archived: boolean }) => {
+      if (!userId) return;
 
-      // Snapshot previous values
-      const prevDetail = queryClient.getQueryData<Contact>(["contact", userId, contactId]);
-      const prevList = queryClient.getQueryData<Contact[]>(["contacts", userId]);
+        await queryClient.cancelQueries({ queryKey: ["contact"] });
+        await queryClient.cancelQueries({ queryKey: ["contacts"] });
 
-      // Optimistically update ALL contact detail queries
-      queryClient.setQueriesData<Contact>(["contact"], (old) => {
-        if (!old) return old;
-        if (old.contactId !== contactId) return old;
+      // Snapshot previous value for rollback
+      const prev = queryClient.getQueryData<Contact>(["contact", userId, contactId]);
+
+      // Update cache immediately - UI updates instantly
+        queryClient.setQueryData<Contact>(["contact", userId, contactId], (old) => {
+          if (!old) return old;
         return { ...old, archived };
-      });
+        });
 
-      // Optimistically update ALL contact list queries
-      queryClient.setQueriesData<Contact[]>(["contacts"], (old) => {
-        if (!Array.isArray(old)) return old;
+        // Also update in contacts list
+        queryClient.setQueryData<Contact[]>(["contacts", userId], (old) => {
+          if (!old) return old;
         return old.map((c) =>
           c.contactId === contactId ? { ...c, archived } : c
-        );
-      });
+          );
+        });
 
-      return { prevDetail, prevList };
+      return { prev };
     },
-
     /**
-     * ROLLBACK ON ERROR
+     * Roll back if error
      */
-    onError: (error, _vars, ctx) => {
-      if (ctx?.prevDetail) {
-        queryClient.setQueryData(["contact", userId, _vars.contactId], ctx.prevDetail);
+    onError: (error, variables, context) => {
+      if (userId && context?.prev) {
+        queryClient.setQueryData(["contact", userId, variables.contactId], context.prev);
       }
-
-      if (ctx?.prevList) {
-        queryClient.setQueryData(["contacts", userId], ctx.prevList);
-      }
-
       reportException(error, {
         context: "Archiving contact",
         tags: { component: "useArchiveContact" },
       });
     },
 
-    /**
-     * FINAL REFRESH
-     */
-    onSettled: (_, __, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["contact"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["contacts"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"], exact: false });
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
   });
 }
-
 
 /**
  * Mutation hook to update touchpoint status
@@ -276,37 +456,28 @@ export function useUpdateTouchpointStatus(userId?: string) {
       const data = await response.json();
       return { ...data, contactId, status, reason };
     },
+    /**
+     * OPTIMISTIC UPDATE
+     * Immediately update the cache so UI feels instant
+     */
     onMutate: async ({ contactId, status, reason }) => {
+      if (!userId) return;
+
       // Cancel outgoing refetches to avoid overwriting optimistic update
-      if (userId) {
         await queryClient.cancelQueries({ queryKey: ["contact", userId, contactId] });
         await queryClient.cancelQueries({ queryKey: ["contacts", userId] });
-      } else {
-        await queryClient.cancelQueries({ queryKey: ["contact"] });
-        await queryClient.cancelQueries({ queryKey: ["contacts"] });
-      }
 
-      // Snapshot previous value
-      const previousContact = userId
-        ? queryClient.getQueryData<Contact>(["contact", userId, contactId])
-        : queryClient.getQueryData<Contact>(["contact"]);
+      // Snapshot previous value for rollback
+      const prev = queryClient.getQueryData<Contact>(["contact", userId, contactId]);
 
-      const previousContacts = userId
-        ? queryClient.getQueryData<Contact[]>(["contacts", userId])
-        : queryClient.getQueryData<Contact[]>(["contacts"]);
-
-      const now = new Date().toISOString();
-
-      // Optimistically update the contact
-      if (userId) {
+      // Update cache immediately - UI updates instantly
         queryClient.setQueryData<Contact>(["contact", userId, contactId], (old) => {
           if (!old) return old;
           return {
             ...old,
             touchpointStatus: status,
-            touchpointStatusUpdatedAt: status !== null ? now : null,
+          touchpointStatusUpdatedAt: status !== null ? new Date().toISOString() : null,
             touchpointStatusReason: reason !== undefined ? reason : old.touchpointStatusReason,
-            updatedAt: now,
           };
         });
 
@@ -318,40 +489,35 @@ export function useUpdateTouchpointStatus(userId?: string) {
               ? {
                   ...contact,
                   touchpointStatus: status,
-                  touchpointStatusUpdatedAt: status !== null ? now : null,
+                touchpointStatusUpdatedAt: status !== null ? new Date().toISOString() : null,
                   touchpointStatusReason: reason !== undefined ? reason : contact.touchpointStatusReason,
-                  updatedAt: now,
                 }
               : contact
           );
         });
-      }
 
-      return { previousContact, previousContacts };
+      return { prev };
     },
+    /**
+     * Roll back if error
+     */
     onError: (error, variables, context) => {
-      // Rollback on error
-      if (userId) {
-        if (context?.previousContact) {
-          queryClient.setQueryData(["contact", userId, variables.contactId], context.previousContact);
-        }
-        if (context?.previousContacts) {
-          queryClient.setQueryData(["contacts", userId], context.previousContacts);
-        }
+      if (userId && context?.prev) {
+        queryClient.setQueryData(["contact", userId, variables.contactId], context.prev);
       }
       reportException(error, {
         context: "Updating touchpoint status",
         tags: { component: "useUpdateTouchpointStatus" },
       });
     },
-    onSuccess: () => {
-      // Optimistic update from onMutate is the source of truth
-      // DO NOT overwrite it with server data - it's already correct and user sees it immediately
-      // Only invalidate dashboard stats (needs recalculation), not contact queries
-      // This ensures button text and UI state persist and don't flash/revert
-      setTimeout(() => {
+    /**
+     * Invalidate after success to ensure server consistency
+     */
+    onSettled: (_data, _error, vars) => {
+      if (!userId) return;
+      queryClient.invalidateQueries({ queryKey: ["contact", userId, vars.contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contacts", userId] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      }, 100);
     },
   });
 }

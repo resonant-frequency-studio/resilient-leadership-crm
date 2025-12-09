@@ -5,6 +5,8 @@ import { reportException } from "@/lib/error-reporting";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { revalidateTag } from "next/cache";
+import { Contact } from "@/types/firestore";
+import { convertTimestamp } from "@/util/timestamp-utils-server";
 
 /**
  * GET /api/contacts/[contactId]
@@ -78,13 +80,40 @@ export async function PATCH(
         updatedAt: FieldValue.serverTimestamp(),
       });
 
+    // Fetch the updated contact to return in response
+    const updatedDoc = await adminDb
+      .collection("users")
+      .doc(userId)
+      .collection("contacts")
+      .doc(contactId)
+      .get();
+
+    if (!updatedDoc.exists) {
+      return NextResponse.json(
+        { error: "Contact not found after update" },
+        { status: 404 }
+      );
+    }
+
+    const contactData = updatedDoc.data() as Contact;
+    const updatedContact: Contact = {
+      ...contactData,
+      contactId: updatedDoc.id,
+      createdAt: convertTimestamp(contactData.createdAt),
+      updatedAt: convertTimestamp(contactData.updatedAt),
+      lastEmailDate: contactData.lastEmailDate ? convertTimestamp(contactData.lastEmailDate) : null,
+      nextTouchpointDate: contactData.nextTouchpointDate ? convertTimestamp(contactData.nextTouchpointDate) : null,
+      touchpointStatusUpdatedAt: contactData.touchpointStatusUpdatedAt ? convertTimestamp(contactData.touchpointStatusUpdatedAt) : null,
+      summaryUpdatedAt: contactData.summaryUpdatedAt ? convertTimestamp(contactData.summaryUpdatedAt) : null,
+    };
+
     // Invalidate Next.js server cache
     revalidateTag("contacts", "max");
     revalidateTag(`contacts-${userId}`, "max");
     revalidateTag(`contact-${userId}-${contactId}`, "max");
     revalidateTag(`dashboard-stats-${userId}`, "max");
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ contact: updatedContact });
   } catch (error) {
     reportException(error, {
       context: "Updating contact",

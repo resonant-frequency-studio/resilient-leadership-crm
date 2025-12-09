@@ -1,0 +1,209 @@
+"use client";
+
+import { Timestamp } from "firebase/firestore";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useContact } from "@/hooks/useContact";
+import { useUpdateContact } from "@/hooks/useContactMutations";
+import { useDebouncedSave } from "@/hooks/useDebouncedSave";
+import Card from "@/components/Card";
+import SavingIndicator from "./SavingIndicator";
+import TouchpointStatusActions from "../TouchpointStatusActions";
+import { formatContactDate } from "@/util/contact-utils";
+import { reportException } from "@/lib/error-reporting";
+import { Contact } from "@/types/firestore";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+interface NextTouchpointCardProps {
+  contactId: string;
+  userId: string;
+}
+
+export default function NextTouchpointCard({
+  contactId,
+  userId,
+}: NextTouchpointCardProps) {
+  const { data: contact } = useContact(userId, contactId);
+  const updateMutation = useUpdateContact(userId);
+  
+  const prevContactIdRef = useRef<Contact | null>(null);
+  
+  // Initialize form state from contact using lazy initialization
+  const [nextTouchpointDate, setNextTouchpointDate] = useState<string>("");
+  const [nextTouchpointMessage, setNextTouchpointMessage] = useState<string>("");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  
+  // Reset form state when contactId changes (different contact loaded)
+  // Using contactId prop as dependency ensures we only update when switching contacts
+  useEffect(() => {
+    if (!contact) return;
+    if (prevContactIdRef.current !== contact) {
+      prevContactIdRef.current = contact;
+      // Batch state updates to avoid cascading renders
+      const dateValue =
+        contact.nextTouchpointDate instanceof Timestamp
+          ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
+          : typeof contact.nextTouchpointDate === "string"
+          ? contact.nextTouchpointDate.split("T")[0]
+          : "";
+      setNextTouchpointDate(dateValue);
+      setNextTouchpointMessage(contact.nextTouchpointMessage ?? "");
+      setSaveStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.contactId, contact?.updatedAt]);
+
+  // Track changes using useMemo instead of useEffect
+  const hasUnsavedChanges = useMemo(() => {
+    if (!contact) return false;
+    const contactDate =
+      contact.nextTouchpointDate instanceof Timestamp
+        ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
+        : typeof contact.nextTouchpointDate === "string"
+        ? contact.nextTouchpointDate.split("T")[0]
+        : "";
+    const dateChanged = nextTouchpointDate !== contactDate;
+    const messageChanged =
+      nextTouchpointMessage !== (contact.nextTouchpointMessage ?? "");
+    return dateChanged || messageChanged;
+  }, [nextTouchpointDate, nextTouchpointMessage, contact]);
+
+  const saveChanges = () => {
+    if (!hasUnsavedChanges || !contact) return;
+
+    setSaveStatus("saving");
+    updateMutation.mutate(
+      {
+        contactId,
+        updates: {
+          nextTouchpointDate: nextTouchpointDate || null,
+          nextTouchpointMessage: nextTouchpointMessage || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        },
+        onError: (error) => {
+          setSaveStatus("error");
+          reportException(error, {
+            context: "Saving next touchpoint in NextTouchpointCard",
+            tags: { component: "NextTouchpointCard", contactId },
+          });
+          setTimeout(() => setSaveStatus("idle"), 3000);
+        },
+      }
+    );
+  };
+
+  const debouncedSave = useDebouncedSave(saveChanges, 500);
+
+  const handleBlur = () => {
+    if (hasUnsavedChanges) {
+      debouncedSave();
+    }
+  };
+
+  if (!contact) {
+    return (
+      <Card padding="md">
+        <div className="h-48 bg-gray-200 rounded animate-pulse" />
+      </Card>
+    );
+  }
+
+  return (
+    <Card padding="md">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <svg
+            className="w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          Next Touchpoint
+        </h2>
+        <SavingIndicator status={saveStatus} />
+      </div>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Date
+          </label>
+          <input
+            type="date"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            value={nextTouchpointDate}
+            onChange={(e) => {
+              const dateValue = e.target.value;
+              if (dateValue && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                setNextTouchpointDate(dateValue);
+              } else if (!dateValue) {
+                setNextTouchpointDate("");
+              }
+            }}
+            onBlur={handleBlur}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Message
+          </label>
+          <textarea
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+            rows={3}
+            value={nextTouchpointMessage}
+            onChange={(e) => setNextTouchpointMessage(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="What should you discuss in the next touchpoint?"
+          />
+        </div>
+      </div>
+
+      {/* Touchpoint Status Management */}
+      {(nextTouchpointDate || contact.touchpointStatus) && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <TouchpointStatusActions
+            contactId={contactId}
+            contactName={
+              [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+              contact.primaryEmail
+            }
+            userId={userId}
+            onStatusUpdate={() => {
+              // No-op: React Query will automatically update the contact data
+            }}
+          />
+          {contact.touchpointStatusUpdatedAt != null && (
+            <p className="text-xs text-gray-500 mt-2">
+              Status updated:{" "}
+              {formatContactDate(contact.touchpointStatusUpdatedAt, {
+                relative: true,
+              })}
+            </p>
+          )}
+          {contact.touchpointStatusReason && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                {contact.touchpointStatus === "completed" ? "Note" : "Reason"}
+              </p>
+              <p className="text-sm text-gray-700">
+                {contact.touchpointStatusReason}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+

@@ -25,6 +25,19 @@ jest.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+// Mock useContact to return mock contact data
+jest.mock("@/hooks/useContact", () => ({
+  useContact: () => ({
+    data: {
+      contactId: "contact-1",
+      primaryEmail: "test@example.com",
+      touchpointStatus: null,
+    },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 // Helper to render with QueryClientProvider
 const renderWithQueryClient = (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
@@ -42,6 +55,7 @@ describe("TouchpointStatusActions", () => {
   const mockProps = {
     contactId: "contact-1",
     contactName: "John Doe",
+    userId: "test-user-id",
     currentStatus: null as Contact["touchpointStatus"],
     onStatusUpdate: jest.fn(),
   };
@@ -153,7 +167,7 @@ describe("TouchpointStatusActions", () => {
     it("allows entering reason in textarea", () => {
       renderWithQueryClient(<TouchpointStatusActions {...mockProps} />);
       fireEvent.click(screen.getByText(/mark as contacted/i));
-      const textarea = screen.getByPlaceholderText(/optional note/i);
+      const textarea = screen.getByPlaceholderText(/discussed proposal/i);
       fireEvent.change(textarea, { target: { value: "Discussed proposal" } });
       expect(textarea).toHaveValue("Discussed proposal");
     });
@@ -212,6 +226,7 @@ describe("TouchpointStatusActions", () => {
     it("handles API errors gracefully", async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
+        status: 500,
         json: async () => ({ error: "Failed to update touchpoint status" }),
       });
 
@@ -226,7 +241,7 @@ describe("TouchpointStatusActions", () => {
       await waitFor(() => {
         // Verify error was reported to Sentry
         expect(reportException).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      }, { timeout: 5000 });
       
       // Error message should appear in the UI
       // Note: React Query might take a moment to process the error

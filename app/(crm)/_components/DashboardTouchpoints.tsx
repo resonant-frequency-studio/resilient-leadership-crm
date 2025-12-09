@@ -272,6 +272,7 @@ function TouchpointsContent({ userId }: { userId: string }) {
                   daysUntil={contact.daysUntil}
                   needsReminder={contact.needsReminder}
                   showTouchpointActions={true}
+                  userId={userId}
                   onTouchpointStatusUpdate={() => {}}
                 />
               );
@@ -340,6 +341,7 @@ function TouchpointsContent({ userId }: { userId: string }) {
                   needsReminder={false}
                   showTouchpointActions={true}
                   onTouchpointStatusUpdate={() => {}}
+                  userId={userId}
                 />
               );
             })}
@@ -358,7 +360,7 @@ function TouchpointsContent({ userId }: { userId: string }) {
           </div>
           <div className="grid grid-cols-1 gap-3">
             {recentContacts.map((contact) => (
-              <ContactCard key={contact.contactId} contact={{ ...contact, id: contact.contactId }} showArrow={true} />
+              <ContactCard key={contact.contactId} contact={{ ...contact, id: contact.contactId }} showArrow={true} userId={userId} />
             ))}
           </div>
         </div>

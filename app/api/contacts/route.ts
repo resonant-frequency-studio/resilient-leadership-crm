@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth-utils";
-import { getAllContactsForUser } from "@/lib/contacts-server";
+import { getAllContactsForUserUncached } from "@/lib/contacts-server";
 import { reportException } from "@/lib/error-reporting";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -8,15 +8,22 @@ import { normalizeContactId } from "@/util/csv-utils";
 import { Contact } from "@/types/firestore";
 import { revalidateTag } from "next/cache";
 
+// Force dynamic rendering - never cache this route
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/contacts
  * Get all contacts for the authenticated user
+ * Bypasses Next.js cache to always fetch fresh data from Firestore
  */
 export async function GET() {
   try {
     const userId = await getUserId();
-    const contacts = await getAllContactsForUser(userId);
-    return NextResponse.json({ contacts });
+    // Force no-store at route level - bypass all caching
+    return NextResponse.json(
+      { contacts: await getAllContactsForUserUncached(userId) },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     reportException(error, {
       context: "Fetching contacts",

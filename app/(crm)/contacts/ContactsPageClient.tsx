@@ -13,7 +13,6 @@ import ContactCard from "../_components/ContactCard";
 import { Button } from "@/components/Button";
 import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
 import { bulkUpdateContactSegments } from "@/lib/firestore-crud";
-import { useAuth } from "@/hooks/useAuth";
 import { useContacts } from "@/hooks/useContacts";
 import { useBulkArchiveContacts } from "@/hooks/useContactMutations";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
@@ -25,39 +24,37 @@ interface ContactWithId extends Contact {
 }
 
 interface ContactsPageClientProps {
-  initialContacts: ContactWithId[];
+  userId: string;
 }
 
 export default function ContactsPageClient({
-  initialContacts,
+  userId,
 }: ContactsPageClientProps) {
-  const { user } = useAuth();
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [showBulkSegmentModal, setShowBulkSegmentModal] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkUpdateProgress, setBulkUpdateProgress] = useState({ completed: 0, total: 0 });
   const [selectedNewSegment, setSelectedNewSegment] = useState<string>("");
 
-  // Use React Query hook for contacts (will use cached data if available)
-  const { data: contactsData = [] } = useContacts(user?.uid || "");
-  
+  // Use React Query hook for contacts
+  // The hook's placeholderData function checks the cache first (includes prefetched SSR data and optimistic updates)
+  // This ensures we always see the latest data, including optimistic updates from mutations
+  const { data: contactsData = [] } = useContacts(userId);
   // Map contacts to include id, displayName, and initials
-  const contacts: ContactWithId[] = (contactsData.length > 0 ? contactsData : initialContacts).map((contact) => {
-    const contactForUtils: Contact = {
-      ...contact,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    return {
+  // ⚠️ CRITICAL: Use useMemo to preserve referential equality and prevent destroying optimistic updates
+  // DO NOT override createdAt/updatedAt - use actual values from React Query cache
+  // DO NOT create new objects on every render - this breaks React Query's cache comparison
+  const contacts: ContactWithId[] = useMemo(() => {
+    return contactsData.map((contact) => ({
       ...contact,
       id: contact.contactId,
-      displayName: getDisplayName(contactForUtils),
-      initials: getInitials(contactForUtils),
-    };
-  });
+      displayName: getDisplayName(contact),
+      initials: getInitials(contact),
+    }));
+  }, [contactsData]);
 
   // Use mutation hook for bulk archive
-  const bulkArchiveMutation = useBulkArchiveContacts(user?.uid);
+  const bulkArchiveMutation = useBulkArchiveContacts(userId);
 
   // Use filtering hook
   const filterContacts = useFilterContacts(contacts);
@@ -72,8 +69,8 @@ export default function ContactsPageClient({
   // Get unique segments from all contacts for the bulk update dropdown
   const uniqueSegments = useMemo(
     () =>
-      Array.from(new Set(initialContacts.map((c) => c.segment).filter(Boolean) as string[])).sort(),
-    [initialContacts]
+      Array.from(new Set(contacts.map((c) => c.segment).filter(Boolean) as string[])).sort(),
+    [contacts]
   );
 
   // Check if all filtered contacts are selected
@@ -114,7 +111,7 @@ export default function ContactsPageClient({
   };
 
   const handleBulkSegmentUpdate = async (newSegment: string | null) => {
-    if (!user || selectedContactIds.size === 0) return;
+    if (!userId || selectedContactIds.size === 0) return;
 
     setBulkUpdating(true);
     setBulkUpdateProgress({ completed: 0, total: selectedContactIds.size });
@@ -122,7 +119,7 @@ export default function ContactsPageClient({
     try {
       const contactIdsArray = Array.from(selectedContactIds);
       const result = await bulkUpdateContactSegments(
-        user.uid,
+        userId,
         contactIdsArray,
         newSegment,
         (completed, total) => {
@@ -161,7 +158,7 @@ export default function ContactsPageClient({
   };
 
   const handleBulkArchive = async (archived: boolean) => {
-    if (!user || selectedContactIds.size === 0) return;
+    if (!userId || selectedContactIds.size === 0) return;
 
     setBulkUpdating(true);
     setBulkUpdateProgress({ completed: 0, total: selectedContactIds.size });
@@ -207,8 +204,8 @@ export default function ContactsPageClient({
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Contacts</h1>
           <p className="text-gray-600 text-lg">
-            {filteredContacts.length} of {initialContacts.length}{" "}
-            {initialContacts.length === 1 ? "contact" : "contacts"}
+            {filteredContacts.length} of {contacts.length}{" "}
+            {contacts.length === 1 ? "contact" : "contacts"}
             {hasActiveFilters && " (filtered)"}
           </p>
         </div>
@@ -240,7 +237,7 @@ export default function ContactsPageClient({
 
       {/* Filters Section */}
       <ContactsFilter
-        contacts={initialContacts}
+        contacts={contacts}
         {...filterContacts}
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
@@ -341,7 +338,7 @@ export default function ContactsPageClient({
           </div>
         }
       >
-        {filteredContacts.length === 0 && initialContacts.length > 0 ? (
+        {filteredContacts.length === 0 && contacts.length > 0 ? (
           <Card padding="xl" className="text-center">
             <svg
               className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -427,6 +424,7 @@ export default function ContactsPageClient({
                     isSelected={isSelected}
                     onSelectChange={toggleContactSelection}
                     variant={isSelected ? "selected" : "default"}
+                    userId={userId}
                   />
                 );
               })}

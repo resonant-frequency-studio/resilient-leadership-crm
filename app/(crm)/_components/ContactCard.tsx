@@ -22,6 +22,7 @@ interface ContactCardProps {
   needsReminder?: boolean;
   showTouchpointActions?: boolean;
   onTouchpointStatusUpdate?: () => void;
+  userId?: string; // For TouchpointStatusActions to read from React Query
 }
 
 export default function ContactCard({
@@ -36,6 +37,7 @@ export default function ContactCard({
   needsReminder = false,
   showTouchpointActions = false,
   onTouchpointStatusUpdate,
+  userId,
 }: ContactCardProps) {
   const isTouchpointVariant = variant === "touchpoint-upcoming" || variant === "touchpoint-overdue";
   
@@ -317,6 +319,7 @@ export default function ContactCard({
           <TouchpointStatusActions
             contactId={contact.id}
             contactName={getDisplayName(contact)}
+            userId={userId || ""}
             currentStatus={contact.touchpointStatus}
             compact={true}
             onStatusUpdate={onTouchpointStatusUpdate}

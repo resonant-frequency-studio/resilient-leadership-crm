@@ -1,36 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { Contact } from "@/types/firestore";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/Button";
 import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
 import { useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
 import { useAuth } from "@/hooks/useAuth";
+import { useContact } from "@/hooks/useContact";
 import { reportException } from "@/lib/error-reporting";
 
 interface TouchpointStatusActionsProps {
   contactId: string;
   contactName: string;
-  currentStatus: Contact["touchpointStatus"];
+  userId: string;
   onStatusUpdate?: () => void;
   compact?: boolean; // For dashboard cards
+  // Optional: for cases where contact data isn't in React Query (e.g., ContactCard in lists)
+  currentStatus?: Contact["touchpointStatus"];
 }
 
 export default function TouchpointStatusActions({
   contactId,
   contactName,
-  currentStatus,
+  userId,
   onStatusUpdate,
   compact = false,
+  currentStatus: fallbackStatus,
 }: TouchpointStatusActionsProps) {
   const { user } = useAuth();
+  
+  // Use userId prop if provided, otherwise fall back to user?.uid
+  const effectiveUserId = userId || user?.uid || "";
+  
+  // Read contact directly from React Query cache for optimistic updates
+  // Fall back to prop if contact isn't in cache (e.g., in ContactCard list view)
+  const { data: contact } = useContact(effectiveUserId, contactId);
+  const currentStatus = contact?.touchpointStatus ?? fallbackStatus;
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const mutation = useUpdateTouchpointStatus(user?.uid);
+  const mutation = useUpdateTouchpointStatus(effectiveUserId);
 
   const handleUpdateStatus = async (status: "completed" | "cancelled" | null, reason?: string) => {
     setError(null);
@@ -132,14 +144,28 @@ export default function TouchpointStatusActions({
           <p className="text-sm text-gray-600 mb-4">
             Mark the touchpoint for <strong>{contactName}</strong> as contacted? This indicates you&apos;ve reached out to them.
           </p>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Optional note about the contact (e.g., what you discussed)..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 resize-none"
-            rows={3}
-            disabled={mutation.isPending}
-          />
+          <div className="mb-4">
+            <label htmlFor="touchpoint-complete-note-compact" className="block text-sm font-medium text-gray-700 mb-2">
+              Note (optional)
+              <span className="text-xs text-gray-500 font-normal ml-1">
+                — This will be saved and displayed on the contact page
+              </span>
+            </label>
+            <textarea
+              id="touchpoint-complete-note-compact"
+              name="touchpoint-complete-note-compact"
+              value={reason}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
+              placeholder="e.g., Discussed proposal, scheduled follow-up, sent quote..."
+              className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+              rows={3}
+              disabled={mutation.isPending}
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
+            />
+          </div>
           {error && (
             <div className="mb-4">
               <ErrorMessage
@@ -188,14 +214,28 @@ export default function TouchpointStatusActions({
           <p className="text-sm text-gray-600 mb-4">
             Skip the touchpoint for <strong>{contactName}</strong>? This indicates no action is needed at this time.
           </p>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Optional reason for skipping (e.g., not relevant, contact inactive)..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 resize-none"
-            rows={3}
-            disabled={mutation.isPending}
-          />
+          <div className="mb-4">
+            <label htmlFor="touchpoint-skip-reason-compact" className="block text-sm font-medium text-gray-700 mb-2">
+              Reason (optional)
+              <span className="text-xs text-gray-500 font-normal ml-1">
+                — This will be saved and displayed on the contact page
+              </span>
+            </label>
+            <textarea
+              id="touchpoint-skip-reason-compact"
+              name="touchpoint-skip-reason-compact"
+              value={reason}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
+              placeholder="e.g., Not relevant, contact inactive, wrong contact..."
+              className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+              rows={3}
+              disabled={mutation.isPending}
+              autoComplete="off"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
+            />
+          </div>
           {error && (
             <div className="mb-4">
               <ErrorMessage
@@ -312,14 +352,28 @@ export default function TouchpointStatusActions({
         <p className="text-sm text-gray-600 mb-4">
           Mark the touchpoint for <strong>{contactName}</strong> as contacted? This indicates you&apos;ve reached out to them.
         </p>
-        <textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Optional note about the contact (e.g., what you discussed)..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 resize-none"
-          rows={3}
-          disabled={mutation.isPending}
-        />
+        <div className="mb-4">
+          <label htmlFor="touchpoint-complete-note" className="block text-sm font-medium text-gray-700 mb-2">
+            Note (optional)
+            <span className="text-xs text-gray-500 font-normal ml-1">
+              — This will be saved and displayed on the contact page
+            </span>
+          </label>
+          <textarea
+            id="touchpoint-complete-note"
+            name="touchpoint-complete-note"
+            value={reason}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
+            placeholder="e.g., Discussed proposal, scheduled follow-up, sent quote..."
+            className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+            rows={3}
+            disabled={mutation.isPending}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
+          />
+        </div>
         {error && (
           <div className="mb-4">
             <ErrorMessage
@@ -369,14 +423,28 @@ export default function TouchpointStatusActions({
         <p className="text-sm text-gray-600 mb-4">
           Skip the touchpoint for <strong>{contactName}</strong>? This indicates no action is needed at this time.
         </p>
-        <textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Optional reason for skipping (e.g., not relevant, contact inactive)..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 resize-none"
-          rows={3}
-          disabled={mutation.isPending}
-        />
+        <div className="mb-4">
+          <label htmlFor="touchpoint-skip-reason" className="block text-sm font-medium text-gray-700 mb-2">
+            Reason (optional)
+            <span className="text-xs text-gray-500 font-normal ml-1">
+              — This will be saved and displayed on the contact page
+            </span>
+          </label>
+          <textarea
+            id="touchpoint-skip-reason"
+            name="touchpoint-skip-reason"
+            value={reason}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
+            placeholder="e.g., Not relevant, contact inactive, wrong contact..."
+            className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+            rows={3}
+            disabled={mutation.isPending}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
+          />
+        </div>
         {error && (
           <div className="mb-4">
             <ErrorMessage
