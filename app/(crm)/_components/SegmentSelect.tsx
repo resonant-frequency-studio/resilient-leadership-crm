@@ -91,7 +91,14 @@ export default function SegmentSelect({
     setIsOpen(true);
   };
 
-  const handleInputBlur = () => {
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Check if the newly focused element is within the dropdown
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (dropdownRef.current?.contains(relatedTarget)) {
+      // User is clicking on dropdown item, don't close
+      return;
+    }
+    
     // Delay closing to allow clicking on dropdown items
     setTimeout(() => {
       if (!dropdownRef.current?.contains(document.activeElement)) {
@@ -104,15 +111,23 @@ export default function SegmentSelect({
           onChange(null);
         }
       }
-    }, 200);
+    }, 150);
   };
 
-  const handleSelectSegment = (segment: string) => {
+  const handleSelectSegment = (segment: string, e?: React.MouseEvent) => {
+    // Prevent blur from interfering with selection
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     setInputValue(segment);
     onChange(segment);
     setIsOpen(false);
     setHighlightedIndex(-1);
-    inputRef.current?.blur();
+    
+    // Use setTimeout to ensure the selection happens before blur
+    setTimeout(() => {
+      inputRef.current?.blur();
+    }, 0);
   };
 
   const handleClear = () => {
@@ -218,7 +233,10 @@ export default function SegmentSelect({
                   <button
                     key={segment}
                     type="button"
-                    onClick={() => handleSelectSegment(segment)}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent input blur
+                      handleSelectSegment(segment, e);
+                    }}
                     className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors text-sm ${
                       index === highlightedIndex ? "bg-gray-100" : ""
                     } ${
@@ -232,7 +250,10 @@ export default function SegmentSelect({
                   <div className="border-t border-gray-200">
                     <button
                       type="button"
-                      onClick={() => handleSelectSegment(inputValue.trim())}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
+                        handleSelectSegment(inputValue.trim(), e);
+                      }}
                       className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors text-sm text-blue-600 font-medium"
                     >
                       + Create &quot;{inputValue.trim()}&quot;
@@ -245,7 +266,10 @@ export default function SegmentSelect({
                 {inputValue.trim() ? (
                   <button
                     type="button"
-                    onClick={() => handleSelectSegment(inputValue.trim())}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent input blur
+                      handleSelectSegment(inputValue.trim(), e);
+                    }}
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors text-sm text-blue-600 font-medium"
                   >
                     + Create new segment: &quot;{inputValue.trim()}&quot;

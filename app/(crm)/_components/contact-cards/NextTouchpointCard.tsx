@@ -8,7 +8,7 @@ import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import TouchpointStatusActions from "../TouchpointStatusActions";
-import { formatContactDate } from "@/util/contact-utils";
+import { formatContactDate, getDisplayName } from "@/util/contact-utils";
 import { reportException } from "@/lib/error-reporting";
 import { useSavingState } from "@/contexts/SavingStateContext";
 
@@ -193,10 +193,7 @@ export default function NextTouchpointCard({
         <div className="mt-4 pt-4 border-t border-gray-200">
           <TouchpointStatusActions
             contactId={contactId}
-            contactName={
-              [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
-              contact.primaryEmail
-            }
+            contactName={getDisplayName(contact)}
             userId={userId}
             onStatusUpdate={() => {
               // No-op: React Query will automatically update the contact data

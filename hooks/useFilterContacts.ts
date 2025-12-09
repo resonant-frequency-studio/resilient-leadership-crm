@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Contact } from "@/types/firestore";
 
 interface ContactWithId extends Contact {
@@ -11,6 +11,7 @@ interface FilterState {
   emailSearch: string;
   firstNameSearch: string;
   lastNameSearch: string;
+  companySearch: string;
   upcomingTouchpoints: boolean;
   showArchived: boolean;
 }
@@ -23,6 +24,7 @@ interface UseFilterContactsReturn {
   emailSearch: string;
   firstNameSearch: string;
   lastNameSearch: string;
+  companySearch: string;
   upcomingTouchpoints: boolean;
   showArchived: boolean;
   setSelectedSegment: (segment: string) => void;
@@ -30,6 +32,7 @@ interface UseFilterContactsReturn {
   setEmailSearch: (email: string) => void;
   setFirstNameSearch: (firstName: string) => void;
   setLastNameSearch: (lastName: string) => void;
+  setCompanySearch: (company: string) => void;
   setUpcomingTouchpoints: (value: boolean) => void;
   setShowArchived: (value: boolean) => void;
   onSegmentChange: (segment: string) => void;
@@ -37,6 +40,7 @@ interface UseFilterContactsReturn {
   onEmailSearchChange: (email: string) => void;
   onFirstNameSearchChange: (firstName: string) => void;
   onLastNameSearchChange: (lastName: string) => void;
+  onCompanySearchChange: (company: string) => void;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
 }
@@ -45,21 +49,58 @@ export function useFilterContacts(
   contacts: ContactWithId[],
   initialUpcomingTouchpoints: boolean = false
 ): UseFilterContactsReturn {
-  // Filter states
+  // Filter states (immediate updates for UI responsiveness)
   const [selectedSegment, setSelectedSegment] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [emailSearch, setEmailSearch] = useState<string>("");
   const [firstNameSearch, setFirstNameSearch] = useState<string>("");
   const [lastNameSearch, setLastNameSearch] = useState<string>("");
+  const [companySearch, setCompanySearch] = useState<string>("");
   const [upcomingTouchpoints, setUpcomingTouchpoints] = useState<boolean>(initialUpcomingTouchpoints);
   const [showArchived, setShowArchived] = useState<boolean>(false);
+
+  // Debounced search values (for filtering performance)
+  const [debouncedEmailSearch, setDebouncedEmailSearch] = useState<string>("");
+  const [debouncedFirstNameSearch, setDebouncedFirstNameSearch] = useState<string>("");
+  const [debouncedLastNameSearch, setDebouncedLastNameSearch] = useState<string>("");
+  const [debouncedCompanySearch, setDebouncedCompanySearch] = useState<string>("");
+
+  // Debounce search inputs (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedEmailSearch(emailSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [emailSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFirstNameSearch(firstNameSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [firstNameSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLastNameSearch(lastNameSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [lastNameSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCompanySearch(companySearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [companySearch]);
 
   const filters: FilterState = {
     selectedSegment,
     selectedTags,
-    emailSearch,
-    firstNameSearch,
-    lastNameSearch,
+    emailSearch: debouncedEmailSearch,
+    firstNameSearch: debouncedFirstNameSearch,
+    lastNameSearch: debouncedLastNameSearch,
+    companySearch: debouncedCompanySearch,
     upcomingTouchpoints,
     showArchived,
   };
@@ -111,6 +152,14 @@ export function useFilterContacts(
       );
     }
 
+    // Search by company
+    if (filters.companySearch.trim()) {
+      const searchLower = filters.companySearch.toLowerCase().trim();
+      filtered = filtered.filter(c => 
+        c.company?.toLowerCase().includes(searchLower)
+      );
+    }
+
     // Filter by upcoming touchpoints
     if (filters.upcomingTouchpoints) {
       const now = new Date();
@@ -130,7 +179,7 @@ export function useFilterContacts(
     }
 
     return filtered;
-  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.upcomingTouchpoints, filters.showArchived]);
+  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.companySearch, filters.upcomingTouchpoints, filters.showArchived]);
 
   const clearFilters = () => {
     setSelectedSegment("");
@@ -138,6 +187,7 @@ export function useFilterContacts(
     setEmailSearch("");
     setFirstNameSearch("");
     setLastNameSearch("");
+    setCompanySearch("");
     setUpcomingTouchpoints(false);
     setShowArchived(false);
   };
@@ -148,6 +198,7 @@ export function useFilterContacts(
     !!emailSearch.trim() || 
     !!firstNameSearch.trim() || 
     !!lastNameSearch.trim() ||
+    !!companySearch.trim() ||
     upcomingTouchpoints ||
     showArchived;
 
@@ -159,6 +210,7 @@ export function useFilterContacts(
     emailSearch,
     firstNameSearch,
     lastNameSearch,
+    companySearch,
     upcomingTouchpoints,
     showArchived,
     setSelectedSegment,
@@ -166,6 +218,7 @@ export function useFilterContacts(
     setEmailSearch,
     setFirstNameSearch,
     setLastNameSearch,
+    setCompanySearch,
     setUpcomingTouchpoints,
     setShowArchived,
     onSegmentChange: setSelectedSegment,
@@ -173,6 +226,7 @@ export function useFilterContacts(
     onEmailSearchChange: setEmailSearch,
     onFirstNameSearchChange: setFirstNameSearch,
     onLastNameSearchChange: setLastNameSearch,
+    onCompanySearchChange: setCompanySearch,
     onClearFilters: clearFilters,
     hasActiveFilters,
   };

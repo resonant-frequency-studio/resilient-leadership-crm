@@ -48,17 +48,14 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
       contactId: item.contactId,
       firstName: contact?.firstName,
       lastName: contact?.lastName,
+      company: contact?.company,
       primaryEmail: contact?.primaryEmail || "",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    const contactName = contact
-      ? [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
-        contact.primaryEmail
-      : "Unknown Contact";
-
-    const displayName = getDisplayName(contactForUtils);
+    const displayName = contact ? getDisplayName(contactForUtils) : "Unknown Contact";
+    const contactName = displayName;
     const initials = getInitials(contactForUtils);
     const isOverdue = computeIsOverdue(item, serverTime);
     const dateCategory = getDateCategory(item.dueDate, serverTime);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { Contact } from "@/types/firestore";
 import ExportContactsButton from "../_components/ExportContactsButton";
@@ -12,9 +12,8 @@ import SegmentSelect from "../_components/SegmentSelect";
 import ContactCard from "../_components/ContactCard";
 import { Button } from "@/components/Button";
 import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reporting";
-import { bulkUpdateContactSegments } from "@/lib/firestore-crud";
 import { useContacts } from "@/hooks/useContacts";
-import { useBulkArchiveContacts } from "@/hooks/useContactMutations";
+import { useBulkArchiveContacts, useBulkUpdateSegments, useBulkUpdateTags } from "@/hooks/useContactMutations";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 
 interface ContactWithId extends Contact {
@@ -32,9 +31,9 @@ export default function ContactsPageClient({
 }: ContactsPageClientProps) {
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [showBulkSegmentModal, setShowBulkSegmentModal] = useState(false);
-  const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [bulkUpdateProgress, setBulkUpdateProgress] = useState({ completed: 0, total: 0 });
+  const [showBulkTagsModal, setShowBulkTagsModal] = useState(false);
   const [selectedNewSegment, setSelectedNewSegment] = useState<string>("");
+  const [selectedNewTags, setSelectedNewTags] = useState<string>("");
 
   // Use React Query hook for contacts
   // The hook's placeholderData function checks the cache first (includes prefetched SSR data and optimistic updates)
@@ -53,8 +52,10 @@ export default function ContactsPageClient({
     }));
   }, [contactsData]);
 
-  // Use mutation hook for bulk archive
-  const bulkArchiveMutation = useBulkArchiveContacts(userId);
+  // Use mutation hooks for bulk operations
+  const bulkArchiveMutation = useBulkArchiveContacts();
+  const bulkSegmentMutation = useBulkUpdateSegments();
+  const bulkTagsMutation = useBulkUpdateTags();
 
   // Use filtering hook
   const filterContacts = useFilterContacts(contacts);
@@ -80,14 +81,47 @@ export default function ContactsPageClient({
   }, [filteredContacts, selectedContactIds]);
 
   // Clear selection when filters change
+  const prevFiltersRef = useRef({
+    selectedSegment: filterContacts.selectedSegment,
+    selectedTags: filterContacts.selectedTags,
+    emailSearch: filterContacts.emailSearch,
+    firstNameSearch: filterContacts.firstNameSearch,
+    lastNameSearch: filterContacts.lastNameSearch,
+    companySearch: filterContacts.companySearch,
+  });
+
   useEffect(() => {
-    setSelectedContactIds(new Set());
+    const currentFilters = {
+      selectedSegment: filterContacts.selectedSegment,
+      selectedTags: filterContacts.selectedTags,
+      emailSearch: filterContacts.emailSearch,
+      firstNameSearch: filterContacts.firstNameSearch,
+      lastNameSearch: filterContacts.lastNameSearch,
+      companySearch: filterContacts.companySearch,
+    };
+
+    const filtersChanged =
+      prevFiltersRef.current.selectedSegment !== currentFilters.selectedSegment ||
+      JSON.stringify(prevFiltersRef.current.selectedTags) !== JSON.stringify(currentFilters.selectedTags) ||
+      prevFiltersRef.current.emailSearch !== currentFilters.emailSearch ||
+      prevFiltersRef.current.firstNameSearch !== currentFilters.firstNameSearch ||
+      prevFiltersRef.current.lastNameSearch !== currentFilters.lastNameSearch ||
+      prevFiltersRef.current.companySearch !== currentFilters.companySearch;
+
+    if (filtersChanged) {
+      prevFiltersRef.current = currentFilters;
+      // Use setTimeout to defer the state update and avoid synchronous setState in effect
+      setTimeout(() => {
+        setSelectedContactIds(new Set());
+      }, 0);
+    }
   }, [
     filterContacts.selectedSegment,
     filterContacts.selectedTags,
     filterContacts.emailSearch,
     filterContacts.firstNameSearch,
     filterContacts.lastNameSearch,
+    filterContacts.companySearch,
   ]);
 
   const toggleContactSelection = (contactId: string) => {
@@ -113,87 +147,117 @@ export default function ContactsPageClient({
   const handleBulkSegmentUpdate = async (newSegment: string | null) => {
     if (!userId || selectedContactIds.size === 0) return;
 
-    setBulkUpdating(true);
-    setBulkUpdateProgress({ completed: 0, total: selectedContactIds.size });
+    const contactIdsArray = Array.from(selectedContactIds);
+    
+    bulkSegmentMutation.mutate(
+      { contactIds: contactIdsArray, segment: newSegment },
+      {
+        onSuccess: (result) => {
+          if (result.errors > 0) {
+            alert(
+              `Updated ${result.success} contact(s), but ${result.errors} failed. Check console for details.`
+            );
+            reportMessage("Bulk update errors occurred", ErrorLevel.WARNING, {
+              tags: { component: "ContactsPageClient" },
+              extra: { errorDetails: result.errorDetails },
+            });
+          } else {
+            reportMessage(`Successfully updated ${result.success} contact(s)`, ErrorLevel.INFO, {
+              tags: { component: "ContactsPageClient" },
+            });
+          }
 
-    try {
-      const contactIdsArray = Array.from(selectedContactIds);
-      const result = await bulkUpdateContactSegments(
-        userId,
-        contactIdsArray,
-        newSegment,
-        (completed, total) => {
-          setBulkUpdateProgress({ completed, total });
-        }
-      );
-
-      if (result.errors > 0) {
-        alert(
-          `Updated ${result.success} contact(s), but ${result.errors} failed. Check console for details.`
-        );
-        reportMessage("Bulk update errors occurred", ErrorLevel.WARNING, {
-          tags: { component: "ContactsPageClient" },
-          extra: { errorDetails: result.errorDetails },
-        });
-      } else {
-        reportMessage(`Successfully updated ${result.success} contact(s)`, ErrorLevel.INFO, {
-          tags: { component: "ContactsPageClient" },
-        });
+          setSelectedContactIds(new Set());
+          setShowBulkSegmentModal(false);
+          setSelectedNewSegment("");
+        },
+        onError: (error) => {
+          reportException(error, {
+            context: "Bulk segment update",
+            tags: { component: "ContactsPageClient" },
+          });
+          alert("Failed to update contacts. Please try again.");
+        },
       }
+    );
+  };
 
-      setSelectedContactIds(new Set());
-      setShowBulkSegmentModal(false);
-      setSelectedNewSegment("");
-      // React Query will automatically refetch contacts after mutation
-    } catch (error) {
-      reportException(error, {
-        context: "Bulk segment update",
-        tags: { component: "ContactsPageClient" },
-      });
-      alert("Failed to update contacts. Please try again.");
-    } finally {
-      setBulkUpdating(false);
-      setBulkUpdateProgress({ completed: 0, total: 0 });
-    }
+  const handleBulkTagsUpdate = async (tagsString: string) => {
+    if (!userId || selectedContactIds.size === 0) return;
+
+    // Parse comma-separated tags
+    const tags = tagsString
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+
+    const contactIdsArray = Array.from(selectedContactIds);
+    
+    bulkTagsMutation.mutate(
+      { contactIds: contactIdsArray, tags },
+      {
+        onSuccess: (result) => {
+          if (result.errors > 0) {
+            alert(
+              `Updated ${result.success} contact(s), but ${result.errors} failed. Check console for details.`
+            );
+            reportMessage("Bulk tag update errors occurred", ErrorLevel.WARNING, {
+              tags: { component: "ContactsPageClient" },
+              extra: { errorDetails: result.errorDetails },
+            });
+          } else {
+            reportMessage(`Successfully updated ${result.success} contact(s)`, ErrorLevel.INFO, {
+              tags: { component: "ContactsPageClient" },
+            });
+          }
+
+          setSelectedContactIds(new Set());
+          setShowBulkTagsModal(false);
+          setSelectedNewTags("");
+        },
+        onError: (error) => {
+          reportException(error, {
+            context: "Bulk tag update",
+            tags: { component: "ContactsPageClient" },
+          });
+          alert("Failed to update contacts. Please try again.");
+        },
+      }
+    );
   };
 
   const handleBulkArchive = async (archived: boolean) => {
     if (!userId || selectedContactIds.size === 0) return;
 
-    setBulkUpdating(true);
-    setBulkUpdateProgress({ completed: 0, total: selectedContactIds.size });
-
-    try {
-      const contactIdsArray = Array.from(selectedContactIds);
-      const result = await bulkArchiveMutation.mutateAsync({
-        contactIds: contactIdsArray,
-        archived: archived,
-      });
-
-      if (result.errors > 0) {
-        alert(
-          `${archived ? "Archived" : "Unarchived"} ${result.success} contact(s), but ${result.errors} failed. Check console for details.`
-        );
-        reportMessage("Bulk archive errors occurred", ErrorLevel.WARNING, {
-          tags: { component: "ContactsPageClient" },
-          extra: { errorDetails: result.errorDetails },
-        });
-      } else {
-        // Success - clear selection
-        setSelectedContactIds(new Set());
+    const contactIdsArray = Array.from(selectedContactIds);
+    
+    bulkArchiveMutation.mutate(
+      { contactIds: contactIdsArray, archived },
+      {
+        onSuccess: (result) => {
+          if (result.errors > 0) {
+            alert(
+              `${archived ? "Archived" : "Unarchived"} ${result.success} contact(s), but ${result.errors} failed. Check console for details.`
+            );
+            reportMessage("Bulk archive errors occurred", ErrorLevel.WARNING, {
+              tags: { component: "ContactsPageClient" },
+              extra: { errorDetails: result.errorDetails },
+            });
+          } else {
+            // Success - clear selection
+            setSelectedContactIds(new Set());
+          }
+        },
+        onError: (error) => {
+          reportException(error, {
+            context: "Bulk archiving contacts",
+            tags: { component: "ContactsPageClient" },
+            extra: { archived },
+          });
+          alert(`Failed to ${archived ? "archive" : "unarchive"} contacts. Please try again.`);
+        },
       }
-      // React Query will automatically invalidate and refetch contacts
-    } catch (error) {
-      reportException(error, {
-        context: "Bulk archiving contacts",
-        tags: { component: "ContactsPageClient" },
-        extra: { archived },
-      });
-      alert(`Failed to ${archived ? "archive" : "unarchive"} contacts. Please try again.`);
-    } finally {
-      setBulkUpdating(false);
-      setBulkUpdateProgress({ completed: 0, total: 0 });
-    }
+    );
   };
 
   // Read the rest of the component from the original file to get the full JSX
@@ -271,11 +335,28 @@ export default function ContactsPageClient({
               >
                 Reassign Segment
               </Button>
+              <Button
+                onClick={() => setShowBulkTagsModal(true)}
+                variant="gradient-blue"
+                size="sm"
+                icon={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    />
+                  </svg>
+                }
+              >
+                Update Tags
+              </Button>
               {!showArchived ? (
                 <Button
                   onClick={() => handleBulkArchive(true)}
-                  disabled={bulkUpdating}
-                  loading={bulkUpdating}
+                  disabled={bulkArchiveMutation.isPending}
+                  loading={bulkArchiveMutation.isPending}
                   variant="gradient-gray"
                   size="sm"
                   icon={
@@ -294,8 +375,8 @@ export default function ContactsPageClient({
               ) : (
                 <Button
                   onClick={() => handleBulkArchive(false)}
-                  disabled={bulkUpdating}
-                  loading={bulkUpdating}
+                  disabled={bulkArchiveMutation.isPending}
+                  loading={bulkArchiveMutation.isPending}
                   variant="gradient-green"
                   size="sm"
                   icon={
@@ -436,18 +517,18 @@ export default function ContactsPageClient({
       {/* Bulk Segment Reassignment Modal */}
       <Modal
         isOpen={showBulkSegmentModal}
-        onClose={() => !bulkUpdating && setShowBulkSegmentModal(false)}
+        onClose={() => !bulkSegmentMutation.isPending && setShowBulkSegmentModal(false)}
         title="Reassign Segment"
-        closeOnBackdropClick={!bulkUpdating}
+        closeOnBackdropClick={!bulkSegmentMutation.isPending}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-900">
             Update the segment for{" "}
             <strong className="font-semibold text-gray-900">{selectedContactIds.size}</strong>{" "}
             selected {selectedContactIds.size === 1 ? "contact" : "contacts"}.
           </p>
 
-          {bulkUpdating ? (
+          {bulkSegmentMutation.isPending ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <svg
@@ -471,7 +552,7 @@ export default function ContactsPageClient({
                   ></path>
                 </svg>
                 <span className="text-sm font-medium text-gray-900">
-                  Updating {bulkUpdateProgress.completed} of {bulkUpdateProgress.total} contacts...
+                  Updating contacts...
                 </span>
               </div>
             </div>
@@ -499,7 +580,7 @@ export default function ContactsPageClient({
                     setShowBulkSegmentModal(false);
                     setSelectedNewSegment("");
                   }}
-                  disabled={bulkUpdating}
+                  disabled={bulkSegmentMutation.isPending}
                   variant="outline"
                   size="sm"
                 >
@@ -511,12 +592,103 @@ export default function ContactsPageClient({
                     handleBulkSegmentUpdate(newSegment);
                     setSelectedNewSegment("");
                   }}
-                  disabled={bulkUpdating}
-                  loading={bulkUpdating}
+                  disabled={bulkSegmentMutation.isPending}
+                  loading={bulkSegmentMutation.isPending}
                   variant="gradient-blue"
                   size="sm"
                 >
                   Update Segment
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* Bulk Tags Update Modal */}
+      <Modal
+        isOpen={showBulkTagsModal}
+        onClose={() => !bulkTagsMutation.isPending && setShowBulkTagsModal(false)}
+        title="Update Tags"
+        closeOnBackdropClick={!bulkTagsMutation.isPending}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-900">
+            Update the tags for{" "}
+            <strong className="font-semibold text-gray-900">{selectedContactIds.size}</strong>{" "}
+            selected {selectedContactIds.size === 1 ? "contact" : "contacts"}.
+          </p>
+
+          {bulkTagsMutation.isPending ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="animate-spin h-5 w-5 text-blue-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span className="text-sm font-medium text-gray-900">
+                  Updating contacts...
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={selectedNewTags}
+                  onChange={(e) => setSelectedNewTags(e.target.value)}
+                  placeholder="tag1, tag2, tag3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="mt-2 text-xs text-gray-600">
+                  Enter tags separated by commas. This will replace all existing tags on the selected contacts.
+                  Leave empty to remove all tags.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  onClick={() => {
+                    setShowBulkTagsModal(false);
+                    setSelectedNewTags("");
+                  }}
+                  disabled={bulkTagsMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleBulkTagsUpdate(selectedNewTags);
+                    setSelectedNewTags("");
+                  }}
+                  disabled={bulkTagsMutation.isPending}
+                  loading={bulkTagsMutation.isPending}
+                  variant="gradient-blue"
+                  size="sm"
+                >
+                  Update Tags
                 </Button>
               </div>
             </>

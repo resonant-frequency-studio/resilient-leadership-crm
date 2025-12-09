@@ -5,6 +5,7 @@ export interface Contact {
     primaryEmail: string;
     firstName?: string | null;
     lastName?: string | null;
+    company?: string | null;
   
     // Gmail-derived
     lastEmailDate?: unknown | null; // Firestore timestamp

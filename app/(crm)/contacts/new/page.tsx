@@ -97,6 +97,8 @@ export default function NewContactPage() {
                   Email <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="new-contact-email"
+                  name="new-contact-email"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   type="email"
                   value={form.primaryEmail || ""}
@@ -111,6 +113,8 @@ export default function NewContactPage() {
                     First Name
                   </label>
                   <input
+                    id="new-contact-first-name"
+                    name="new-contact-first-name"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     value={form.firstName || ""}
                     onChange={(e) => updateField("firstName", e.target.value)}
@@ -122,12 +126,27 @@ export default function NewContactPage() {
                     Last Name
                   </label>
                   <input
+                    id="new-contact-last-name"
+                    name="new-contact-last-name"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     value={form.lastName || ""}
                     onChange={(e) => updateField("lastName", e.target.value)}
                     placeholder="Last Name"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company
+                </label>
+                <input
+                  id="new-contact-company"
+                  name="new-contact-company"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  value={form.company || ""}
+                  onChange={(e) => updateField("company", e.target.value)}
+                  placeholder="Company"
+                />
               </div>
             </div>
           </Card>

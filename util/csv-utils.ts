@@ -22,6 +22,7 @@ export function csvRowToContact(row: Record<string, string>, contactId: string):
     primaryEmail: email,
     firstName: row.FirstName?.trim() || null,
     lastName: row.LastName?.trim() || null,
+    company: row.Company?.trim() || null,
 
     // Imported CRM fields
     summary: row.Summary?.trim() || null,

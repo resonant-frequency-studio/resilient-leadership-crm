@@ -28,13 +28,17 @@ export function getInitials(contact: Contact): string {
  * 
  * Priority:
  * 1. Full name (firstName + lastName) if either exists
- * 2. Email username (part before @) as fallback
+ * 2. Company if no first/last name
+ * 3. Email address as fallback
  */
 export function getDisplayName(contact: Contact): string {
   if (contact.firstName || contact.lastName) {
     return `${contact.firstName || ""} ${contact.lastName || ""}`.trim();
   }
-  return contact.primaryEmail.split("@")[0];
+  if (contact.company) {
+    return contact.company;
+  }
+  return contact.primaryEmail;
 }
 
 /**

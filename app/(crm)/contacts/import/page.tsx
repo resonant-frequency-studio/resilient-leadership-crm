@@ -43,6 +43,8 @@ export default function ImportContactsPage() {
   const isImporting = importState.isImporting || isParsing;
   const hasError = parseError || importState.status.includes("Error");
   const isSuccess = status.includes("complete") || status.includes("Successfully");
+  const isChecking = status.includes("Checking for existing contacts");
+  const isProcessing = isImporting || isChecking || isParsing;
 
   // Handle drag and drop
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -281,7 +283,19 @@ export default function ImportContactsPage() {
           </label>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar - Checking for existing contacts */}
+        {isChecking && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Checking for existing contacts</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div className="bg-blue-600 h-2.5 rounded-full animate-progress-bar relative"></div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Bar - Import Progress */}
         {isImporting && importState.progress && (
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
@@ -297,6 +311,35 @@ export default function ImportContactsPage() {
                   width: `${((importState.importCount + importState.progress.errors) / importState.progress.total) * 100}%`,
                 }}
               ></div>
+            </div>
+          </div>
+        )}
+
+        {/* Warning Message - Don't refresh or navigate away */}
+        {isProcessing && (
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-amber-600 mt-0.5 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div>
+                <p className="font-medium text-amber-800 mb-1">Please do not refresh or navigate away</p>
+                <p className="text-sm text-amber-700">
+                  {isChecking
+                    ? "We're checking your existing contacts. This process will be interrupted if you leave this page."
+                    : "The import is in progress. Refreshing or navigating away will cancel the import and you'll need to start over."}
+                </p>
+              </div>
             </div>
           </div>
         )}

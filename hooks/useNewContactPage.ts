@@ -12,6 +12,7 @@ export interface NewContactForm {
   primaryEmail: string;
   firstName: string;
   lastName: string;
+  company: string;
   notes: string;
   tags: string[];
   segment: string;
@@ -26,6 +27,7 @@ const initialFormState: NewContactForm = {
   primaryEmail: "",
   firstName: "",
   lastName: "",
+  company: "",
   notes: "",
   tags: [],
   segment: "",
@@ -77,6 +79,7 @@ export function useNewContactPage() {
         primaryEmail: email,
         firstName: form.firstName?.trim() || null,
         lastName: form.lastName?.trim() || null,
+        company: form.company?.trim() || null,
         notes: form.notes?.trim() || null,
         tags: form.tags || [],
         segment: form.segment?.trim() || null,

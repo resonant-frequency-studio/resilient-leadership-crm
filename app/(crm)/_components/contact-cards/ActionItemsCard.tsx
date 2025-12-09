@@ -38,14 +38,10 @@ export default function ActionItemsCard({
       <ActionItemsList
         userId={userId}
         contactId={contactId}
-        contactName={
-          displayContact.firstName || displayContact.lastName
-            ? `${displayContact.firstName || ""} ${displayContact.lastName || ""}`.trim()
-            : displayContact.primaryEmail.split("@")[0]
-        }
         contactEmail={displayContact.primaryEmail}
         contactFirstName={displayContact.firstName || undefined}
         contactLastName={displayContact.lastName || undefined}
+        contactCompany={displayContact.company || undefined}
         onActionItemUpdate={() => {
           // Trigger a refresh if needed
         }}

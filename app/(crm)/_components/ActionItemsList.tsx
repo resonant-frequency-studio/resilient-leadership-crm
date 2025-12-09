@@ -15,10 +15,10 @@ import { useCreateActionItem, useUpdateActionItem, useDeleteActionItem } from "@
 interface ActionItemsListProps {
   userId: string;
   contactId: string;
-  contactName?: string;
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
+  contactCompany?: string;
   onActionItemUpdate?: () => void;
   // Pre-fetched action items (for SSR)
   initialActionItems?: ActionItem[];
@@ -30,10 +30,10 @@ type FilterStatus = "all" | "pending" | "completed";
 export default function ActionItemsList({
   userId,
   contactId,
-  contactName,
   contactEmail,
   contactFirstName,
   contactLastName,
+  contactCompany,
   onActionItemUpdate,
   initialActionItems,
   initialContact,
@@ -399,12 +399,13 @@ export default function ActionItemsList({
               contactId: contactId,
               firstName: contactFirstName,
               lastName: contactLastName,
+              company: contactCompany,
               primaryEmail: contactEmail || "",
               createdAt: new Date(),
               updatedAt: new Date(),
             };
             
-            const displayName = contactName || getDisplayName(contactForUtils);
+            const displayName = getDisplayName(contactForUtils);
             const initials = getInitials(contactForUtils);
             // Compute isOverdue on client (ActionItemCard will also compute if not provided)
             const isOverdue =
@@ -426,7 +427,6 @@ export default function ActionItemsList({
                 key={item.actionItemId}
                 actionItem={item}
                 contactId={contactId}
-                contactName={contactName}
                 contactEmail={contactEmail}
                 contactFirstName={contactFirstName}
                 contactLastName={contactLastName}

@@ -28,6 +28,7 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
   // Initialize form state from contact using lazy initialization
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   
   // Register/unregister save status with context
@@ -47,6 +48,7 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
         // Batch state updates to avoid cascading renders
         setFirstName(contact.firstName ?? "");
         setLastName(contact.lastName ?? "");
+        setCompany(contact.company ?? "");
         setSaveStatus("idle");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,8 +59,9 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
     if (!contact) return false;
     const firstNameChanged = firstName !== (contact.firstName ?? "");
     const lastNameChanged = lastName !== (contact.lastName ?? "");
-    return firstNameChanged || lastNameChanged;
-  }, [firstName, lastName, contact]);
+    const companyChanged = company !== (contact.company ?? "");
+    return firstNameChanged || lastNameChanged || companyChanged;
+  }, [firstName, lastName, company, contact]);
 
   const saveChanges = () => {
     if (!hasChanges || !contact) return;
@@ -70,6 +73,7 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
         updates: {
           firstName: firstName || null,
           lastName: lastName || null,
+          company: company || null,
         },
       },
       {
@@ -133,6 +137,8 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
               First Name
             </label>
             <input
+              id="contact-first-name"
+              name="contact-first-name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -145,6 +151,8 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
               Last Name
             </label>
             <input
+              id="contact-last-name"
+              name="contact-last-name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -155,10 +163,26 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
+            Company
+          </label>
+          <input
+            id="contact-company"
+            name="contact-company"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="Company"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Email
           </label>
           <input
             type="email"
+            id="contact-email"
+            name="contact-email"
             disabled
             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
             value={contact.primaryEmail}

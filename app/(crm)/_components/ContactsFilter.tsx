@@ -16,12 +16,14 @@ interface ContactsFilterProps {
   emailSearch: string;
   firstNameSearch: string;
   lastNameSearch: string;
+  companySearch: string;
   showArchived: boolean;
   onSegmentChange: (segment: string) => void;
   onTagsChange: (tags: string[]) => void;
   onEmailSearchChange: (email: string) => void;
   onFirstNameSearchChange: (firstName: string) => void;
   onLastNameSearchChange: (lastName: string) => void;
+  onCompanySearchChange: (company: string) => void;
   onShowArchivedChange: (show: boolean) => void;
   onClearFilters: () => void;
 }
@@ -33,12 +35,14 @@ export default function ContactsFilter({
   emailSearch,
   firstNameSearch,
   lastNameSearch,
+  companySearch,
   showArchived,
   onSegmentChange,
   onTagsChange,
   onEmailSearchChange,
   onFirstNameSearchChange,
   onLastNameSearchChange,
+  onCompanySearchChange,
   onShowArchivedChange,
   onClearFilters,
 }: ContactsFilterProps) {
@@ -63,7 +67,7 @@ export default function ContactsFilter({
     }
   };
 
-  const hasActiveFilters = selectedSegment || selectedTags.length > 0 || emailSearch.trim() || firstNameSearch.trim() || lastNameSearch.trim();
+  const hasActiveFilters = selectedSegment || selectedTags.length > 0 || emailSearch.trim() || firstNameSearch.trim() || lastNameSearch.trim() || companySearch.trim();
 
   return (
     <Card padding="md">
@@ -82,7 +86,7 @@ export default function ContactsFilter({
       </div>
 
       {/* Search Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* Email Search */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -124,6 +128,20 @@ export default function ContactsFilter({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
+
+        {/* Company Search */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Search by Company
+          </label>
+          <input
+            type="text"
+            value={companySearch}
+            onChange={(e) => onCompanySearchChange(e.target.value)}
+            placeholder="Enter company name..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
       </div>
 
       {/* Filter Row */}
@@ -145,25 +163,12 @@ export default function ContactsFilter({
           </select>
         </div>
 
-        {/* Show Archived Toggle */}
-        <div>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => onShowArchivedChange(e.target.checked)}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              aria-label="View Archived"
-            />
-            <span className="text-sm text-gray-700">
-              {showArchived ? "Showing archived contacts" : "Show archived contacts"}
-            </span>
-          </label>
-        </div>
-
-        {/* Tags Filter - Searchable Multi-Select */}
-        {uniqueTags.length > 0 && (
-          <div>
+        {/* Tags Filter and Show Archived - Combined */}
+        <div className="md:col-span-2">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            {/* Tags Filter - Searchable Multi-Select */}
+            {uniqueTags.length > 0 && (
+              <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Filter by Tags
             </label>
@@ -256,8 +261,26 @@ export default function ContactsFilter({
                 {selectedTags.length} {selectedTags.length === 1 ? "tag" : "tags"} selected
               </p>
             )}
+              </div>
+            )}
+
+            {/* Show Archived Toggle */}
+            <div className="flex items-center">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => onShowArchivedChange(e.target.checked)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  aria-label="View Archived"
+                />
+                <span className="text-sm text-gray-700">
+                  {showArchived ? "Showing archived contacts" : "Show archived contacts"}
+                </span>
+              </label>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </Card>
   );

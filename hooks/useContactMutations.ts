@@ -386,7 +386,7 @@ export function useUpdateTouchpointStatus(userId?: string) {
 /**
  * Mutation hook for bulk archiving contacts
  */
-export function useBulkArchiveContacts(userId?: string) {
+export function useBulkArchiveContacts() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -420,6 +420,90 @@ export function useBulkArchiveContacts(userId?: string) {
       reportException(error, {
         context: "Bulk archiving contacts",
         tags: { component: "useBulkArchiveContacts" },
+      });
+    },
+  });
+}
+
+/**
+ * Mutation hook for bulk updating contact segments
+ */
+export function useBulkUpdateSegments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      contactIds,
+      segment,
+    }: {
+      contactIds: string[];
+      segment: string | null;
+    }) => {
+      const response = await fetch("/api/contacts/bulk-segment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactIds, segment }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to bulk update segments");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate by prefixes → guarantees matching all screen variations
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (error) => {
+      reportException(error, {
+        context: "Bulk updating contact segments",
+        tags: { component: "useBulkUpdateSegments" },
+      });
+    },
+  });
+}
+
+/**
+ * Mutation hook for bulk updating contact tags
+ */
+export function useBulkUpdateTags() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      contactIds,
+      tags,
+    }: {
+      contactIds: string[];
+      tags: string[];
+    }) => {
+      const response = await fetch("/api/contacts/bulk-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactIds, tags }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to bulk update tags");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate by prefixes → guarantees matching all screen variations
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (error) => {
+      reportException(error, {
+        context: "Bulk updating contact tags",
+        tags: { component: "useBulkUpdateTags" },
       });
     },
   });
