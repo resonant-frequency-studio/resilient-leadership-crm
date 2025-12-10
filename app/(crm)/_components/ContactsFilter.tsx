@@ -96,10 +96,11 @@ export default function ContactsFilter({
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         {/* Email Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="email-search" className="block text-sm font-medium text-gray-700 mb-2">
             Search by Email
           </label>
           <Input
+            id="email-search"
             type="text"
             value={emailSearch}
             onChange={(e) => onEmailSearchChange(e.target.value)}
@@ -109,10 +110,11 @@ export default function ContactsFilter({
 
         {/* Last Name Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="last-name-search" className="block text-sm font-medium text-gray-700 mb-2">
             Search by Last Name
           </label>
           <Input
+            id="last-name-search"
             type="text"
             value={lastNameSearch}
             onChange={(e) => onLastNameSearchChange(e.target.value)}
@@ -122,10 +124,11 @@ export default function ContactsFilter({
 
         {/* First Name Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="first-name-search" className="block text-sm font-medium text-gray-700 mb-2">
             Search by First Name
           </label>
           <Input
+            id="first-name-search"
             type="text"
             value={firstNameSearch}
             onChange={(e) => onFirstNameSearchChange(e.target.value)}
@@ -135,10 +138,11 @@ export default function ContactsFilter({
 
         {/* Company Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="company-search" className="block text-sm font-medium text-gray-700 mb-2">
             Search by Company
           </label>
           <Input
+            id="company-search"
             type="text"
             value={companySearch}
             onChange={(e) => onCompanySearchChange(e.target.value)}
@@ -151,10 +155,11 @@ export default function ContactsFilter({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Segment Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="segment-filter" className="block text-sm font-medium text-gray-700 mb-2">
             Filter by Segment
           </label>
           <Select
+            id="segment-filter"
             value={selectedSegment}
             onChange={(e) => onSegmentChange(e.target.value)}
           >
@@ -168,10 +173,11 @@ export default function ContactsFilter({
         {/* Custom Filters (At-Risk, Warm) */}
         {onCustomFilterChange && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="quick-filters" className="block text-sm font-medium text-gray-700 mb-2">
               Quick Filters
             </label>
             <Select
+              id="quick-filters"
               value={customFilter || ""}
               onChange={(e) => {
                 const value = e.target.value;
@@ -190,7 +196,7 @@ export default function ContactsFilter({
           {/* Tags Filter - Searchable Multi-Select */}
           {uniqueTags.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="tag-search" className="block text-sm font-medium text-gray-700 mb-2">
                 Filter by Tags
               </label>
               
@@ -208,9 +214,9 @@ export default function ContactsFilter({
                         variant="ghost"
                         size="sm"
                         className="p-0 w-auto h-auto hover:text-blue-900"
-                        title="Remove tag"
+                        aria-label={`Remove ${tag} tag`}
                         icon={
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         }
@@ -225,6 +231,7 @@ export default function ContactsFilter({
               {/* Searchable Tag Dropdown */}
               <div className="relative">
                 <Input
+                  id="tag-search"
                   type="text"
                   value={tagSearch}
                   onChange={(e) => {
@@ -233,6 +240,8 @@ export default function ContactsFilter({
                   }}
                   onFocus={() => setShowTagDropdown(true)}
                   placeholder="Search and select tags..."
+                  aria-expanded={showTagDropdown}
+                  aria-haspopup="listbox"
                 />
                 
                 {/* Dropdown */}
@@ -292,7 +301,6 @@ export default function ContactsFilter({
           checked={showArchived}
           onChange={(e) => onShowArchivedChange(e.target.checked)}
           label={showArchived ? "Showing archived contacts" : "Show archived contacts"}
-          aria-label="View Archived"
         />
       </div>
     </Card>
