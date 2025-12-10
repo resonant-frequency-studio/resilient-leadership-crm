@@ -200,9 +200,72 @@ export default function ContactsFilter({
                 Filter by Tags
               </label>
               
-              {/* Selected Tags Display */}
+              {/* Searchable Tag Dropdown */}
+              <div className="relative">
+                <Input
+                  id="tag-search"
+                  type="text"
+                  value={tagSearch}
+                  onChange={(e) => {
+                    setTagSearch(e.target.value);
+                    setShowTagDropdown(true);
+                  }}
+                  onFocus={() => setShowTagDropdown(true)}
+                  placeholder="Search and select tags..."
+                  aria-expanded={showTagDropdown}
+                  aria-haspopup="listbox"
+                />
+                
+                {/* Dropdown - positioned absolutely to prevent layout shift */}
+                {showTagDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowTagDropdown(false)}
+                      aria-hidden="true"
+                    />
+                    <div 
+                      className="absolute z-20 w-full top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      role="listbox"
+                    >
+                      {uniqueTags
+                        .filter(tag => 
+                          !selectedTags.includes(tag) &&
+                          tag.toLowerCase().includes(tagSearch.toLowerCase())
+                        )
+                        .slice(0, 20)
+                        .map(tag => (
+                          <Button
+                            key={tag}
+                            onClick={() => {
+                              toggleTag(tag);
+                              setTagSearch("");
+                            }}
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 justify-start"
+                            role="option"
+                            aria-selected="false"
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      {uniqueTags.filter(tag => 
+                        !selectedTags.includes(tag) &&
+                        tag.toLowerCase().includes(tagSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          No tags found
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Selected Tags Display - Below input */}
               {selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mt-3">
                   {selectedTags.map(tag => (
                     <span
                       key={tag}
@@ -227,63 +290,6 @@ export default function ContactsFilter({
                   ))}
                 </div>
               )}
-
-              {/* Searchable Tag Dropdown */}
-              <div className="relative">
-                <Input
-                  id="tag-search"
-                  type="text"
-                  value={tagSearch}
-                  onChange={(e) => {
-                    setTagSearch(e.target.value);
-                    setShowTagDropdown(true);
-                  }}
-                  onFocus={() => setShowTagDropdown(true)}
-                  placeholder="Search and select tags..."
-                  aria-expanded={showTagDropdown}
-                  aria-haspopup="listbox"
-                />
-                
-                {/* Dropdown */}
-                {showTagDropdown && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setShowTagDropdown(false)}
-                    />
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {uniqueTags
-                        .filter(tag => 
-                          !selectedTags.includes(tag) &&
-                          tag.toLowerCase().includes(tagSearch.toLowerCase())
-                        )
-                        .slice(0, 20)
-                        .map(tag => (
-                          <Button
-                            key={tag}
-                            onClick={() => {
-                              toggleTag(tag);
-                              setTagSearch("");
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 justify-start"
-                          >
-                            {tag}
-                          </Button>
-                        ))}
-                      {uniqueTags.filter(tag => 
-                        !selectedTags.includes(tag) &&
-                        tag.toLowerCase().includes(tagSearch.toLowerCase())
-                      ).length === 0 && (
-                        <div className="px-4 py-2 text-sm text-gray-500">
-                          No tags found
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
               
               {selectedTags.length > 0 && (
                 <p className="mt-2 text-xs text-gray-500">
