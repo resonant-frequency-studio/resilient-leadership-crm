@@ -8,6 +8,7 @@ import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import TouchpointStatusActions from "../TouchpointStatusActions";
+import Textarea from "@/components/Textarea";
 import { formatContactDate, getDisplayName } from "@/util/contact-utils";
 import { reportException } from "@/lib/error-reporting";
 import { useSavingState } from "@/contexts/SavingStateContext";
@@ -176,10 +177,9 @@ export default function NextTouchpointCard({
           <label htmlFor="next-touchpoint-message" className="block text-sm font-medium text-gray-700 mb-2">
             Message
           </label>
-          <textarea
+          <Textarea
             id="next-touchpoint-message"
             name="next-touchpoint-message"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
             rows={3}
             value={nextTouchpointMessage}
             onChange={(e) => setNextTouchpointMessage(e.target.value)}

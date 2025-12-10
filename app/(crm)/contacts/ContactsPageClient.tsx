@@ -17,6 +17,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { useBulkArchiveContacts, useBulkUpdateSegments, useBulkUpdateTags } from "@/hooks/useContactMutations";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import BulkActionsBar from "@/components/BulkActionsBar";
+import Input from "@/components/Input";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -735,12 +736,12 @@ export default function ContactsPageClient({
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Tags (comma-separated)
                 </label>
-                <input
+                <Input
                   type="text"
                   value={selectedNewTags}
                   onChange={(e) => setSelectedNewTags(e.target.value)}
                   placeholder="tag1, tag2, tag3"
-                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="text-gray-700"
                 />
                 <p className="mt-2 text-xs text-gray-600">
                   Enter tags separated by commas. This will replace all existing tags on the selected contacts.

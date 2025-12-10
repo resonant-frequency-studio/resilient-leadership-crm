@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import { Contact } from "@/types/firestore";
 import Card from "@/components/Card";
 import { Button } from "@/components/Button";
+import Select from "@/components/Select";
+import Input from "@/components/Input";
+import Checkbox from "@/components/Checkbox";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -96,12 +99,11 @@ export default function ContactsFilter({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search by Email
           </label>
-          <input
+          <Input
             type="text"
             value={emailSearch}
             onChange={(e) => onEmailSearchChange(e.target.value)}
             placeholder="Enter email address..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -110,12 +112,11 @@ export default function ContactsFilter({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search by Last Name
           </label>
-          <input
+          <Input
             type="text"
             value={lastNameSearch}
             onChange={(e) => onLastNameSearchChange(e.target.value)}
             placeholder="Enter last name..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -124,12 +125,11 @@ export default function ContactsFilter({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search by First Name
           </label>
-          <input
+          <Input
             type="text"
             value={firstNameSearch}
             onChange={(e) => onFirstNameSearchChange(e.target.value)}
             placeholder="Enter first name..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -138,12 +138,11 @@ export default function ContactsFilter({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Search by Company
           </label>
-          <input
+          <Input
             type="text"
             value={companySearch}
             onChange={(e) => onCompanySearchChange(e.target.value)}
             placeholder="Enter company name..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
@@ -155,16 +154,15 @@ export default function ContactsFilter({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Filter by Segment
           </label>
-          <select
+          <Select
             value={selectedSegment}
             onChange={(e) => onSegmentChange(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">All Segments</option>
             {uniqueSegments.map(segment => (
               <option key={segment} value={segment}>{segment}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Custom Filters (At-Risk, Warm) */}
@@ -173,139 +171,129 @@ export default function ContactsFilter({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Quick Filters
             </label>
-            <select
+            <Select
               value={customFilter || ""}
               onChange={(e) => {
                 const value = e.target.value;
                 onCustomFilterChange(value === "" ? null : (value as "at-risk" | "warm"));
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">None</option>
               <option value="at-risk">At-Risk (14+ days no reply)</option>
               <option value="warm">Warm Leads (50-70 engagement)</option>
-            </select>
+            </Select>
           </div>
         )}
 
-        {/* Tags Filter and Show Archived - Combined */}
+        {/* Tags Filter */}
         <div className={onCustomFilterChange ? "md:col-span-1" : "md:col-span-2"}>
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            {/* Tags Filter - Searchable Multi-Select */}
-            {uniqueTags.length > 0 && (
-              <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Tags
-            </label>
-            
-            {/* Selected Tags Display */}
-            {selectedTags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {selectedTags.map(tag => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium"
-                  >
-                    {tag}
-                    <Button
-                      onClick={() => toggleTag(tag)}
-                      variant="ghost"
-                      size="sm"
-                      className="p-0 w-auto h-auto hover:text-blue-900"
-                      title="Remove tag"
-                      icon={
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      }
-                    >
-                      <span className="sr-only">Remove {tag}</span>
-                    </Button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Searchable Tag Dropdown */}
-            <div className="relative">
-              <input
-                type="text"
-                value={tagSearch}
-                onChange={(e) => {
-                  setTagSearch(e.target.value);
-                  setShowTagDropdown(true);
-                }}
-                onFocus={() => setShowTagDropdown(true)}
-                placeholder="Search and select tags..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+          {/* Tags Filter - Searchable Multi-Select */}
+          {uniqueTags.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Tags
+              </label>
               
-              {/* Dropdown */}
-              {showTagDropdown && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setShowTagDropdown(false)}
-                  />
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {uniqueTags
-                      .filter(tag => 
+              {/* Selected Tags Display */}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedTags.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium"
+                    >
+                      {tag}
+                      <Button
+                        onClick={() => toggleTag(tag)}
+                        variant="ghost"
+                        size="sm"
+                        className="p-0 w-auto h-auto hover:text-blue-900"
+                        title="Remove tag"
+                        icon={
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        }
+                      >
+                        <span className="sr-only">Remove {tag}</span>
+                      </Button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Searchable Tag Dropdown */}
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={tagSearch}
+                  onChange={(e) => {
+                    setTagSearch(e.target.value);
+                    setShowTagDropdown(true);
+                  }}
+                  onFocus={() => setShowTagDropdown(true)}
+                  placeholder="Search and select tags..."
+                />
+                
+                {/* Dropdown */}
+                {showTagDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowTagDropdown(false)}
+                    />
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {uniqueTags
+                        .filter(tag => 
+                          !selectedTags.includes(tag) &&
+                          tag.toLowerCase().includes(tagSearch.toLowerCase())
+                        )
+                        .slice(0, 20)
+                        .map(tag => (
+                          <Button
+                            key={tag}
+                            onClick={() => {
+                              toggleTag(tag);
+                              setTagSearch("");
+                            }}
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 justify-start"
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      {uniqueTags.filter(tag => 
                         !selectedTags.includes(tag) &&
                         tag.toLowerCase().includes(tagSearch.toLowerCase())
-                      )
-                      .slice(0, 20)
-                      .map(tag => (
-                        <Button
-                          key={tag}
-                          onClick={() => {
-                            toggleTag(tag);
-                            setTagSearch("");
-                          }}
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 justify-start"
-                        >
-                          {tag}
-                        </Button>
-                      ))}
-                    {uniqueTags.filter(tag => 
-                      !selectedTags.includes(tag) &&
-                      tag.toLowerCase().includes(tagSearch.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        No tags found
-                      </div>
-                    )}
-                  </div>
-                </>
+                      ).length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          No tags found
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              {selectedTags.length > 0 && (
+                <p className="mt-2 text-xs text-gray-500">
+                  {selectedTags.length} {selectedTags.length === 1 ? "tag" : "tags"} selected
+                </p>
               )}
             </div>
-            
-            {selectedTags.length > 0 && (
-              <p className="mt-2 text-xs text-gray-500">
-                {selectedTags.length} {selectedTags.length === 1 ? "tag" : "tags"} selected
-              </p>
-            )}
-              </div>
-            )}
-
-            {/* Show Archived Toggle */}
-            <div className="flex items-center">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showArchived}
-                  onChange={(e) => onShowArchivedChange(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  aria-label="View Archived"
-                />
-                <span className="text-sm text-gray-700">
-                  {showArchived ? "Showing archived contacts" : "Show archived contacts"}
-                </span>
-              </label>
-            </div>
-          </div>
+          )}
         </div>
+      </div>
+
+      {/* Show Archived Row */}
+      <div className="mt-4">
+        <Checkbox
+          checked={showArchived}
+          onChange={(e) => onShowArchivedChange(e.target.checked)}
+          label={showArchived ? "Showing archived contacts" : "Show archived contacts"}
+          aria-label="View Archived"
+        />
       </div>
     </Card>
   );

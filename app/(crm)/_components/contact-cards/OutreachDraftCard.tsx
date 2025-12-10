@@ -8,6 +8,7 @@ import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import { Button } from "@/components/Button";
 import Modal from "@/components/Modal";
+import Textarea from "@/components/Textarea";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
 import { useSavingState } from "@/contexts/SavingStateContext";
@@ -243,14 +244,14 @@ export default function OutreachDraftCard({
       <p className="text-sm text-gray-600 mb-4">
         Draft and refine your email messages before sending. Your draft is automatically saved and can be opened directly in Gmail when ready to send.
       </p>
-      <textarea
+      <Textarea
         id="outreach-draft"
         name="outreach-draft"
         value={localDraft}
         onChange={(e) => setLocalDraft(e.target.value)}
         onBlur={handleBlur}
         placeholder="Write your outreach draft here..."
-        className="w-full min-h-[120px] px-4 py-3 text-gray-900 bg-gray-50 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 resize-y font-sans text-sm leading-relaxed"
+        className="min-h-[120px] text-gray-900 bg-gray-50 border-gray-200 focus:ring-green-500 focus:border-green-500 resize-y font-sans text-sm leading-relaxed"
       />
       </Card>
     </>

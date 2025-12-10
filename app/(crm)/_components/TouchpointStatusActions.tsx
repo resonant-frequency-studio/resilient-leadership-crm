@@ -5,6 +5,7 @@ import { Contact } from "@/types/firestore";
 import Modal from "@/components/Modal";
 import { Button } from "@/components/Button";
 import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
+import Textarea from "@/components/Textarea";
 import { useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useContact } from "@/hooks/useContact";
@@ -172,13 +173,13 @@ export default function TouchpointStatusActions({
                 — This will be saved and displayed on the contact page
               </span>
             </label>
-            <textarea
+            <Textarea
               id="touchpoint-complete-note-compact"
               name="touchpoint-complete-note-compact"
               value={reason}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
               placeholder="e.g., Discussed proposal, scheduled follow-up, sent quote..."
-              className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+              className="px-3 py-2 text-gray-900 disabled:text-gray-600"
               rows={3}
               disabled={mutation.isPending}
               autoComplete="off"
@@ -242,13 +243,13 @@ export default function TouchpointStatusActions({
                 — This will be saved and displayed on the contact page
               </span>
             </label>
-            <textarea
+            <Textarea
               id="touchpoint-skip-reason-compact"
               name="touchpoint-skip-reason-compact"
               value={reason}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
               placeholder="e.g., Not relevant, contact inactive, wrong contact..."
-              className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+              className="px-3 py-2 text-gray-900 disabled:text-gray-600"
               rows={3}
               disabled={mutation.isPending}
               autoComplete="off"
@@ -380,13 +381,13 @@ export default function TouchpointStatusActions({
               — This will be saved and displayed on the contact page
             </span>
           </label>
-          <textarea
+          <Textarea
             id="touchpoint-complete-note"
             name="touchpoint-complete-note"
             value={reason}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
             placeholder="e.g., Discussed proposal, scheduled follow-up, sent quote..."
-            className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+            className="px-3 py-2 text-gray-900 disabled:text-gray-600"
             rows={3}
             disabled={mutation.isPending}
             autoComplete="off"
@@ -451,13 +452,13 @@ export default function TouchpointStatusActions({
               — This will be saved and displayed on the contact page
             </span>
           </label>
-          <textarea
+          <Textarea
             id="touchpoint-skip-reason"
             name="touchpoint-skip-reason"
             value={reason}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)}
             placeholder="e.g., Not relevant, contact inactive, wrong contact..."
-            className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:text-gray-600"
+            className="px-3 py-2 text-gray-900 disabled:text-gray-600"
             rows={3}
             disabled={mutation.isPending}
             autoComplete="off"

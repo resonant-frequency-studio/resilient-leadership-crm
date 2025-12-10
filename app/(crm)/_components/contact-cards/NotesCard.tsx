@@ -6,6 +6,7 @@ import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
+import Textarea from "@/components/Textarea";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
 import { useSavingState } from "@/contexts/SavingStateContext";
@@ -121,10 +122,9 @@ export default function NotesCard({ contactId, userId }: NotesCardProps) {
         </h2>
         <SavingIndicator status={saveStatus} />
       </div>
-      <textarea
+      <Textarea
         id="contact-notes"
         name="contact-notes"
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
         rows={6}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}

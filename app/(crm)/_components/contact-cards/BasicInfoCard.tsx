@@ -6,6 +6,7 @@ import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useDebouncedSave } from "@/hooks/useDebouncedSave";
 import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
+import Input from "@/components/Input";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
 import { useSavingState } from "@/contexts/SavingStateContext";
@@ -136,10 +137,9 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
             <label className="block text-sm font-medium text-gray-700 mb-2">
               First Name
             </label>
-            <input
+            <Input
               id="contact-first-name"
               name="contact-first-name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               onBlur={handleBlur}
@@ -150,10 +150,9 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Last Name
             </label>
-            <input
+            <Input
               id="contact-last-name"
               name="contact-last-name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               onBlur={handleBlur}
@@ -165,10 +164,9 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Company
           </label>
-          <input
+          <Input
             id="contact-company"
             name="contact-company"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             onBlur={handleBlur}
@@ -179,12 +177,12 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email
           </label>
-          <input
+          <Input
             type="email"
             id="contact-email"
             name="contact-email"
             disabled
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="bg-gray-50 text-gray-500 cursor-not-allowed"
             value={contact.primaryEmail}
           />
         </div>
