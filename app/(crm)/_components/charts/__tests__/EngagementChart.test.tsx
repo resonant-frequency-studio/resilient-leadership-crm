@@ -20,7 +20,7 @@ describe("EngagementChart", () => {
   };
 
   beforeEach(() => {
-    mockWindowWidth(1024); // Desktop by default
+    mockWindowWidth(1280); // Desktop by default
   });
 
   it("renders chart with data", () => {

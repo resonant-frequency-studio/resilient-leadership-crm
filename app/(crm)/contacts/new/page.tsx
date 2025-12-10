@@ -5,6 +5,8 @@ import Loading from "@/components/Loading";
 import Card from "@/components/Card";
 import ContactsLink from "@/app/(crm)/_components/ContactsLink";
 import { Button } from "@/components/Button";
+import Input from "@/components/Input";
+import Textarea from "@/components/Textarea";
 
 export default function NewContactPage() {
   const { user, loading, form, updateField, saving, error, handleSave } = useNewContactPage();
@@ -18,17 +20,17 @@ export default function NewContactPage() {
   return (
     <div className="space-y-6">
       {/* Back Button - Mobile: top, Desktop: in header */}
-      <div className="lg:hidden">
+      <div className="xl:hidden">
         <ContactsLink variant="default" />
       </div>
 
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Add New Contact</h1>
           <p className="text-gray-600 text-lg">Create a new contact in your CRM</p>
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <ContactsLink variant="default" />
         </div>
       </div>
@@ -55,9 +57,9 @@ export default function NewContactPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Sidebar - Right Column (1/3) - Top on mobile, Right on desktop */}
-        <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
+        <div className="xl:col-span-1 space-y-6 order-1 xl:order-2">
           {/* Quick Info Card */}
           <Card padding="md">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Details</h2>
@@ -72,7 +74,7 @@ export default function NewContactPage() {
         </div>
 
         {/* Main Content - Left Column (2/3) */}
-        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+        <div className="xl:col-span-2 space-y-6 order-2 xl:order-1">
           {/* Basic Information Card */}
           <Card padding="md">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -96,10 +98,9 @@ export default function NewContactPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   id="new-contact-email"
                   name="new-contact-email"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   type="email"
                   value={form.primaryEmail || ""}
                   onChange={(e) => updateField("primaryEmail", e.target.value)}
@@ -112,10 +113,9 @@ export default function NewContactPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     First Name
                   </label>
-                  <input
+                  <Input
                     id="new-contact-first-name"
                     name="new-contact-first-name"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     value={form.firstName || ""}
                     onChange={(e) => updateField("firstName", e.target.value)}
                     placeholder="First Name"
@@ -125,10 +125,9 @@ export default function NewContactPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Last Name
                   </label>
-                  <input
+                  <Input
                     id="new-contact-last-name"
                     name="new-contact-last-name"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                     value={form.lastName || ""}
                     onChange={(e) => updateField("lastName", e.target.value)}
                     placeholder="Last Name"
@@ -139,10 +138,9 @@ export default function NewContactPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Company
                 </label>
-                <input
+                <Input
                   id="new-contact-company"
                   name="new-contact-company"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   value={form.company || ""}
                   onChange={(e) => updateField("company", e.target.value)}
                   placeholder="Company"
@@ -172,8 +170,7 @@ export default function NewContactPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Segment</label>
-                <input
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                <Input
                   value={form.segment || ""}
                   onChange={(e) => updateField("segment", e.target.value)}
                   placeholder="e.g., Enterprise, SMB, Individual"
@@ -183,8 +180,7 @@ export default function NewContactPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lead Source
                 </label>
-                <input
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                <Input
                   value={form.leadSource || ""}
                   onChange={(e) => updateField("leadSource", e.target.value)}
                   placeholder="e.g., Website, Referral, Event"
@@ -194,8 +190,7 @@ export default function NewContactPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Engagement Score
                 </label>
-                <input
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                <Input
                   type="number"
                   min="0"
                   max="100"
@@ -208,10 +203,9 @@ export default function NewContactPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                <input
+                <Input
                   id="new-contact-tags"
                   name="new-contact-tags"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   value={Array.isArray(form.tags) ? form.tags.join(", ") : ""}
                   onChange={(e) =>
                     updateField(
@@ -246,10 +240,9 @@ export default function NewContactPage() {
               </svg>
               Notes
             </h2>
-            <textarea
+            <Textarea
               id="new-contact-notes"
               name="new-contact-notes"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
               rows={6}
               value={form.notes || ""}
               onChange={(e) => updateField("notes", e.target.value)}
@@ -278,8 +271,7 @@ export default function NewContactPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                <Input
                   type="date"
                   value={
                     form.nextTouchpointDate && typeof form.nextTouchpointDate === "string"
@@ -291,10 +283,9 @@ export default function NewContactPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                <textarea
+                <Textarea
                   id="new-contact-next-touchpoint-message"
                   name="new-contact-next-touchpoint-message"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
                   rows={4}
                   value={form.nextTouchpointMessage || ""}
                   onChange={(e) => updateField("nextTouchpointMessage", e.target.value)}

@@ -7,6 +7,8 @@ import { formatContactDate } from "@/util/contact-utils";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Button } from "@/components/Button";
 import ActionItemCheckbox from "@/components/ActionItemCheckbox";
+import Textarea from "@/components/Textarea";
+import Input from "@/components/Input";
 
 interface ActionItemCardProps {
   actionItem: ActionItem;
@@ -149,20 +151,20 @@ export default function ActionItemCard({
     <div className={`rounded-lg p-3 sm:p-4 transition-all duration-200 min-w-0 overflow-hidden ${getVariantStyles()}`}>
       {isEditing ? (
         <div className="space-y-3">
-          <textarea
+          <Textarea
             id={`action-item-edit-text-${actionItem.actionItemId}`}
             name={`action-item-edit-text-${actionItem.actionItemId}`}
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+            className="px-3 py-2"
             rows={2}
             disabled={disabled}
           />
-          <input
+          <Input
             type="date"
             value={editDueDate}
             onChange={(e) => setEditDueDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            className="px-3 py-2"
             disabled={disabled}
           />
           <div className="flex gap-2">

@@ -148,9 +148,9 @@ export default function ImportContactsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* CSV Format Guide - Top on mobile, Right on desktop */}
-        <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
+        <div className="xl:col-span-1 space-y-6 order-1 xl:order-2">
           <Card padding="md">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">CSV Format Guide</h3>
             <p className="text-sm text-gray-600 mb-4">
@@ -208,7 +208,7 @@ export default function ImportContactsPage() {
         </div>
 
         {/* Upload Card - Left Column (2/3) */}
-        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+        <div className="xl:col-span-2 space-y-6 order-2 xl:order-1">
       <Card padding="lg">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">CSV File Upload</h2>

@@ -14,6 +14,7 @@ interface FilterState {
   companySearch: string;
   upcomingTouchpoints: boolean;
   showArchived: boolean;
+  customFilter?: "at-risk" | "warm" | null;
 }
 
 interface UseFilterContactsReturn {
@@ -27,6 +28,7 @@ interface UseFilterContactsReturn {
   companySearch: string;
   upcomingTouchpoints: boolean;
   showArchived: boolean;
+  customFilter?: "at-risk" | "warm" | null;
   setSelectedSegment: (segment: string) => void;
   setSelectedTags: (tags: string[]) => void;
   setEmailSearch: (email: string) => void;
@@ -35,6 +37,7 @@ interface UseFilterContactsReturn {
   setCompanySearch: (company: string) => void;
   setUpcomingTouchpoints: (value: boolean) => void;
   setShowArchived: (value: boolean) => void;
+  setCustomFilter: (filter: "at-risk" | "warm" | null) => void;
   onSegmentChange: (segment: string) => void;
   onTagsChange: (tags: string[]) => void;
   onEmailSearchChange: (email: string) => void;
@@ -58,6 +61,7 @@ export function useFilterContacts(
   const [companySearch, setCompanySearch] = useState<string>("");
   const [upcomingTouchpoints, setUpcomingTouchpoints] = useState<boolean>(initialUpcomingTouchpoints);
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  const [customFilter, setCustomFilter] = useState<"at-risk" | "warm" | null>(null);
 
   // Debounced search values (for filtering performance)
   const [debouncedEmailSearch, setDebouncedEmailSearch] = useState<string>("");
@@ -103,6 +107,7 @@ export function useFilterContacts(
     companySearch: debouncedCompanySearch,
     upcomingTouchpoints,
     showArchived,
+    customFilter,
   };
 
   const filteredContacts = useMemo(() => {
@@ -178,8 +183,33 @@ export function useFilterContacts(
       });
     }
 
+    // Custom filters from AI Insights
+    if (filters.customFilter === "at-risk") {
+      const now = new Date();
+      filtered = filtered.filter((contact) => {
+        if (!contact.lastEmailDate) return true; // No email history is at-risk
+        // Handle Firestore Timestamp or Date string
+        const lastEmailDate =
+          contact.lastEmailDate instanceof Date
+            ? contact.lastEmailDate
+            : typeof contact.lastEmailDate === "string"
+            ? new Date(contact.lastEmailDate)
+            : typeof contact.lastEmailDate === "object" && "toDate" in contact.lastEmailDate
+            ? (contact.lastEmailDate as { toDate: () => Date }).toDate()
+            : null;
+        if (!lastEmailDate) return true;
+        const daysSinceReply = (now.getTime() - lastEmailDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceReply >= 14;
+      });
+    } else if (filters.customFilter === "warm") {
+      filtered = filtered.filter((contact) => {
+        const score = contact.engagementScore || 0;
+        return score >= 50 && score < 70; // Medium-high engagement
+      });
+    }
+
     return filtered;
-  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.companySearch, filters.upcomingTouchpoints, filters.showArchived]);
+  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.companySearch, filters.upcomingTouchpoints, filters.showArchived, filters.customFilter]);
 
   const clearFilters = () => {
     setSelectedSegment("");
@@ -190,6 +220,7 @@ export function useFilterContacts(
     setCompanySearch("");
     setUpcomingTouchpoints(false);
     setShowArchived(false);
+    setCustomFilter(null);
   };
 
   const hasActiveFilters = 
@@ -200,7 +231,8 @@ export function useFilterContacts(
     !!lastNameSearch.trim() ||
     !!companySearch.trim() ||
     upcomingTouchpoints ||
-    showArchived;
+    showArchived ||
+    !!customFilter;
 
   return {
     filteredContacts,
@@ -213,6 +245,7 @@ export function useFilterContacts(
     companySearch,
     upcomingTouchpoints,
     showArchived,
+    customFilter,
     setSelectedSegment,
     setSelectedTags,
     setEmailSearch,
@@ -221,6 +254,7 @@ export function useFilterContacts(
     setCompanySearch,
     setUpcomingTouchpoints,
     setShowArchived,
+    setCustomFilter,
     onSegmentChange: setSelectedSegment,
     onTagsChange: setSelectedTags,
     onEmailSearchChange: setEmailSearch,

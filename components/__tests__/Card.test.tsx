@@ -47,7 +47,7 @@ describe("Card", () => {
     it("applies responsive padding", () => {
       const { container } = render(<Card padding="responsive">Content</Card>);
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("p-3", "lg:p-6");
+      expect(card).toHaveClass("p-3", "xl:p-6");
     });
   });
 

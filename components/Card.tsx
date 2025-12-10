@@ -19,7 +19,7 @@ export default function Card({
     md: "p-6",
     lg: "p-8",
     xl: "p-12",
-    responsive: "p-3 lg:p-6",
+    responsive: "p-3 xl:p-6",
   };
 
   const baseClasses = "bg-white rounded-xl shadow-[0px_4px_12px_rgba(0,0,0,0.1)] border border-gray-200";

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Contact } from "@/types/firestore";
 import ExportContactsButton from "../_components/ExportContactsButton";
 import ContactsFilter from "../_components/ContactsFilter";
@@ -15,6 +16,8 @@ import { reportException, reportMessage, ErrorLevel } from "@/lib/error-reportin
 import { useContacts } from "@/hooks/useContacts";
 import { useBulkArchiveContacts, useBulkUpdateSegments, useBulkUpdateTags } from "@/hooks/useContactMutations";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
+import BulkActionsBar from "@/components/BulkActionsBar";
+import Input from "@/components/Input";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -26,14 +29,19 @@ interface ContactsPageClientProps {
   userId: string;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export default function ContactsPageClient({
   userId,
 }: ContactsPageClientProps) {
+  const searchParams = useSearchParams();
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [showBulkSegmentModal, setShowBulkSegmentModal] = useState(false);
   const [showBulkTagsModal, setShowBulkTagsModal] = useState(false);
   const [selectedNewSegment, setSelectedNewSegment] = useState<string>("");
   const [selectedNewTags, setSelectedNewTags] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const urlParamsInitializedRef = useRef(false);
 
   // Use React Query hook for contacts
   // The hook's placeholderData function checks the cache first (includes prefetched SSR data and optimistic updates)
@@ -65,7 +73,37 @@ export default function ContactsPageClient({
     onClearFilters,
     showArchived,
     setShowArchived,
+    setSelectedSegment,
+    setSelectedTags,
+    setCustomFilter,
   } = filterContacts;
+
+  // Initialize filters from URL search params on mount
+  useEffect(() => {
+    if (urlParamsInitializedRef.current) return; // Only initialize once
+    
+    const segment = searchParams.get("segment");
+    const tags = searchParams.get("tags");
+    const filter = searchParams.get("filter");
+    
+    if (segment) {
+      setSelectedSegment(decodeURIComponent(segment));
+    }
+    
+    if (tags) {
+      const tagArray = decodeURIComponent(tags).split(",").filter(Boolean);
+      if (tagArray.length > 0) {
+        setSelectedTags(tagArray);
+      }
+    }
+    
+    // Handle custom filter types from AI Insights
+    if (filter === "at-risk" || filter === "warm") {
+      setCustomFilter(filter as "at-risk" | "warm");
+    }
+    
+    urlParamsInitializedRef.current = true;
+  }, [searchParams, setSelectedSegment, setSelectedTags, setCustomFilter]);
 
   // Get unique segments from all contacts for the bulk update dropdown
   const uniqueSegments = useMemo(
@@ -73,6 +111,29 @@ export default function ContactsPageClient({
       Array.from(new Set(contacts.map((c) => c.segment).filter(Boolean) as string[])).sort(),
     [contacts]
   );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    // Use setTimeout to defer the state update and avoid synchronous setState in effect
+    setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+  }, [
+    filterContacts.selectedSegment,
+    filterContacts.selectedTags,
+    filterContacts.emailSearch,
+    filterContacts.firstNameSearch,
+    filterContacts.lastNameSearch,
+    filterContacts.companySearch,
+    filterContacts.customFilter,
+    showArchived,
+  ]);
+
+  // Paginate filtered contacts
+  const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
 
   // Check if all filtered contacts are selected
   const allFilteredSelected = useMemo(() => {
@@ -264,7 +325,7 @@ export default function ContactsPageClient({
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Contacts</h1>
           <p className="text-gray-600 text-lg">
@@ -274,7 +335,7 @@ export default function ContactsPageClient({
           </p>
         </div>
         {/* Buttons - Mobile: below header, Desktop: right side */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 lg:shrink-0 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 xl:shrink-0 w-full sm:w-auto">
           <ExportContactsButton contacts={filteredContacts} />
           <Link href="/contacts/new" className="w-full sm:w-auto">
             <Button
@@ -305,97 +366,88 @@ export default function ContactsPageClient({
         {...filterContacts}
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
+        onCustomFilterChange={filterContacts.setCustomFilter}
       />
 
       {/* Bulk Action Bar */}
       {selectedContactIds.size > 0 && filteredContacts.length > 0 && (
-        <Card padding="md" className="bg-blue-50 border-blue-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-900">
-                {selectedContactIds.size}{" "}
-                {selectedContactIds.size === 1 ? "contact" : "contacts"} selected
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => setShowBulkSegmentModal(true)}
-                variant="gradient-blue"
-                size="sm"
-                icon={
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                    />
-                  </svg>
-                }
-              >
-                Reassign Segment
-              </Button>
-              <Button
-                onClick={() => setShowBulkTagsModal(true)}
-                variant="gradient-blue"
-                size="sm"
-                icon={
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                    />
-                  </svg>
-                }
-              >
-                Update Tags
-              </Button>
-              {!showArchived ? (
-                <Button
-                  onClick={() => handleBulkArchive(true)}
-                  disabled={bulkArchiveMutation.isPending}
-                  loading={bulkArchiveMutation.isPending}
-                  variant="gradient-gray"
-                  size="sm"
-                  icon={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                      />
-                    </svg>
-                  }
-                >
-                  Archive ({selectedContactIds.size})
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => handleBulkArchive(false)}
-                  disabled={bulkArchiveMutation.isPending}
-                  loading={bulkArchiveMutation.isPending}
-                  variant="gradient-green"
-                  size="sm"
-                  icon={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                  }
-                >
-                  Unarchive ({selectedContactIds.size})
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+        <BulkActionsBar
+          selectedCount={selectedContactIds.size}
+          itemLabel="contact"
+          actions={[
+            {
+              label: "Reassign Segment",
+              onClick: () => setShowBulkSegmentModal(true),
+              variant: "gradient-blue",
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                  />
+                </svg>
+              ),
+            },
+            {
+              label: "Update Tags",
+              onClick: () => setShowBulkTagsModal(true),
+              variant: "gradient-blue",
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                  />
+                </svg>
+              ),
+            },
+            ...(!showArchived
+              ? [
+                  {
+                    label: "Archive",
+                    onClick: () => handleBulkArchive(true),
+                    variant: "gradient-gray" as const,
+                    disabled: bulkArchiveMutation.isPending,
+                    loading: bulkArchiveMutation.isPending,
+                    showCount: true,
+                    icon: (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                        />
+                      </svg>
+                    ),
+                  },
+                ]
+              : [
+                  {
+                    label: "Unarchive",
+                    onClick: () => handleBulkArchive(false),
+                    variant: "gradient-green" as const,
+                    disabled: bulkArchiveMutation.isPending,
+                    loading: bulkArchiveMutation.isPending,
+                    showCount: true,
+                    icon: (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    ),
+                  },
+                ]),
+          ]}
+        />
       )}
 
       {/* Contacts Grid - Only the list is suspended */}
@@ -495,7 +547,7 @@ export default function ContactsPageClient({
             )}
 
             <div className="grid grid-cols-1 gap-3">
-              {filteredContacts.map((contact) => {
+              {paginatedContacts.map((contact) => {
                 const isSelected = selectedContactIds.has(contact.id);
                 return (
                   <ContactCard
@@ -510,6 +562,37 @@ export default function ContactsPageClient({
                 );
               })}
             </div>
+
+            {/* Pagination */}
+            {filteredContacts.length > ITEMS_PER_PAGE && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 pt-4 mt-4">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredContacts.length)} of{" "}
+                  {filteredContacts.length} {filteredContacts.length === 1 ? "contact" : "contacts"}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Previous
+                  </Button>
+                  <span className="flex items-center px-4 text-sm text-gray-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Suspense>
@@ -653,12 +736,12 @@ export default function ContactsPageClient({
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Tags (comma-separated)
                 </label>
-                <input
+                <Input
                   type="text"
                   value={selectedNewTags}
                   onChange={(e) => setSelectedNewTags(e.target.value)}
                   placeholder="tag1, tag2, tag3"
-                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="text-gray-700"
                 />
                 <p className="mt-2 text-xs text-gray-600">
                   Enter tags separated by commas. This will replace all existing tags on the selected contacts.

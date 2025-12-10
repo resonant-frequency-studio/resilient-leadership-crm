@@ -215,7 +215,7 @@ export default function ContactCard({
                 )}
 
                 {/* Segment and Tags - Mobile: show below */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-1.5 lg:hidden">
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5 xl:hidden">
                   {contact.segment && (
                     <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
                       {contact.segment}
@@ -243,7 +243,7 @@ export default function ContactCard({
               </div>
 
               {/* Segment and Tags - Desktop: show on right */}
-              <div className={`hidden lg:flex ${isTouchpointVariant ? 'items-center' : 'flex-col items-end'} gap-2 shrink-0 ${isTouchpointVariant ? 'ml-2' : 'max-w-[250px]'}`}>
+              <div className={`hidden xl:flex ${isTouchpointVariant ? 'items-center' : 'flex-col items-end'} gap-2 shrink-0 ${isTouchpointVariant ? 'ml-2' : 'max-w-[250px]'}`}>
                 {contact.segment && (
                   <span className={`px-2 ${isTouchpointVariant ? 'py-1' : 'py-1'} text-xs font-medium bg-gray-100 text-gray-700 rounded whitespace-nowrap`}>
                     {contact.segment}
@@ -271,7 +271,7 @@ export default function ContactCard({
 
               {/* Arrow Icon - Desktop only (only for non-touchpoint variants) */}
               {showArrow && !isTouchpointVariant && (
-                <div className="hidden lg:block shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="hidden xl:block shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <svg
                     className="w-5 h-5 text-gray-400"
                     fill="none"

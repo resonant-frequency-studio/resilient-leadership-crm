@@ -42,9 +42,9 @@ export default function ContactEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Content - Left Column (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           <BasicInfoCard contactId={contactDocumentId} userId={userId} />
           <TagsClassificationCard
             contactId={contactDocumentId}
@@ -63,7 +63,7 @@ export default function ContactEditor({
         </div>
 
         {/* Sidebar - Right Column (1/3) */}
-        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
           <ContactInsightsCard
             contactId={contactDocumentId}
             userId={userId}

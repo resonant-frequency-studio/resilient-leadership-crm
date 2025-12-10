@@ -1,9 +1,12 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import DashboardStatsCards from "./_components/DashboardStatsCards";
 import DashboardTouchpoints from "./_components/DashboardTouchpoints";
 import { DashboardStats } from "@/hooks/useDashboardStats";
+import RightColumnMetrics from "@/components/dashboard/RightColumnMetrics";
+import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
+import AiInsights from "@/components/dashboard/AiInsights";
+import SavedSegments from "@/components/dashboard/SavedSegments";
 
 interface DashboardPageClientProps {
   userId: string;
@@ -37,11 +40,22 @@ export default function DashboardPageClient({ userId, initialStats }: DashboardP
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <DashboardStatsCards userId={userId} initialStats={initialStats} />
+      {/* Two-Column Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
+        {/* Left Column - Main Content */}
+        <div className="space-y-6">
+          {/* Touchpoints Section - Already uses Card internally */}
+          <DashboardTouchpoints userId={userId} />
+        </div>
 
-      {/* Touchpoints Section - Already uses Card internally */}
-      <DashboardTouchpoints userId={userId} />
+        {/* Right Column - Metrics & Insights */}
+        <div className="space-y-6">
+          <RightColumnMetrics userId={userId} initialStats={initialStats} />
+          <AiInsights userId={userId} />
+          <PipelineSnapshot userId={userId} />
+          <SavedSegments userId={userId} />
+        </div>
+      </div>
     </div>
   );
 }

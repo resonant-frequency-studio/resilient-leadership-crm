@@ -28,13 +28,23 @@ export function normalizeDate(value: unknown): Date | null {
  * Normalize an ActionItem's date fields from API responses
  * API returns ISO strings, but we need Date objects for calculations
  */
-export function normalizeActionItem(raw: any): any {
+export function normalizeActionItem<T extends Record<string, unknown>>(raw: T): T & {
+  dueDate: Date | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  completedAt: Date | null;
+} {
   return {
     ...raw,
     dueDate: normalizeDate(raw.dueDate),
     createdAt: normalizeDate(raw.createdAt),
     updatedAt: normalizeDate(raw.updatedAt),
     completedAt: raw.completedAt ? normalizeDate(raw.completedAt) : null,
+  } as T & {
+    dueDate: Date | null;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    completedAt: Date | null;
   };
 }
 

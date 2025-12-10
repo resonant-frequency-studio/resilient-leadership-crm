@@ -16,7 +16,7 @@ function DashboardChartsContent({ userId, initialStats }: { userId: string; init
   // React Query with prefetched data should have data available immediately on hydration
   if (isLoading && !stats) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white rounded-xl shadow p-6 animate-pulse">
             <div className="h-6 bg-gray-200 rounded w-40 mb-4" />
@@ -30,7 +30,7 @@ function DashboardChartsContent({ userId, initialStats }: { userId: string; init
   // If no stats but not loading, show empty state
   if (!stats) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow p-6">
           <p className="text-gray-500">Loading charts...</p>
         </div>
@@ -39,7 +39,7 @@ function DashboardChartsContent({ userId, initialStats }: { userId: string; init
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <ChartCard userId={userId} title="Segment Distribution">
         {(stats) => <SegmentChart data={stats.segmentDistribution} />}
       </ChartCard>
@@ -56,7 +56,7 @@ function DashboardChartsContent({ userId, initialStats }: { userId: string; init
         {(stats) => <TopTagsChart data={stats.tagDistribution} />}
       </ChartCard>
 
-      <div className="lg:col-span-2">
+      <div className="xl:col-span-2">
         <ChartCard userId={userId} title="Sentiment Distribution">
           {(stats) => <SentimentChart data={stats.sentimentDistribution} />}
         </ChartCard>
@@ -74,7 +74,7 @@ export default function DashboardCharts({ userId, initialStats }: { userId: stri
   return (
     <Suspense
       fallback={
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="bg-white rounded-xl shadow p-6 animate-pulse">
               <div className="h-6 bg-gray-200 rounded w-40 mb-4" />

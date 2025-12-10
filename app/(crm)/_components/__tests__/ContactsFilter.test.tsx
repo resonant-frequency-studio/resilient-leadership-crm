@@ -38,6 +38,7 @@ describe("ContactsFilter", () => {
     onLastNameSearchChange: jest.fn(),
     onCompanySearchChange: jest.fn(),
     onShowArchivedChange: jest.fn(),
+    onCustomFilterChange: jest.fn(),
     onClearFilters: jest.fn(),
   };
 
@@ -64,7 +65,8 @@ describe("ContactsFilter", () => {
       expect(screen.getByPlaceholderText("Enter last name...")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Enter first name...")).toBeInTheDocument();
       expect(screen.getByText(/Filter by Segment/i)).toBeInTheDocument();
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
       expect(screen.getByRole("checkbox")).toBeInTheDocument();
     });
   });
@@ -143,7 +145,11 @@ describe("ContactsFilter", () => {
           {...mockHandlers}
         />
       );
-      const segmentSelect = screen.getByRole("combobox");
+      const comboboxes = screen.getAllByRole("combobox");
+      const segmentSelect = comboboxes.find(select => 
+        (select as HTMLSelectElement).options[0]?.text === "All Segments"
+      ) as HTMLSelectElement;
+      expect(segmentSelect).toBeDefined();
       fireEvent.change(segmentSelect, { target: { value: "Enterprise" } });
       expect(mockHandlers.onSegmentChange).toHaveBeenCalledWith("Enterprise");
     });
@@ -162,7 +168,11 @@ describe("ContactsFilter", () => {
           {...mockHandlers}
         />
       );
-      const segmentSelect = screen.getByRole("combobox") as HTMLSelectElement;
+      const comboboxes = screen.getAllByRole("combobox");
+      const segmentSelect = comboboxes.find(select => 
+        (select as HTMLSelectElement).options[0]?.text === "All Segments"
+      ) as HTMLSelectElement;
+      expect(segmentSelect).toBeDefined();
       const options = Array.from(segmentSelect.options).map(opt => opt.value);
       expect(options).toContain("Enterprise");
       expect(options).toContain("SMB");
@@ -404,6 +414,7 @@ describe("ContactsFilter", () => {
           emailSearch="john"
           firstNameSearch=""
           lastNameSearch=""
+          companySearch=""
           showArchived={false}
           {...mockHandlers}
         />
@@ -463,7 +474,11 @@ describe("ContactsFilter", () => {
           {...mockHandlers}
         />
       );
-      const segmentSelect = screen.getByRole("combobox") as HTMLSelectElement;
+      const comboboxes = screen.getAllByRole("combobox");
+      const segmentSelect = comboboxes.find(select => 
+        (select as HTMLSelectElement).options[0]?.text === "All Segments"
+      ) as HTMLSelectElement;
+      expect(segmentSelect).toBeDefined();
       const options = Array.from(segmentSelect.options).map(opt => opt.text);
       // Should have "All Segments", "Enterprise", "SMB" (sorted)
       expect(options).toContain("Enterprise");

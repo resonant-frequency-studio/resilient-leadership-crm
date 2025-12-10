@@ -6,6 +6,8 @@ import ActionItemCard from "./ActionItemCard";
 import { Button } from "@/components/Button";
 import Modal from "@/components/Modal";
 import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
+import Textarea from "@/components/Textarea";
+import Input from "@/components/Input";
 import { reportException } from "@/lib/error-reporting";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Contact } from "@/types/firestore";
@@ -307,22 +309,22 @@ export default function ActionItemsList({
       {/* Add new action item */}
       {isAdding ? (
         <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-          <textarea
+          <Textarea
             id="action-item-new-text"
             name="action-item-new-text"
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             placeholder="Enter action item..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+            className="px-3 py-2"
             rows={2}
             disabled={saving}
           />
-          <input
+          <Input
             type="date"
             value={newDueDate}
             onChange={(e) => setNewDueDate(e.target.value)}
             placeholder="Due date (optional)"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            className="px-3 py-2"
             disabled={saving}
           />
           <div className="flex flex-col gap-2">

@@ -8,6 +8,7 @@ import Card from "@/components/Card";
 import SavingIndicator from "./SavingIndicator";
 import { Button } from "@/components/Button";
 import Modal from "@/components/Modal";
+import Textarea from "@/components/Textarea";
 import { reportException } from "@/lib/error-reporting";
 import { Contact } from "@/types/firestore";
 import { useSavingState } from "@/contexts/SavingStateContext";
@@ -183,64 +184,74 @@ export default function OutreachDraftCard({
         </div>
       </Modal>
 
-      <Card padding="md">
-        <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-          Outreach Draft
-        </h2>
-        <div className="flex items-center gap-3">
+      <Card padding="md" className="relative">
+        {/* Saving Indicator - Mobile: absolute right, Desktop: in flex container */}
+        <div className="absolute top-6 right-6 xl:hidden">
           <SavingIndicator status={saveStatus} />
-          {localDraft.trim() && contact.primaryEmail && (
-            <Button
-              onClick={openGmailCompose}
-              variant="gradient-blue"
-              size="sm"
-              title="Open this draft in Gmail"
-              icon={
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              }
-            >
-              Continue in Gmail
-            </Button>
-          )}
         </div>
-      </div>
+        
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 mb-2">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 pr-20 xl:pr-0">
+            <svg
+              className="w-5 h-5 text-gray-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            <span className="truncate">Outreach Draft</span>
+          </h2>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Saving Indicator - Desktop only */}
+            <div className="hidden xl:block">
+              <SavingIndicator status={saveStatus} />
+            </div>
+            {localDraft.trim() && contact.primaryEmail && (
+              <Button
+                onClick={openGmailCompose}
+                variant="gradient-blue"
+                size="sm"
+                title="Open this draft in Gmail"
+                className="whitespace-nowrap"
+                icon={
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                }
+              >
+                <span className="hidden sm:inline">Continue in Gmail</span>
+                <span className="sm:hidden">Gmail</span>
+              </Button>
+            )}
+          </div>
+        </div>
       <p className="text-sm text-gray-600 mb-4">
         Draft and refine your email messages before sending. Your draft is automatically saved and can be opened directly in Gmail when ready to send.
       </p>
-      <textarea
+      <Textarea
         id="outreach-draft"
         name="outreach-draft"
         value={localDraft}
         onChange={(e) => setLocalDraft(e.target.value)}
         onBlur={handleBlur}
         placeholder="Write your outreach draft here..."
-        className="w-full min-h-[120px] px-4 py-3 text-gray-900 bg-gray-50 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 resize-y font-sans text-sm leading-relaxed"
+        className="min-h-[120px] text-gray-900 bg-gray-50 border-gray-200 focus:ring-green-500 focus:border-green-500 resize-y font-sans text-sm leading-relaxed"
       />
       </Card>
     </>
