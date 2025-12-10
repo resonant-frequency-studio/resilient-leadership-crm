@@ -244,7 +244,7 @@ export default function ActionItemCard({
                   </div>
 
                   {/* Arrow Icon */}
-                  <div className="hidden lg:block shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden xl:block shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg
                       className="w-5 h-5 text-gray-400"
                       fill="none"
@@ -264,7 +264,7 @@ export default function ActionItemCard({
             )}
 
             {/* Action Item Content */}
-            <div className={compact ? "" : "ml-0 lg:ml-12"}>
+            <div className={compact ? "" : "ml-0 xl:ml-12"}>
               <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
                 <p
                   className={`text-sm font-medium flex-1 min-w-0 break-words ${

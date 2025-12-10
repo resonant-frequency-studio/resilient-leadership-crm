@@ -44,7 +44,7 @@ const initialFormState: NewContactForm = {
 export function useNewContactPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const createContactMutation = useCreateContact(user?.uid);
+  const createContactMutation = useCreateContact();
   const [form, setForm] = useState<NewContactForm>(initialFormState);
   const [error, setError] = useState<string | null>(null);
 

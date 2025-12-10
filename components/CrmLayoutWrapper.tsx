@@ -23,6 +23,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
   const previousPathname = useRef(pathname);
   const [hasSessionCookie, setHasSessionCookie] = useState<boolean | null>(null);
+  const [isTouchpointsOpen, setIsTouchpointsOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -30,6 +31,13 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
     }
     return pathname?.startsWith(path);
   };
+
+  // Auto-expand Touchpoints submenu if on a touchpoint page
+  useEffect(() => {
+    if (pathname?.startsWith("/touchpoints/")) {
+      setIsTouchpointsOpen(true);
+    }
+  }, [pathname]);
 
   // Close mobile menu when pathname changes
   // This closes the menu on navigation (e.g., browser back/forward, programmatic navigation)
@@ -175,36 +183,39 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
     const baseClasses = "flex items-center px-4 py-3 rounded-lg transition-colors duration-200 font-medium";
     if (isSaving) {
       // Darker gray when saving - gray-600 on mobile (darker than normal gray-700), gray-500 on desktop (darker than normal gray-300)
-      return `${baseClasses} text-gray-600 lg:text-gray-500 cursor-not-allowed pointer-events-none`;
+      return `${baseClasses} text-gray-600 xl:text-gray-500 cursor-not-allowed pointer-events-none`;
     }
     if (isActive) {
-      return `${baseClasses} bg-gray-200 lg:bg-gray-700 text-gray-900 lg:text-white`;
+      return `${baseClasses} bg-gray-200 xl:bg-gray-700 text-gray-900 xl:text-white`;
     }
-    return `${baseClasses} text-gray-700 lg:text-gray-300 hover:bg-gray-100 lg:hover:bg-gray-700 hover:text-gray-900 lg:hover:text-white`;
+    return `${baseClasses} text-gray-700 xl:text-gray-300 hover:bg-gray-100 xl:hover:bg-gray-700 hover:text-gray-900 xl:hover:text-white`;
   };
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile Header Bar - Only visible on mobile (up to 1024px) */}
+      {/* Mobile Header Bar - Only visible on mobile (up to 1280px) */}
       <MobileHeader isMenuOpen={isMobileMenuOpen} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
 
       {/* Mobile Menu Overlay Backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/20 z-40 xl:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar - Fixed on desktop, overlay on mobile */}
       <nav
-        className={`w-full lg:w-64 bg-white lg:bg-[#212B36] p-6 border-r border-gray-200 lg:border-gray-700 flex flex-col h-[calc(100vh-4rem)] lg:h-screen fixed right-0 lg:left-0 top-16 lg:top-0 z-50 transition-transform duration-500 ease-in-out ${
-          isMobileMenuOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
+        className={`w-full xl:w-64 bg-white xl:bg-[#212B36] p-6 border-r border-gray-200 xl:border-gray-700 flex flex-col h-[calc(100vh-4rem)] xl:h-screen fixed right-0 xl:left-0 top-16 xl:top-0 z-50 transition-transform duration-500 ease-in-out ${
+          isMobileMenuOpen ? "translate-x-0" : "translate-x-full xl:translate-x-0"
         }`}
       >
-        <h2 className="text-xl font-semibold mb-8 text-gray-900 lg:text-white">{appConfig.crmName}</h2>
+        {/* Title - Only show on desktop */}
+        <h2 className="hidden xl:block text-xl font-semibold mb-8 text-white">{appConfig.crmName}</h2>
 
-        <ul className="space-y-2 flex-1">
+        {/* Scrollable menu content */}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+          <ul className="space-y-2">
           <li>
             <Link
               href="/"
@@ -293,6 +304,117 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
               Action Items
             </Link>
           </li>
+          {/* Touchpoints Submenu */}
+          <li>
+            <button
+              onClick={() => setIsTouchpointsOpen(!isTouchpointsOpen)}
+              disabled={isSaving}
+              className={`${getLinkClasses(
+                pathname?.startsWith("/touchpoints/") || false,
+                isSaving
+              )} ${!isSaving ? "cursor-pointer" : ""} w-full`}
+            >
+              <svg
+                className="w-5 h-5 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              Touchpoints
+              <svg
+                className={`w-4 h-4 ml-auto transition-transform duration-200 ${
+                  isTouchpointsOpen ? "rotate-90" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+            {isTouchpointsOpen && (
+              <ul className="ml-8 mt-2 space-y-1">
+                <li>
+                  <Link
+                    href="/touchpoints/today"
+                    onClick={handleLinkClick}
+                    className={getLinkClasses(isActive("/touchpoints/today"), isSaving)}
+                  >
+                    <svg
+                      className="w-4 h-4 mr-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Today
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/touchpoints/overdue"
+                    onClick={handleLinkClick}
+                    className={getLinkClasses(isActive("/touchpoints/overdue"), isSaving)}
+                  >
+                    <svg
+                      className="w-4 h-4 mr-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Overdue
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/touchpoints/upcoming"
+                    onClick={handleLinkClick}
+                    className={getLinkClasses(isActive("/touchpoints/upcoming"), isSaving)}
+                  >
+                    <svg
+                      className="w-4 h-4 mr-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Upcoming
+                  </Link>
+                </li>
+              </ul>
+            )}
+          </li>
           <li>
             <Link
               href="/charts"
@@ -359,24 +481,25 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
               FAQ
             </Link>
           </li>
-        </ul>
+          </ul>
+        </div>
 
         {/* User Profile and Sign Out - only show when user is loaded */}
         {showUserElements && (
           <div className="mt-auto space-y-3">
             {/* User Info Card */}
-            <div className="px-4 py-3 bg-gray-100 lg:bg-gray-700 rounded-lg">
+            <div className="px-4 py-3 bg-gray-100 xl:bg-gray-700 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-300 lg:bg-gray-600 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-gray-900 lg:text-white font-semibold text-sm">
+                <div className="w-10 h-10 bg-gray-300 xl:bg-gray-600 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-gray-900 xl:text-white font-semibold text-sm">
                     {user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 lg:text-white font-medium text-sm truncate">
+                  <p className="text-gray-900 xl:text-white font-medium text-sm truncate">
                     {user?.displayName || "User"}
                   </p>
-                  <p className="text-gray-600 lg:text-gray-400 text-xs truncate">
+                  <p className="text-gray-600 xl:text-gray-400 text-xs truncate">
                     {user?.email}
                   </p>
                 </div>
@@ -390,7 +513,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
               variant="secondary"
               size="sm"
               fullWidth
-              className="bg-gray-200 lg:bg-gray-700 hover:bg-gray-300 lg:hover:bg-gray-600 text-gray-900 lg:text-white"
+              className="bg-gray-200 xl:bg-gray-700 hover:bg-gray-300 xl:hover:bg-gray-600 text-gray-900 xl:text-white"
               icon={
                 <svg
                   className="w-4 h-4"
@@ -414,7 +537,7 @@ export function CrmLayoutWrapper({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Main content - Scrollable */}
-      <main className="flex-1 lg:ml-64 pt-20 lg:pt-10 px-6 lg:px-10 pb-6 lg:pb-10 bg-white text-gray-800 overflow-y-auto h-screen">
+      <main className="flex-1 xl:ml-64 pt-20 xl:pt-10 px-6 xl:px-10 pb-6 xl:pb-10 bg-white text-gray-800 overflow-y-auto h-screen">
         {children}
       </main>
     </div>

@@ -14,8 +14,8 @@ const renderTooltip = (props: any) => {
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className="bg-white p-2 lg:p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="font-semibold text-gray-900 text-xs lg:text-sm">{data.payload?.name || "Unknown"}</p>
+      <div className="bg-white p-2 xl:p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="font-semibold text-gray-900 text-xs xl:text-sm">{data.payload?.name || "Unknown"}</p>
         <p className="text-xs text-gray-600">{data.value} contacts</p>
       </div>
     );
@@ -28,7 +28,7 @@ export default function TopTagsChart({ data }: TopTagsChartProps) {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+      setIsMobile(window.innerWidth < 1280);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);

@@ -259,8 +259,10 @@ describe("OutreachDraftCard", () => {
 
       render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
-      const indicator = screen.getByTestId("saving-indicator");
-      expect(indicator.getAttribute("data-status")).toBe("idle");
+      // There may be multiple indicators (mobile and desktop), so get all and check the first one
+      const indicators = screen.getAllByTestId("saving-indicator");
+      expect(indicators.length).toBeGreaterThan(0);
+      expect(indicators[0].getAttribute("data-status")).toBe("idle");
     });
 
     it("only saves when there are unsaved changes", () => {

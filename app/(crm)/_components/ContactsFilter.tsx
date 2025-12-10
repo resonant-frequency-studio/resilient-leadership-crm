@@ -18,6 +18,7 @@ interface ContactsFilterProps {
   lastNameSearch: string;
   companySearch: string;
   showArchived: boolean;
+  customFilter?: "at-risk" | "warm" | null;
   onSegmentChange: (segment: string) => void;
   onTagsChange: (tags: string[]) => void;
   onEmailSearchChange: (email: string) => void;
@@ -25,6 +26,7 @@ interface ContactsFilterProps {
   onLastNameSearchChange: (lastName: string) => void;
   onCompanySearchChange: (company: string) => void;
   onShowArchivedChange: (show: boolean) => void;
+  onCustomFilterChange?: (filter: "at-risk" | "warm" | null) => void;
   onClearFilters: () => void;
 }
 
@@ -37,6 +39,7 @@ export default function ContactsFilter({
   lastNameSearch,
   companySearch,
   showArchived,
+  customFilter,
   onSegmentChange,
   onTagsChange,
   onEmailSearchChange,
@@ -44,6 +47,7 @@ export default function ContactsFilter({
   onLastNameSearchChange,
   onCompanySearchChange,
   onShowArchivedChange,
+  onCustomFilterChange,
   onClearFilters,
 }: ContactsFilterProps) {
   const [tagSearch, setTagSearch] = useState<string>("");
@@ -67,7 +71,7 @@ export default function ContactsFilter({
     }
   };
 
-  const hasActiveFilters = selectedSegment || selectedTags.length > 0 || emailSearch.trim() || firstNameSearch.trim() || lastNameSearch.trim() || companySearch.trim();
+  const hasActiveFilters = selectedSegment || selectedTags.length > 0 || emailSearch.trim() || firstNameSearch.trim() || lastNameSearch.trim() || companySearch.trim() || !!customFilter;
 
   return (
     <Card padding="md">
@@ -86,7 +90,7 @@ export default function ContactsFilter({
       </div>
 
       {/* Search Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         {/* Email Search */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -163,8 +167,29 @@ export default function ContactsFilter({
           </select>
         </div>
 
+        {/* Custom Filters (At-Risk, Warm) */}
+        {onCustomFilterChange && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quick Filters
+            </label>
+            <select
+              value={customFilter || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                onCustomFilterChange(value === "" ? null : (value as "at-risk" | "warm"));
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">None</option>
+              <option value="at-risk">At-Risk (14+ days no reply)</option>
+              <option value="warm">Warm Leads (50-70 engagement)</option>
+            </select>
+          </div>
+        )}
+
         {/* Tags Filter and Show Archived - Combined */}
-        <div className="md:col-span-2">
+        <div className={onCustomFilterChange ? "md:col-span-1" : "md:col-span-2"}>
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             {/* Tags Filter - Searchable Multi-Select */}
             {uniqueTags.length > 0 && (

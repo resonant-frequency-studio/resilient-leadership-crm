@@ -19,8 +19,8 @@ const renderTooltip = (props: any) => {
     const data = payload[0];
     if (!data) return null;
     return (
-      <div className="bg-white p-2 lg:p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="font-semibold text-gray-900 text-xs lg:text-sm">{data.payload?.name || "Unknown"}</p>
+      <div className="bg-white p-2 xl:p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="font-semibold text-gray-900 text-xs xl:text-sm">{data.payload?.name || "Unknown"}</p>
         <p className="text-xs text-gray-600">{data.value || 0} contacts</p>
       </div>
     );
@@ -33,7 +33,7 @@ export default function EngagementChart({ data }: EngagementChartProps) {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+      setIsMobile(window.innerWidth < 1280);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -48,7 +48,7 @@ export default function EngagementChart({ data }: EngagementChartProps) {
   ];
 
   return (
-    <div className="w-full -mb-2 lg:mb-0">
+    <div className="w-full -mb-2 xl:mb-0">
       <ResponsiveContainer width="100%" height={isMobile ? 320 : 450}>
         <BarChart 
           data={chartData} 

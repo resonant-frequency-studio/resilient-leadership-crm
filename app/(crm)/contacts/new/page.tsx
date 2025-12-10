@@ -18,17 +18,17 @@ export default function NewContactPage() {
   return (
     <div className="space-y-6">
       {/* Back Button - Mobile: top, Desktop: in header */}
-      <div className="lg:hidden">
+      <div className="xl:hidden">
         <ContactsLink variant="default" />
       </div>
 
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Add New Contact</h1>
           <p className="text-gray-600 text-lg">Create a new contact in your CRM</p>
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <ContactsLink variant="default" />
         </div>
       </div>
@@ -55,9 +55,9 @@ export default function NewContactPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Sidebar - Right Column (1/3) - Top on mobile, Right on desktop */}
-        <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
+        <div className="xl:col-span-1 space-y-6 order-1 xl:order-2">
           {/* Quick Info Card */}
           <Card padding="md">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Details</h2>
@@ -72,7 +72,7 @@ export default function NewContactPage() {
         </div>
 
         {/* Main Content - Left Column (2/3) */}
-        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+        <div className="xl:col-span-2 space-y-6 order-2 xl:order-1">
           {/* Basic Information Card */}
           <Card padding="md">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">

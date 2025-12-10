@@ -14,7 +14,7 @@ const mockWindowWidth = (width: number) => {
 
 describe("SegmentChart", () => {
   beforeEach(() => {
-    mockWindowWidth(1024); // Desktop by default
+    mockWindowWidth(1280); // Desktop by default
   });
 
   describe("Rendering", () => {
