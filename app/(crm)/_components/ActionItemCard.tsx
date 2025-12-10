@@ -6,6 +6,7 @@ import { ActionItem, Contact } from "@/types/firestore";
 import { formatContactDate } from "@/util/contact-utils";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { Button } from "@/components/Button";
+import ActionItemCheckbox from "@/components/ActionItemCheckbox";
 
 interface ActionItemCardProps {
   actionItem: ActionItem;
@@ -21,8 +22,9 @@ interface ActionItemCardProps {
   compact?: boolean; // If true, hide contact info (for use on contact detail page)
   // Pre-computed values (optional for backward compatibility)
   isOverdue?: boolean;
-  displayName?: string;
+  displayName?: string | null; // null when contact not found (show skeleton)
   initials?: string;
+  contactLoading?: boolean; // true when contacts are still loading
 }
 
 export default function ActionItemCard({
@@ -40,6 +42,7 @@ export default function ActionItemCard({
   isOverdue: preComputedIsOverdue,
   displayName: preComputedDisplayName,
   initials: preComputedInitials,
+  contactLoading = false,
 }: ActionItemCardProps) {
   // Use pre-computed values if provided, otherwise compute on client (for backward compatibility)
   const isOverdue =
@@ -183,69 +186,14 @@ export default function ActionItemCard({
         </div>
       ) : (
         <div className="flex flex-col gap-3 min-w-0 overflow-hidden">
-          {/* Top Row: Checkbox, Edit, Delete */}
+          {/* Top Row: Checkbox with label, Edit, Delete */}
           <div className="flex items-center gap-2">
-            {/* Checkbox */}
-            <button
-              onClick={onComplete}
+            {/* Checkbox with label */}
+            <ActionItemCheckbox
+              checked={actionItem.status === "completed"}
+              onChange={onComplete}
               disabled={disabled}
-              className={`w-5 h-5 p-0 rounded border-2 flex items-center justify-center shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed ${
-                actionItem.status === "completed"
-                  ? "bg-green-500 border-green-500 hover:bg-green-600"
-                  : "border-gray-300 hover:border-green-500 bg-transparent"
-              }`}
-              title={
-                actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"
-              }
-              aria-label={actionItem.status === "completed" ? "Mark as pending" : "Mark as complete"}
-            >
-              {actionItem.status === "completed" && (
-                <svg
-                  className="w-3 h-3 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={3}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </button>
-
-            {/* Contact Info Section - Only show if not in compact mode */}
-            {!compact && (
-              <Link
-                href={`/contacts/${contactId}`}
-                className="flex items-center gap-2 group flex-1 min-w-0"
-              >
-                {/* Avatar */}
-                <div className="shrink-0">
-                  <div className={`w-8 h-8 ${getAvatarStyles()} rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-sm`}>
-                    {initials}
-                  </div>
-                </div>
-
-                {/* Contact Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-semibold group-hover:text-gray-700 transition-colors truncate ${
-                    actionItem.status === "completed" ? "text-gray-500" : "text-gray-900"
-                  }`}>
-                    {displayName}
-                  </h3>
-                  {email && (
-                    <p className={`text-xs truncate mt-0.5 ${
-                      actionItem.status === "completed" ? "text-gray-400" : "text-gray-500"
-                    }`}>
-                      {email}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            )}
+            />
 
             {/* Action Buttons - Edit and Delete */}
             {actionItem.status === "pending" && (
@@ -303,6 +251,43 @@ export default function ActionItemCard({
               </div>
             )}
           </div>
+
+          {/* Contact Info Section - Only show if not in compact mode, on its own row */}
+          {!compact && (
+            <Link
+              href={`/contacts/${contactId}`}
+              className="flex items-center gap-2 group"
+            >
+              {/* Avatar */}
+              <div className="shrink-0">
+                <div className={`w-8 h-8 ${getAvatarStyles()} rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-sm`}>
+                  {initials}
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="flex-1 min-w-0">
+                {contactLoading || displayName === null ? (
+                  <div className="h-[38px] bg-gray-200 rounded w-24 animate-pulse" />
+                ) : (
+                  <>
+                    <h3 className={`text-sm font-semibold group-hover:text-gray-700 transition-colors truncate ${
+                      actionItem.status === "completed" ? "text-gray-500" : "text-gray-900"
+                    }`}>
+                      {displayName || ""}
+                    </h3>
+                    {email && (
+                      <p className={`text-xs truncate mt-0.5 ${
+                        actionItem.status === "completed" ? "text-gray-400" : "text-gray-500"
+                      }`}>
+                        {email}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </Link>
+          )}
 
           {/* Bottom Row: Action Item Text */}
           <div className="min-w-0">

@@ -92,14 +92,12 @@ describe("ActionItemCard", () => {
           onEdit={mockOnEdit}
         />
       );
-      const checkbox = screen.getByRole("button", {
-        name: /mark as complete/i,
-      });
+      const checkbox = screen.getByRole("checkbox");
       fireEvent.click(checkbox);
       expect(mockOnComplete).toHaveBeenCalledTimes(1);
     });
 
-    it("shows correct title for pending items", () => {
+    it("checkbox is unchecked for pending items", () => {
       render(
         <ActionItemCard
           actionItem={mockActionItem}
@@ -110,13 +108,11 @@ describe("ActionItemCard", () => {
           onEdit={mockOnEdit}
         />
       );
-      const checkbox = screen.getByRole("button", {
-        name: /mark as complete/i,
-      });
-      expect(checkbox).toHaveAttribute("title", "Mark as complete");
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).not.toBeChecked();
     });
 
-    it("shows correct title for completed items", () => {
+    it("checkbox is checked for completed items", () => {
       const completedItem = createMockActionItem({
         ...mockActionItem,
         status: "completed",
@@ -131,10 +127,8 @@ describe("ActionItemCard", () => {
           onEdit={mockOnEdit}
         />
       );
-      const checkbox = screen.getByRole("button", {
-        name: /mark as pending/i,
-      });
-      expect(checkbox).toHaveAttribute("title", "Mark as pending");
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).toBeChecked();
     });
   });
 
@@ -418,9 +412,7 @@ describe("ActionItemCard", () => {
           disabled
         />
       );
-      const checkbox = screen.getByRole("button", {
-        name: /mark as complete/i,
-      });
+      const checkbox = screen.getByRole("checkbox");
       expect(checkbox).toBeDisabled();
 
       const editButton = screen.getByRole("button", { name: /edit/i });

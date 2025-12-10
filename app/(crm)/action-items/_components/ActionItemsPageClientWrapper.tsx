@@ -14,10 +14,11 @@ interface EnrichedActionItem extends ActionItem {
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
-  displayName: string;
+  displayName: string | null; // null when contact not found (show skeleton)
   initials: string;
   isOverdue: boolean;
   dateCategory: "overdue" | "today" | "thisWeek" | "upcoming";
+  contactLoading?: boolean; // true when contacts are still loading
 }
 
 export default function ActionItemsPageClientWrapper({ userId }: { userId: string }) {
@@ -28,7 +29,7 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
   const effectiveUserId = userId || (authLoading ? "" : user?.uid || "");
   // React Query automatically uses prefetched data from HydrationBoundary
   const { data: actionItems = [] } = useActionItems(effectiveUserId);
-  const { data: contacts = [] } = useContacts(effectiveUserId);
+  const { data: contacts = [], isLoading: contactsLoading } = useContacts(effectiveUserId);
 
   // Convert contacts array to Map for efficient lookup
   const contactsMap = new Map<string, Contact>();
@@ -54,9 +55,11 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
       updatedAt: new Date(),
     };
 
-    const displayName = contact ? getDisplayName(contactForUtils) : "Unknown Contact";
-    const contactName = displayName;
-    const initials = getInitials(contactForUtils);
+    // If contact not found, set displayName to null (will show skeleton)
+    // Only show skeleton if contacts are still loading
+    const displayName = contact ? getDisplayName(contactForUtils) : null;
+    const contactName = displayName || "";
+    const initials = contact ? getInitials(contactForUtils) : "";
     const isOverdue = computeIsOverdue(item, serverTime);
     const dateCategory = getDateCategory(item.dueDate, serverTime);
 
@@ -70,6 +73,7 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
       initials,
       isOverdue,
       dateCategory,
+      contactLoading: contactsLoading && !contact, // Show skeleton if loading and contact not found
     };
   });
 
