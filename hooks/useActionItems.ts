@@ -9,10 +9,17 @@ import { ActionItem } from "@/types/firestore";
  * @param contactId - Optional contact ID. If provided, fetches action items for that contact only
  * @param initialData - Optional initial data from server prefetch
  */
+type EnrichedActionItem = ActionItem & { 
+  contactId: string;
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+  contactEmail?: string;
+};
+
 export function useActionItems(
   userId: string,
   contactId?: string,
-  initialData?: ActionItem[] | Array<ActionItem & { contactId: string }>
+  initialData?: ActionItem[] | EnrichedActionItem[]
 ) {
   const queryClient = useQueryClient();
 
@@ -38,7 +45,7 @@ export function useActionItems(
           throw new Error(errorData.error || "Failed to fetch action items");
         }
         const data = await response.json();
-        return data.actionItems as Array<ActionItem & { contactId: string }>;
+        return data.actionItems as EnrichedActionItem[];
       }
     },
     enabled: !!userId,
@@ -47,7 +54,7 @@ export function useActionItems(
     // This is a valid optimization: show filtered items while fetching
     placeholderData: () => {
       if (contactId) {
-        const allActionItems = queryClient.getQueryData<Array<ActionItem & { contactId: string }>>([
+        const allActionItems = queryClient.getQueryData<EnrichedActionItem[]>([
           "action-items",
           userId,
         ]);

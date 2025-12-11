@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionItems } from "@/hooks/useActionItems";
-import { useContacts } from "@/hooks/useContacts";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { computeIsOverdue, getDateCategory } from "@/util/date-utils-server";
@@ -14,12 +13,18 @@ interface EnrichedActionItem extends ActionItem {
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
-  displayName: string | null; // null when contact not found (show skeleton)
+  displayName: string | null;
   initials: string;
   isOverdue: boolean;
   dateCategory: "overdue" | "today" | "thisWeek" | "upcoming";
-  contactLoading?: boolean; // true when contacts are still loading
 }
+
+type ActionItemWithContactFields = ActionItem & {
+  contactId: string;
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+  contactEmail?: string;
+};
 
 export default function ActionItemsPageClientWrapper({ userId }: { userId: string }) {
   const { user, loading: authLoading } = useAuth();
@@ -29,56 +34,62 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
   const effectiveUserId = userId || (authLoading ? "" : user?.uid || "");
   // React Query automatically uses prefetched data from HydrationBoundary
   const { data: actionItems = [] } = useActionItems(effectiveUserId);
-  const { data: contacts = [], isLoading: contactsLoading } = useContacts(effectiveUserId);
-
-  // Convert contacts array to Map for efficient lookup
-  const contactsMap = new Map<string, Contact>();
-  contacts.forEach((contact) => {
-    contactsMap.set(contact.contactId, contact);
-  });
 
   // Use consistent server time for all calculations
   const serverTime = new Date();
 
-  // Pre-compute all derived values
-  const enrichedItems: EnrichedActionItem[] = actionItems.map((item) => {
-    const contact = contactsMap.get(item.contactId);
-    
-    // Create contact object for utility functions
+  // Pre-compute all derived values using enriched contact data from action items
+  const enrichedItems: EnrichedActionItem[] = (actionItems as ActionItemWithContactFields[]).map((item) => {
+    // Create contact object for utility functions using enriched data
     const contactForUtils: Contact = {
       contactId: item.contactId,
-      firstName: contact?.firstName,
-      lastName: contact?.lastName,
-      company: contact?.company,
-      primaryEmail: contact?.primaryEmail || "",
+      firstName: item.contactFirstName || null,
+      lastName: item.contactLastName || null,
+      company: null,
+      primaryEmail: item.contactEmail || "",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    // If contact not found, set displayName to null (will show skeleton)
-    // Only show skeleton if contacts are still loading
-    const displayName = contact ? getDisplayName(contactForUtils) : null;
-    const contactName = displayName || "";
-    const initials = contact ? getInitials(contactForUtils) : "";
+    const displayName = getDisplayName(contactForUtils);
+    const contactName = displayName || item.contactEmail || "";
+    const initials = getInitials(contactForUtils);
     const isOverdue = computeIsOverdue(item, serverTime);
     const dateCategory = getDateCategory(item.dueDate, serverTime);
 
     return {
       ...item,
       contactName,
-      contactEmail: contact?.primaryEmail,
-      contactFirstName: contact?.firstName || undefined,
-      contactLastName: contact?.lastName || undefined,
+      contactEmail: item.contactEmail,
+      contactFirstName: item.contactFirstName || undefined,
+      contactLastName: item.contactLastName || undefined,
       displayName,
       initials,
       isOverdue,
       dateCategory,
-      contactLoading: contactsLoading && !contact, // Show skeleton if loading and contact not found
     };
   });
 
-  // Convert contacts Map to array for serialization
-  const contactsArray: Array<[string, Contact]> = Array.from(contactsMap.entries());
+  // Extract unique contact IDs for filters
+  const uniqueContactIds = Array.from(
+    new Set(enrichedItems.map((i) => i.contactId))
+  );
+
+  // Create contacts array for filters (minimal data needed)
+  const contactsArray: Array<[string, Contact]> = uniqueContactIds.map((contactId) => {
+    const item = enrichedItems.find((i) => i.contactId === contactId);
+    return [
+      contactId,
+      {
+        contactId,
+        primaryEmail: item?.contactEmail || "",
+        firstName: item?.contactFirstName || null,
+        lastName: item?.contactLastName || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Contact,
+    ];
+  });
 
   return (
     <ActionItemsPageClient

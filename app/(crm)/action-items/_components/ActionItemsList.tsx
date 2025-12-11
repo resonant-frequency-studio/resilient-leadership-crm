@@ -1,6 +1,5 @@
 import { getUserId } from "@/lib/auth-utils";
 import { getAllActionItemsForUser } from "@/lib/action-items";
-import { getAllContactsForUser } from "@/lib/contacts-server";
 import { getQueryClient } from "@/lib/query-client";
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { isPlaywrightTest } from "@/util/test-utils";
@@ -24,17 +23,12 @@ export default async function ActionItemsList() {
   }
 
   // Only prefetch if we have userId
+  // Note: Action items are now enriched with contact fields, so we don't need to prefetch contacts separately
   if (userId) {
-    await Promise.all([
-      queryClient.prefetchQuery({
-        queryKey: ["action-items", userId],
-        queryFn: () => getAllActionItemsForUser(userId!),
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ["contacts", userId],
-        queryFn: () => getAllContactsForUser(userId!),
-      }),
-    ]);
+    await queryClient.prefetchQuery({
+      queryKey: ["action-items", userId],
+      queryFn: () => getAllActionItemsForUser(userId!),
+    });
   }
 
   return (

@@ -1,14 +1,15 @@
-import { getAllContactsForUser } from "./contacts-server";
+import { getAllContactsForUserUncached } from "./contacts-server";
 import { DashboardStats } from "@/hooks/useDashboardStats";
 import { reportException } from "./error-reporting";
 import { unstable_cache } from "next/cache";
 
 /**
  * Internal function to calculate dashboard stats (uncached)
+ * Uses getAllContactsForUserUncached to avoid nested caching that can exceed Next.js 2MB cache limit
  */
 async function getDashboardStatsUncached(userId: string): Promise<DashboardStats> {
   try {
-    const contacts = await getAllContactsForUser(userId);
+    const contacts = await getAllContactsForUserUncached(userId);
 
     const totalContacts = contacts.length;
     const contactsWithEmail = contacts.filter((c) => c.primaryEmail).length;
