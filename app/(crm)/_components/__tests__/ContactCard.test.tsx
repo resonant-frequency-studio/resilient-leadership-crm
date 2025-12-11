@@ -125,7 +125,7 @@ describe("ContactCard", () => {
         />
       );
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("bg-gray-50", "border", "border-gray-200");
+      expect(card).toHaveClass("border", "border-theme-light");
     });
 
     it("touchpoint-overdue variant shows correct styling", () => {
@@ -138,7 +138,7 @@ describe("ContactCard", () => {
         />
       );
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("bg-red-50", "border", "border-red-200");
+      expect(card).toHaveClass("bg-card-overdue", "border", "border-card-overdue-dark");
     });
   });
 

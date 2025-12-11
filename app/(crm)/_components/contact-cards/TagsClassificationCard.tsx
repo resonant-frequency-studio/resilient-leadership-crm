@@ -217,6 +217,8 @@ export default function TagsClassificationCard({
             </label>
             <Input
               type="text"
+              id="contact-lead-source"
+              name="contact-lead-source"
               value={leadSource}
               onChange={(e) => setLeadSource(e.target.value)}
               onBlur={handleBlur}
