@@ -1,5 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { ActionItem } from "@/types/firestore";
+import { ActionItem, Contact } from "@/types/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { reportException } from "@/lib/error-reporting";
 import { convertTimestamp } from "@/util/timestamp-utils-server";
@@ -105,10 +105,16 @@ export async function getActionItemsForContact(
 
 /**
  * Internal function to fetch all action items for a user (uncached)
+ * Enriches action items with contact fields (firstName, lastName, primaryEmail) for better performance
  */
 async function getAllActionItemsForUserUncached(
   userId: string
-): Promise<Array<ActionItem & { contactId: string }>> {
+): Promise<Array<ActionItem & { 
+  contactId: string;
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+  contactEmail?: string;
+}>> {
   // Get all contacts first
   const contactsSnapshot = await adminDb
     .collection(`users/${userId}/contacts`)
@@ -120,16 +126,27 @@ async function getAllActionItemsForUserUncached(
 
   const contactDocs = contactsSnapshot.docs;
   
+  // Create a map of contactId -> contact data for efficient lookup
+  const contactsMap = new Map<string, Contact>();
+  contactDocs.forEach((contactDoc) => {
+    const contact = { ...contactDoc.data(), contactId: contactDoc.id } as Contact;
+    contactsMap.set(contactDoc.id, contact);
+  });
+  
   // Process all contacts in parallel (removed batching delays for performance)
   const allPromises = contactDocs.map(async (contactDoc) => {
     const contactId = contactDoc.id;
+    const contact = contactsMap.get(contactId);
     try {
       const actionItems = await getActionItemsForContactUncached(userId, contactId);
       // Action items already have timestamps converted to ISO strings
-      // Just add contactId
+      // Enrich with contact fields
       return actionItems.map((item) => ({
         ...item,
         contactId,
+        contactFirstName: contact?.firstName || null,
+        contactLastName: contact?.lastName || null,
+        contactEmail: contact?.primaryEmail || undefined,
       }));
     } catch (error) {
       reportException(error, {
@@ -162,12 +179,18 @@ async function getAllActionItemsForUserUncached(
 /**
  * Get all action items for a user (across all contacts)
  * OPTIMIZED: Uses parallel queries without delays for better performance
- * Returns action items with contactId included and timestamps converted to ISO strings
+ * Returns action items enriched with contact fields (firstName, lastName, primaryEmail)
+ * and timestamps converted to ISO strings
  * Cache removed to ensure React Query works properly with real-time updates.
  */
 export async function getAllActionItemsForUser(
   userId: string
-): Promise<Array<ActionItem & { contactId: string }>> {
+): Promise<Array<ActionItem & { 
+  contactId: string;
+  contactFirstName?: string | null;
+  contactLastName?: string | null;
+  contactEmail?: string;
+}>> {
   return getAllActionItemsForUserUncached(userId);
 }
 

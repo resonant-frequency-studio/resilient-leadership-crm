@@ -14,7 +14,15 @@ export async function GET() {
     const actionItems = await getAllActionItemsForUser(userId);
     
     // Include debug info in development
-    const response: { actionItems: Array<ActionItem & { contactId: string }>; debug?: { count: number; userId: string } } = { 
+    const response: { 
+      actionItems: Array<ActionItem & { 
+        contactId: string;
+        contactFirstName?: string | null;
+        contactLastName?: string | null;
+        contactEmail?: string;
+      }>; 
+      debug?: { count: number; userId: string } 
+    } = { 
       actionItems 
     };
     

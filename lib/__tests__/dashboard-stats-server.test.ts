@@ -1,10 +1,10 @@
 import { getDashboardStats } from "../dashboard-stats-server";
-import { getAllContactsForUser } from "../contacts-server";
+import { getAllContactsForUserUncached } from "../contacts-server";
 import { Contact } from "@/types/firestore";
 
 // Mock the contacts-server module
 jest.mock("../contacts-server", () => ({
-  getAllContactsForUser: jest.fn(),
+  getAllContactsForUserUncached: jest.fn(),
 }));
 
 // Mock error reporting
@@ -20,7 +20,7 @@ describe("dashboard-stats-server", () => {
   });
 
   it("should calculate stats with empty contacts array", async () => {
-    (getAllContactsForUser as jest.Mock).mockResolvedValue([]);
+    (getAllContactsForUserUncached as jest.Mock).mockResolvedValue([]);
 
     const result = await getDashboardStats(mockUserId);
 
@@ -97,7 +97,7 @@ describe("dashboard-stats-server", () => {
       },
     ];
 
-    (getAllContactsForUser as jest.Mock).mockResolvedValue(mockContacts);
+    (getAllContactsForUserUncached as jest.Mock).mockResolvedValue(mockContacts);
 
     const result = await getDashboardStats(mockUserId);
 
@@ -142,7 +142,7 @@ describe("dashboard-stats-server", () => {
       },
     ];
 
-    (getAllContactsForUser as jest.Mock).mockResolvedValue(mockContacts);
+    (getAllContactsForUserUncached as jest.Mock).mockResolvedValue(mockContacts);
 
     const result = await getDashboardStats(mockUserId);
 
@@ -175,7 +175,7 @@ describe("dashboard-stats-server", () => {
       },
     ];
 
-    (getAllContactsForUser as jest.Mock).mockResolvedValue(mockContacts);
+    (getAllContactsForUserUncached as jest.Mock).mockResolvedValue(mockContacts);
 
     const result = await getDashboardStats(mockUserId);
 
@@ -184,9 +184,9 @@ describe("dashboard-stats-server", () => {
     expect(result.sentimentDistribution["Very Negative"]).toBe(1);
   });
 
-  it("should handle errors from getAllContactsForUser", async () => {
+  it("should handle errors from getAllContactsForUserUncached", async () => {
     const error = new Error("Database error");
-    (getAllContactsForUser as jest.Mock).mockRejectedValue(error);
+    (getAllContactsForUserUncached as jest.Mock).mockRejectedValue(error);
 
     await expect(getDashboardStats(mockUserId)).rejects.toThrow("Database error");
   });
