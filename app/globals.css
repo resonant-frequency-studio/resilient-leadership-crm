@@ -3,14 +3,20 @@
 :root {
   --background: #eeeeec;
   --foreground: #191919;
+  --card-active: rgba(59, 130, 246, 0.1);
   --card-light: #fafaf9;
   --card-dark: #292927;
+  --card-tag: rgba(59, 130, 246, 1);
+  --card-tag-text: rgba(59, 130, 246, 1);
   --card-upcoming: rgba(253, 153, 0, 0.03);
   --card-upcoming-dark: rgba(253, 153, 0, 0.15);
   --card-overdue: rgba(250, 43, 54, 0.03);
   --card-overdue-dark: rgba(250, 43, 54, 0.15);
   --card-highlight-light: #ebe7e4;
   --card-highlight-dark: #333330;
+  --selected-background: #e0e0e0;
+  --selected-foreground: #191919;
+  --selected-active: rgba(59, 130, 246, 0.1);
   --theme-lightest: #fafaf9;
   --theme-lighter: #ebe7e4;
   --theme-light: #d4d1cc;
@@ -24,14 +30,20 @@
 [data-theme='dark'] {
   --background: #191919;
   --foreground: #eeeeec;
+  --card-active: rgba(59, 130, 246, 0.1);
   --card-light: #292927;
   --card-dark: #fafaf9;
+  --card-tag: rgba(59, 130, 246, 1);
+  --card-tag-text: #d4d1cc;
   --card-upcoming: rgba(253, 153, 0, 0.03);
   --card-upcoming-dark: rgba(253, 153, 0, 0.15);
   --card-overdue: rgba(250, 43, 54, 0.03);
   --card-overdue-dark: rgba(250, 43, 54, 0.15);
   --card-highlight-light: #333330;
   --card-highlight-dark: #ebe7e4;
+  --selected-background: #333330;
+  --selected-foreground: #fafaf9;
+  --selected-active: rgba(59, 130, 246, 0.1);
   --theme-lightest: #191919;
   --theme-lighter: #292927;
   --theme-light: #585550;
@@ -46,14 +58,20 @@
   :root:not([data-theme]) {
     --background: #191919;
     --foreground: #eeeeec;
+    --card-active: rgba(59, 130, 246, 0.1);
     --card-light: #292927;
     --card-dark: #fafaf9;
+    --card-tag: rgba(59, 130, 246, 1);
+    --card-tag-text: #d4d1cc;
     --card-upcoming: rgba(253, 153, 0, 0.03);
     --card-upcoming-dark: rgba(253, 153, 0, 0.15);
     --card-overdue: rgba(250, 43, 54, 0.03);
     --card-overdue-dark: rgba(250, 43, 54, 0.15);
     --card-highlight-light: #333330;
     --card-highlight-dark: #ebe7e4;
+    --selected-background: #333330;
+    --selected-foreground: #fafaf9;
+    --selected-active: rgba(59, 130, 246, 0.1);
     --theme-lightest: #191919;
     --theme-lighter: #292927;
     --theme-light: #585550;
@@ -67,8 +85,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card-active: var(--card-active);
   --color-card-light: var(--card-light);
   --color-card-dark: var(--card-dark);
+  --color-card-tag: var(--card-tag);
+  --color-card-tag-text: var(--card-tag-text);
   --color-card-upcoming: var(--card-upcoming);
   --color-card-upcoming-dark: var(--card-upcoming-dark);
   --color-card-overdue: var(--card-overdue);
@@ -76,6 +97,9 @@
   --color-card-highlight-light: var(--card-highlight-light);
   --color-card-highlight-dark: var(--card-highlight-dark);
   --color-theme-lightest: var(--theme-lightest);
+  --color-selected-background: var(--selected-background);
+  --color-selected-foreground: var(--selected-foreground);
+  --color-selected-active: var(--selected-active);
   --color-theme-lighter: var(--theme-lighter);
   --color-theme-light: var(--theme-light);
   --color-theme-medium: var(--theme-medium);
