@@ -8,6 +8,7 @@ import { getDaysUntilTouchpoint } from "@/util/date-utils-server";
 import { Contact } from "@/types/firestore";
 import { useAuth } from "@/hooks/useAuth";
 import Pagination from "@/components/Pagination";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 interface ContactWithTouchpoint extends Contact {
   id: string;
@@ -23,6 +24,11 @@ export default function TouchpointsUpcomingPageClient() {
   const userId = user?.uid || "";
   const { data: contacts = [] } = useContacts(userId);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Show empty state if no contacts
+  if (contacts.length === 0) {
+    return <EmptyState wrapInCard={true} size="lg" />;
+  }
 
   const serverTime = new Date();
   const maxDaysAhead = 60;

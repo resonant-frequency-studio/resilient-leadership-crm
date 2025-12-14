@@ -32,11 +32,15 @@ function ContactsPageHeader({ contacts }: { contacts: ContactWithId[] }) {
     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
       <div>
         <h1 className="text-4xl font-bold text-theme-darkest mb-2">Contacts</h1>
-        <p className="text-theme-dark text-lg">
-          {filteredContacts.length} of {contacts.length}{" "}
-          {contacts.length === 1 ? "contact" : "contacts"}
-          {hasActiveFilters && " (filtered)"}
-        </p>
+        {contacts.length === 0 ? (
+          <p className="text-theme-dark text-lg">No contacts yet</p>
+        ) : (
+          <p className="text-theme-dark text-lg">
+            {filteredContacts.length} of {contacts.length}{" "}
+            {contacts.length === 1 ? "contact" : "contacts"}
+            {hasActiveFilters && " (filtered)"}
+          </p>
+        )}
       </div>
       {/* Buttons - Mobile: below header, Desktop: right side */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 xl:shrink-0 w-full sm:w-auto">

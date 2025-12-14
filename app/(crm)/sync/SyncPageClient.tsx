@@ -3,11 +3,14 @@
 import { useState } from "react";
 import ThemedSuspense from "@/components/ThemedSuspense";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
+import { useContacts } from "@/hooks/useContacts";
+import { useAuth } from "@/hooks/useAuth";
 import Card from "@/components/Card";
 import { Button } from "@/components/Button";
 import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
 import { reportException } from "@/lib/error-reporting";
 import { SyncJob } from "@/types/firestore";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 interface SyncPageClientProps {
   userId: string;
@@ -20,14 +23,22 @@ export default function SyncPageClient({
   initialLastSync,
   initialSyncHistory,
 }: SyncPageClientProps) {
+  const { user } = useAuth();
+  const effectiveUserId = userId || user?.uid || "";
   // Use real-time hook for updates
   const { lastSync: realtimeLastSync, syncHistory: realtimeSyncHistory, error } = useSyncStatus(userId);
+  const { data: contacts = [] } = useContacts(effectiveUserId);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
   // Use real-time data if available, otherwise fall back to initial data
   const lastSync = realtimeLastSync || initialLastSync;
   const syncHistory = realtimeSyncHistory.length > 0 ? realtimeSyncHistory : initialSyncHistory;
+  
+  // Show empty state if no contacts
+  if (contacts.length === 0) {
+    return <EmptyState wrapInCard={true} size="lg" />;
+  }
 
   const handleManualSync = async () => {
     setSyncing(true);

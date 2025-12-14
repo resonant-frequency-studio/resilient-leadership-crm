@@ -13,6 +13,7 @@ import { reportException } from "@/lib/error-reporting";
 import ViewAllLink from "@/components/ViewAllLink";
 import TouchpointBulkActions from "./TouchpointBulkActions";
 import Checkbox from "@/components/Checkbox";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 interface ContactWithTouchpoint extends Contact {
   id: string;
@@ -235,6 +236,24 @@ function TouchpointsContent({ userId }: { userId: string }) {
   }).length;
 
   const totalTodayPriorities = totalTodayCount + totalOverdueCount;
+
+  // Show empty state when no contacts at all
+  if (contacts.length === 0) {
+    return (
+      <Card padding="sm">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-theme-darkest">Recent Contacts</h2>
+        </div>
+        <EmptyState
+          message="No contacts yet"
+          description="Get started by importing your contacts or adding your first contact"
+          showActions={true}
+          wrapInCard={false}
+          size="sm"
+        />
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

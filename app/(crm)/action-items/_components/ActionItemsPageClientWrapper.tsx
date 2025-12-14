@@ -2,10 +2,12 @@
 
 import { useActionItems } from "@/hooks/useActionItems";
 import { useAuth } from "@/hooks/useAuth";
+import { useContacts } from "@/hooks/useContacts";
 import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { computeIsOverdue, getDateCategory } from "@/util/date-utils-server";
 import { ActionItem, Contact } from "@/types/firestore";
 import ActionItemsPageClient from "../ActionItemsPageClient";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 interface EnrichedActionItem extends ActionItem {
   contactId: string;
@@ -34,6 +36,12 @@ export default function ActionItemsPageClientWrapper({ userId }: { userId: strin
   const effectiveUserId = userId || (authLoading ? "" : user?.uid || "");
   // React Query automatically uses prefetched data from HydrationBoundary
   const { data: actionItems = [] } = useActionItems(effectiveUserId);
+  const { data: contacts = [] } = useContacts(effectiveUserId);
+  
+  // Show empty state if no contacts
+  if (contacts.length === 0) {
+    return <EmptyState wrapInCard={true} size="lg" />;
+  }
 
   // Use consistent server time for all calculations
   const serverTime = new Date();

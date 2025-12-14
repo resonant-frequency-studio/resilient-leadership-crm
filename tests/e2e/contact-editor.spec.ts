@@ -254,9 +254,6 @@ test.describe("Complete User Workflows", () => {
 
       await authenticatedPage.getByRole('button', { name: 'Toggle Contacts submenu' }).click();
       await authenticatedPage.getByRole('link', { name: 'Add Contact'}).click();
-      // Step 2: Edit contact (auto-saves on blur)
-      await authenticatedPage.goto(`/contacts/${contactId}`);
-      await authenticatedPage.waitForURL(/\/contacts\/.+/);
 
       // Edit first name - auto-saves on blur
       await Promise.all([

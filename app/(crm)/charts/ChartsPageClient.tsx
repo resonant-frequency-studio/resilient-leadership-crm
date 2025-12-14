@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import DashboardCharts from "../_components/DashboardCharts";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 export default function ChartsPageClient({ userId }: { userId: string }) {
   const { loading } = useAuth();
@@ -10,6 +11,11 @@ export default function ChartsPageClient({ userId }: { userId: string }) {
 
   if (loading && !userId) {
     return null;
+  }
+  
+  // Show empty state if no contacts
+  if (initialStats?.totalContacts === 0) {
+    return <EmptyState wrapInCard={true} size="lg" />;
   }
 
   return (
