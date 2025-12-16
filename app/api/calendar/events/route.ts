@@ -72,11 +72,24 @@ export async function GET(req: Request) {
             if (syncTime && typeof syncTime === "object" && "toDate" in syncTime) {
               return (syncTime as { toDate: () => Date }).toDate().getTime();
             }
+            if (typeof syncTime === "string") {
+              return new Date(syncTime).getTime();
+            }
             return 0;
           })
           .reduce((max, time) => Math.max(max, time), 0);
 
         const cacheAge = Date.now() - mostRecentSync;
+        const cacheAgeMinutes = Math.floor(cacheAge / (60 * 1000));
+        
+        // Log cached freshness info (no UI yet)
+        console.log('[Calendar API] Cache freshness:', {
+          eventCount: cachedEvents.length,
+          cacheAgeMinutes,
+          mostRecentSync: new Date(mostRecentSync).toISOString(),
+          isFresh: cacheAge < CACHE_TTL_MS,
+        });
+        
         if (cacheAge < CACHE_TTL_MS) {
           return NextResponse.json({ events: cachedEvents });
         }

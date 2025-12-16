@@ -90,6 +90,12 @@ export async function syncCalendarEventsToFirestore(
         isAllDay
       );
 
+      // Convert Google's updated timestamp to Firestore Timestamp if present
+      let googleUpdated: Timestamp | undefined;
+      if (googleEvent.updated) {
+        googleUpdated = Timestamp.fromDate(new Date(googleEvent.updated));
+      }
+
       // Prepare event data
       const eventData: Omit<CalendarEvent, 'eventId'> = {
         googleEventId: googleEvent.id,
@@ -101,10 +107,13 @@ export async function syncCalendarEventsToFirestore(
         location: googleEvent.location || null,
         attendees: googleEvent.attendees?.map((a) => ({
           email: a.email,
-          displayName: a.displayName || null, // Convert undefined to null for Firestore
+          displayName: a.displayName || undefined, // Keep as undefined (not null) to match type
         })) || [],
         lastSyncedAt: FieldValue.serverTimestamp(),
         etag: googleEvent.etag,
+        googleUpdated: googleUpdated || FieldValue.serverTimestamp(), // Use Google's updated time or fallback to now
+        sourceOfTruth: "google", // All events synced from Google have this source
+        isDirty: false, // Newly synced events are clean
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };

@@ -136,6 +136,9 @@ export interface Contact {
     // Sync metadata
     lastSyncedAt: unknown;
     etag?: string; // For future conflict detection
+    googleUpdated?: unknown; // Google's updated timestamp (Firestore timestamp)
+    sourceOfTruth?: "google" | "crm_touchpoint"; // Where event originated
+    isDirty?: boolean; // Has local changes not synced to Google
     
     createdAt: unknown;
     updatedAt: unknown;

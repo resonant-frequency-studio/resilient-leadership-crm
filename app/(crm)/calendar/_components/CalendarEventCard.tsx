@@ -106,7 +106,7 @@ export default function CalendarEventCard({ event, onClose }: CalendarEventCardP
           } else {
             newAttributes = newAttributes.replace(
               /rel\s*=\s*["']?([^"'\s>]+)["']?/gi,
-              (relMatch, relValue) => {
+              (relMatch: string, relValue: string) => {
                 const relParts = relValue.split(/\s+/);
                 if (!relParts.includes('noopener')) relParts.push('noopener');
                 if (!relParts.includes('noreferrer')) relParts.push('noreferrer');
@@ -122,7 +122,7 @@ export default function CalendarEventCard({ event, onClose }: CalendarEventCardP
             // Add break-all class to existing class
             newAttributes = newAttributes.replace(
               /class\s*=\s*["']([^"']+)["']/gi,
-              (classMatch, classValue) => {
+              (classMatch: string, classValue: string) => {
                 const classes = classValue.split(/\s+/);
                 if (!classes.includes('break-all')) classes.push('break-all');
                 if (!classes.includes('underline')) classes.push('underline');
@@ -208,7 +208,7 @@ export default function CalendarEventCard({ event, onClose }: CalendarEventCardP
     } else {
       // Plain text - convert URLs to links
       const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
-      const parts: (string | JSX.Element)[] = [];
+      const parts: (string | React.ReactElement)[] = [];
       let lastIndex = 0;
       let match;
       let keyCounter = 0;

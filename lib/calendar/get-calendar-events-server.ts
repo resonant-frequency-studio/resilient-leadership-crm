@@ -58,6 +58,9 @@ export async function getCalendarEventsForUser(
         attendees: data.attendees || [],
         lastSyncedAt: convertTimestamp(data.lastSyncedAt) as string,
         etag: data.etag || null,
+        googleUpdated: data.googleUpdated ? convertTimestamp(data.googleUpdated) as string : undefined,
+        sourceOfTruth: data.sourceOfTruth || "google", // Default to "google" for backward compatibility
+        isDirty: data.isDirty ?? false, // Default to false for backward compatibility
         createdAt: convertTimestamp(data.createdAt) as string,
         updatedAt: convertTimestamp(data.updatedAt) as string,
       } as CalendarEvent);
