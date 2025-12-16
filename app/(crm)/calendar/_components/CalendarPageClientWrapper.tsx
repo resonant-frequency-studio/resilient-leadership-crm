@@ -5,10 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import CalendarView from "./CalendarView";
 import CalendarSkeleton from "./CalendarSkeleton";
+import CalendarFilterBar, { CalendarFilters } from "./CalendarFilterBar";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import EmptyState from "@/components/dashboard/EmptyState";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
+import { CalendarEvent } from "@/types/firestore";
 
 export default function CalendarPageClientWrapper({ userId }: { userId: string }) {
   const { user, loading: authLoading } = useAuth();
@@ -35,6 +37,63 @@ export default function CalendarPageClientWrapper({ userId }: { userId: string }
     timeMax,
     { enabled: !!effectiveUserId }
   );
+
+  // Filter state
+  const [filters, setFilters] = useState<CalendarFilters>({
+    segment: undefined,
+    tags: undefined,
+    onlyLinked: false,
+    onlyTouchpoints: false,
+    search: undefined,
+  });
+
+  // Filter events client-side
+  const filteredEvents = useMemo(() => {
+    return events.filter((event: CalendarEvent) => {
+      // Segment filter
+      if (filters.segment) {
+        if (event.contactSnapshot?.segment !== filters.segment) {
+          return false;
+        }
+      }
+
+      // Tags filter
+      if (filters.tags && filters.tags.length > 0) {
+        const eventTags = event.contactSnapshot?.tags || [];
+        if (!filters.tags.every((tag) => eventTags.includes(tag))) {
+          return false;
+        }
+      }
+
+      // Only linked events
+      if (filters.onlyLinked) {
+        if (!event.matchedContactId) {
+          return false;
+        }
+      }
+
+      // Only touchpoints
+      if (filters.onlyTouchpoints) {
+        if (event.sourceOfTruth !== "crm_touchpoint") {
+          return false;
+        }
+      }
+
+      // Search filter
+      if (filters.search && filters.search.trim().length > 0) {
+        const searchLower = filters.search.toLowerCase().trim();
+        const titleMatch = event.title.toLowerCase().includes(searchLower);
+        const contactNameMatch = event.contactSnapshot?.name
+          ?.toLowerCase()
+          .includes(searchLower);
+        if (!titleMatch && !contactNameMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [events, filters]);
 
   // Show loading if we don't have userId yet
   if (!effectiveUserId) {
@@ -279,11 +338,20 @@ export default function CalendarPageClientWrapper({ userId }: { userId: string }
       {/* Sync Calendar Button - always visible */}
       {syncButton}
 
+      {/* Calendar Filter Bar */}
+      {events.length > 0 && (
+        <CalendarFilterBar
+          events={events}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      )}
+
       {isLoading && events.length === 0 ? (
         <CalendarSkeleton />
       ) : (
         <CalendarView
-          events={events}
+          events={filteredEvents}
           currentDate={currentDate}
           onNavigate={(date) => setCurrentDate(date)}
         />
