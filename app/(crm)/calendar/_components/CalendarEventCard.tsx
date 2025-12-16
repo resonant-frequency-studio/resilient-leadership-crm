@@ -246,6 +246,20 @@ export default function CalendarEventCard({ event, onClose }: CalendarEventCardP
     }
   }, [event.description]);
 
+  // Get segment color (simple mapping - can be enhanced later)
+  const getSegmentColor = (segment: string | null | undefined): string => {
+    if (!segment) return "";
+    const segmentLower = segment.toLowerCase();
+    // Simple color mapping - can be made configurable later
+    const colorMap: Record<string, string> = {
+      vip: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      prospect: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      customer: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      lead: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    };
+    return colorMap[segmentLower] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+  };
+
   return (
     <div className="w-full max-w-full overflow-hidden calendar-event-card flex flex-col">
       <div className="flex items-start justify-between mb-6 gap-2 flex-shrink-0 relative">
@@ -276,6 +290,56 @@ export default function CalendarEventCard({ event, onClose }: CalendarEventCardP
           <h3 className="text-xl font-semibold text-theme-darkest mb-2 break-words overflow-wrap-anywhere word-break-break-word">
             {event.title}
           </h3>
+          
+          {/* Visual Indicators */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            {/* Linked Contact Indicator */}
+            {event.matchedContactId && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs font-medium rounded">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+                Linked
+              </span>
+            )}
+
+            {/* Segment Pill */}
+            {event.contactSnapshot?.segment && (
+              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${getSegmentColor(event.contactSnapshot.segment)}`}>
+                {event.contactSnapshot.segment}
+              </span>
+            )}
+
+            {/* Touchpoint Badge */}
+            {event.sourceOfTruth === "crm_touchpoint" && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs font-medium rounded border border-orange-300 dark:border-orange-700 border-dashed">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Touchpoint
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2 min-w-0">

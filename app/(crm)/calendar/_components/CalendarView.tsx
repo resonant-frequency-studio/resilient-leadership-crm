@@ -173,6 +173,34 @@ export default function CalendarView({ events, currentDate, onNavigate }: Calend
     setSelectedEvent(null);
   };
 
+  // Style events based on their properties (linked, segment, touchpoint)
+  const eventPropGetter = (event: Event) => {
+    const calendarEvent = event.resource as CalendarEvent;
+    const classes: string[] = [];
+
+    // Add class for linked events
+    if (calendarEvent.matchedContactId) {
+      classes.push("rbc-event-linked");
+    }
+
+    // Add class for touchpoint events
+    if (calendarEvent.sourceOfTruth === "crm_touchpoint") {
+      classes.push("rbc-event-touchpoint");
+    }
+
+    // Add segment-specific class if contact is linked and has a segment
+    if (calendarEvent.contactSnapshot?.segment) {
+      const segmentSlug = calendarEvent.contactSnapshot.segment
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+      classes.push(`rbc-event-segment-${segmentSlug}`);
+    }
+
+    return {
+      className: classes.join(" "),
+    };
+  };
+
   return (
     <div className="space-y-6">
       <Card padding="none" className="">
@@ -191,6 +219,7 @@ export default function CalendarView({ events, currentDate, onNavigate }: Calend
             onSelectEvent={handleSelectEvent}
             onSelectSlot={handleSelectSlot}
             selectable
+            eventPropGetter={eventPropGetter}
             className={`rbc-calendar-${resolvedTheme}`}
           />
         </div>
