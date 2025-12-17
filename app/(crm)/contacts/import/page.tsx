@@ -446,7 +446,7 @@ export default function ImportContactsPage() {
                       </Button>
                     </Link>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         setSelectedFileName(null);
