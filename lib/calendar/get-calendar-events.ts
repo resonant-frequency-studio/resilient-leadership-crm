@@ -21,6 +21,7 @@ export interface GoogleCalendarEvent {
     responseStatus?: string;
   }>;
   etag: string;
+  updated?: string; // ISO 8601 timestamp of last update from Google
   status?: string;
 }
 
