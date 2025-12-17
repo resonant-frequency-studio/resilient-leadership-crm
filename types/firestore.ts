@@ -24,6 +24,10 @@ export interface Contact {
     touchpointStatus?: "pending" | "completed" | "cancelled" | null;
     touchpointStatusUpdatedAt?: unknown | null;
     touchpointStatusReason?: string | null;
+    // Touchpoint ↔ Calendar Event linkage
+    linkedGoogleEventId?: string | null;
+    linkedGoogleCalendarId?: string | null;
+    linkStatus?: "none" | "linked" | "broken" | null;
   
     // AI fields
     summary?: string | null;
