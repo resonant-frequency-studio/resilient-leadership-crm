@@ -10,7 +10,7 @@ interface ModalProps {
   title?: string;
   showBackdrop?: boolean;
   closeOnBackdropClick?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "4xl" | "5xl";
   className?: string;
 }
 
@@ -30,6 +30,8 @@ export default function Modal({
     lg: "max-w-lg",
     xl: "max-w-xl",
     "2xl": "max-w-2xl",
+    "4xl": "max-w-4xl",
+    "5xl": "max-w-5xl",
   };
   const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
