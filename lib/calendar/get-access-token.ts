@@ -17,7 +17,7 @@ export async function getCalendarAccessToken(userId: string): Promise<string> {
   const data = doc.data()!;
   const scope = data.scope || "";
   
-  // Check if Calendar scope is present
+  // Check if Calendar scope is present (readonly or full write access)
   const hasCalendarScope = scope.includes("calendar.readonly") || scope.includes("calendar");
   
   if (!hasCalendarScope) {
@@ -30,6 +30,11 @@ export async function getCalendarAccessToken(userId: string): Promise<string> {
     });
     throw error;
   }
+
+  // For write operations, verify full calendar scope (not just readonly)
+  // This check can be done by the calling function if needed
+  // For now, we allow both readonly and full scope to pass through
+  // Individual write functions should check for write scope if needed
 
   // Use the same token infrastructure as Gmail
   return getGmailAccessToken(userId);
