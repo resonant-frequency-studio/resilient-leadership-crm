@@ -13,7 +13,6 @@ import {
 } from "@/hooks/useCalendarEvents";
 import { useContacts } from "@/hooks/useContacts";
 import { useAuth } from "@/hooks/useAuth";
-import { formatContactDate } from "@/util/contact-utils";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import Input from "@/components/Input";
@@ -34,7 +33,7 @@ interface CalendarEventCardProps {
   contacts?: Contact[]; // Optional - will fetch if not provided
 }
 
-export default function CalendarEventCard({ event, onClose, contacts: providedContacts }: CalendarEventCardProps) {
+export default function CalendarEventCard({ event: eventProp, onClose, contacts: providedContacts }: CalendarEventCardProps) {
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -43,6 +42,19 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
   const generateContextMutation = useGenerateEventContext();
   const updateMutation = useUpdateCalendarEvent();
   const deleteMutation = useDeleteCalendarEvent();
+
+  // Get the latest event from query cache if available, otherwise use prop
+  // This ensures optimistic updates are reflected immediately
+  const event = useMemo(() => {
+    const cachedEvents = queryClient.getQueryData<CalendarEvent[]>(["calendar-events"]);
+    if (cachedEvents) {
+      const cachedEvent = cachedEvents.find((e) => e.eventId === eventProp.eventId);
+      if (cachedEvent) {
+        return cachedEvent;
+      }
+    }
+    return eventProp;
+  }, [eventProp, queryClient]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
@@ -70,23 +82,6 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
   const startTime = getDate(event.startTime);
   const endTime = getDate(event.endTime);
 
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   // Check if this is an all-day event
   // All-day events are stored in UTC at midnight (00:00:00 UTC) for start
   // and 23:59:59.999 UTC for end (even for multi-day events)
@@ -95,25 +90,8 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
   const startIsMidnightUTC = startUTC.getUTCHours() === 0 && startUTC.getUTCMinutes() === 0 && startUTC.getUTCSeconds() === 0;
   const endIsEndOfDayUTC = endUTC.getUTCHours() === 23 && endUTC.getUTCMinutes() === 59 && endUTC.getUTCSeconds() === 59;
   
-  // Extract UTC date components (year, month, day) - these are the actual dates
-  const startYear = startUTC.getUTCFullYear();
-  const startMonth = startUTC.getUTCMonth();
-  const startDay = startUTC.getUTCDate();
-  const endYear = endUTC.getUTCFullYear();
-  const endMonth = endUTC.getUTCMonth();
-  const endDay = endUTC.getUTCDate();
-  
   // If start is midnight UTC and end is end of day UTC, it's an all-day event
   const isAllDay = startIsMidnightUTC && endIsEndOfDayUTC;
-
-  // For all-day events, use UTC date components to create display date in local timezone
-  // This preserves the correct date without timezone shifts
-  const displayDate = isAllDay 
-    ? new Date(startYear, startMonth, startDay, 0, 0, 0, 0)
-    : startTime;
-  
-  // For multi-day all-day events, show the date range
-  const isMultiDayAllDay = isAllDay && (startYear !== endYear || startMonth !== endMonth || startDay !== endDay);
 
   // Edit form state - initialized after date calculations
   const [editForm, setEditForm] = useState<UpdateEventInput>({
@@ -307,19 +285,6 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
     }
   }, [event.description]);
 
-  // Get segment color (simple mapping - can be enhanced later)
-  const getSegmentColor = (segment: string | null | undefined): string => {
-    if (!segment) return "";
-    const segmentLower = segment.toLowerCase();
-    // Simple color mapping - can be made configurable later
-    const colorMap: Record<string, string> = {
-      vip: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      prospect: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      customer: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      lead: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    };
-    return colorMap[segmentLower] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-  };
 
   // Extract Zoom/Meet links from description
   const joinLinks = useMemo(() => {
@@ -421,11 +386,6 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
            linkedContact.linkStatus === "linked";
   }, [linkedContact, event.eventId]);
 
-  // Format sync metadata
-  const syncMetadata = useMemo(() => {
-    if (!event.lastSyncedAt) return null;
-    return formatContactDate(event.lastSyncedAt, { relative: true });
-  }, [event.lastSyncedAt]);
 
   // Handlers for edit/delete
   const handleEdit = () => {
@@ -579,10 +539,6 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
       router.push(`/contacts/${linkedContact.contactId}`);
       onClose();
     }
-  };
-
-  const handleLinkContact = () => {
-    setShowContactSearch(true);
   };
 
   // Check if description is long (needs collapsible)
@@ -772,7 +728,6 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
                 }
               }}
               onViewContact={handleViewContact}
-              onLinkContact={handleLinkContact}
               followUpEmailDraft={generateContextMutation.data?.followUpEmailDraft || null}
             />
 
@@ -797,10 +752,11 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
             <EventMeetingInsights
               event={event}
               linkedContact={linkedContact}
+              storedInsights={event.meetingInsights || null}
               aiContext={generateContextMutation.data || null}
               isGenerating={generateContextMutation.isPending}
               error={generateContextMutation.error as Error | null}
-              onGenerate={() => generateContextMutation.mutate(event.eventId)}
+              onGenerate={(regenerate) => generateContextMutation.mutate({ eventId: event.eventId, regenerate })}
               onClose={onClose}
             />
 
@@ -836,7 +792,7 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
                 <div>
                 {parseDescription && typeof parseDescription === 'object' && '__html' in parseDescription ? (
                   <div
-                    className="text-theme-darkest whitespace-pre-wrap break-words overflow-wrap-anywhere word-break-break-word prose prose-sm max-w-none"
+                    className="text-theme-darkest whitespace-pre-wrap wrap-break-word overflow-wrap-anywhere word-break-break-word prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={parseDescription}
                     style={{
                       wordBreak: 'break-word',
@@ -844,7 +800,7 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
                     }}
                   />
                 ) : parseDescription ? (
-                  <p className="text-theme-darkest whitespace-pre-wrap break-words overflow-wrap-anywhere word-break-break-word">
+                  <p className="text-theme-darkest whitespace-pre-wrap wrap-break-word overflow-wrap-anywhere word-break-break-word">
                     {Array.isArray(parseDescription) ? (
                       parseDescription.map((part, index) => (
                         <span key={index}>{part}</span>
@@ -878,8 +834,15 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
 
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/60 flex items-center justify-center z-50">
+            <div 
+              className="rounded-lg p-6 max-w-md w-full mx-4"
+              style={{
+                backgroundColor: 'var(--surface-modal)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
               <h3 className="text-lg font-semibold text-theme-darkest mb-4">Delete Event</h3>
               <p className="text-theme-dark mb-6">
                 Are you sure you want to delete &quot;{event.title}&quot;? This action cannot be undone.
@@ -906,8 +869,15 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
 
         {/* Unlink Confirmation Modal */}
         {showUnlinkConfirm && linkedContact && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/60 flex items-center justify-center z-50">
+            <div 
+              className="rounded-lg p-6 max-w-md w-full mx-4"
+              style={{
+                backgroundColor: 'var(--surface-modal)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
               <h3 className="text-lg font-semibold text-theme-darkest mb-4">Unlink Contact</h3>
               <p className="text-theme-dark mb-6">
                 Unlink this event from {linkedContact.firstName || linkedContact.lastName
@@ -925,8 +895,12 @@ export default function CalendarEventCard({ event, onClose, contacts: providedCo
                 <Button
                   variant="danger"
               onClick={() => {
-                    unlinkMutation.mutate(event.eventId);
-                    setShowUnlinkConfirm(false);
+                    unlinkMutation.mutate(event.eventId, {
+                      onSuccess: () => {
+                        setShowUnlinkConfirm(false);
+                        // The optimistic update will immediately show the unlinked state
+                      },
+                    });
                   }}
                   disabled={unlinkMutation.isPending}
                 >

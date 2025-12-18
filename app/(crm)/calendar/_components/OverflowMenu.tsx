@@ -37,7 +37,24 @@ export default function OverflowMenu({ items }: OverflowMenuProps) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1 rounded-sm hover:bg-theme-light transition-colors text-theme-medium hover:text-theme-darkest focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-1 rounded-sm transition-colors focus:outline-none"
+        style={{
+          color: 'var(--text-muted)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+          e.currentTarget.style.color = 'var(--foreground)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = 'var(--text-muted)';
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.boxShadow = 'none';
+        }}
         aria-label="More options"
       >
         <svg
@@ -55,7 +72,14 @@ export default function OverflowMenu({ items }: OverflowMenuProps) {
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-theme-light rounded-sm shadow-lg z-50">
+        <div 
+          className="absolute right-0 mt-2 w-48 rounded-sm z-50"
+          style={{
+            backgroundColor: 'var(--surface-modal)',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: 'var(--shadow-menu)',
+          }}
+        >
           <div className="py-1">
             {items.map((item, index) => (
               <button
@@ -65,15 +89,32 @@ export default function OverflowMenu({ items }: OverflowMenuProps) {
                   setIsOpen(false);
                 }}
                 disabled={item.disabled}
-                className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                  item.danger
-                    ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    : "text-theme-darkest hover:bg-theme-light"
-                } ${
-                  item.disabled
-                    ? "opacity-50 cursor-not-allowed"
-                    : "cursor-pointer"
-                }`}
+                className="w-full text-left px-4 py-2 text-sm transition-colors focus:outline-none"
+                style={{
+                  color: item.danger 
+                    ? 'rgba(250, 43, 54, 0.95)' 
+                    : 'var(--foreground)',
+                  cursor: item.disabled ? 'not-allowed' : 'pointer',
+                  opacity: item.disabled ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!item.disabled) {
+                    e.currentTarget.style.backgroundColor = item.danger
+                      ? 'rgba(250, 43, 54, 0.1)'
+                      : 'var(--surface-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                onFocus={(e) => {
+                  if (!item.disabled) {
+                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+                  }
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 {item.label}
               </button>

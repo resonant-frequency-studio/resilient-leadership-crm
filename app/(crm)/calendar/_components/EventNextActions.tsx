@@ -11,7 +11,6 @@ interface EventNextActionsProps {
   onDraftEmail: () => void;
   onAddActionItem: () => void;
   onViewContact: () => void;
-  onLinkContact: () => void;
   followUpEmailDraft?: string | null;
 }
 
@@ -22,7 +21,6 @@ export default function EventNextActions({
   onDraftEmail,
   onAddActionItem,
   onViewContact,
-  onLinkContact,
   followUpEmailDraft,
 }: EventNextActionsProps) {
   const router = useRouter();
@@ -48,49 +46,45 @@ export default function EventNextActions({
     }
   };
 
+  // Only show actions if there's a linked contact
   if (!linkedContact) {
-    return (
-      <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 py-4 border-b border-theme-light mb-4">
-        <Button
-          onClick={onLinkContact}
-          variant="primary"
-          size="lg"
-          fullWidth
-        >
-          Link a Contact
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 py-4 border-b border-theme-light mb-4">
-      <div className="flex flex-wrap gap-2">
+    <div 
+      className="sticky top-0 z-10 py-4 mb-4"
+      style={{
+        backgroundColor: 'var(--surface-bar)',
+        borderBottom: '1px solid var(--border-subtle)',
+      }}
+    >
+      <div className="flex flex-wrap gap-2 justify-center">
         <Button
           onClick={onCreateFollowUp}
           variant="primary"
-          size="lg"
+          size="md"
         >
           Create Follow-up
         </Button>
         <Button
           onClick={handleDraftEmail}
           variant="secondary"
-          size="lg"
+          size="md"
         >
           Draft Follow-up Email
         </Button>
         <Button
           onClick={handleAddActionItem}
           variant="secondary"
-          size="lg"
+          size="md"
         >
           Add Action Item
         </Button>
         <Button
           onClick={onViewContact}
           variant="outline"
-          size="lg"
+          size="md"
         >
           View Contact
         </Button>

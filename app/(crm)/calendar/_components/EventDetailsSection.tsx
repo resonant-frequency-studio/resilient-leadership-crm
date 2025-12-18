@@ -90,13 +90,13 @@ export default function EventDetailsSection({
           />
         </svg>
         <div className="min-w-0 flex-1">
-          <p className="text-theme-darkest font-medium break-words">
+          <p className="text-theme-darkest font-medium wrap-break-word">
             {isMultiDayAllDay
               ? `${formatDate(displayDate)} - ${formatDate(new Date(endYear, endMonth, endDay, 0, 0, 0, 0))}`
               : formatDate(displayDate)}
           </p>
           {!isAllDay && (
-            <p className="text-theme-dark text-sm break-words">
+            <p className="text-theme-dark text-sm wrap-break-word">
               {formatTime(startTime)} - {formatTime(endTime)}
             </p>
           )}
@@ -128,7 +128,7 @@ export default function EventDetailsSection({
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-          <p className="text-theme-dark text-sm break-words">{event.location}</p>
+          <p className="text-theme-dark text-sm wrap-break-word">{event.location}</p>
         </div>
       )}
 
@@ -139,7 +139,24 @@ export default function EventDetailsSection({
             href={googleCalendarLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+            className="text-sm flex items-center gap-1 focus:outline-none"
+            style={{
+              color: 'var(--link)',
+              textDecorationColor: 'var(--divider)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--link-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--link)';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+              e.currentTarget.style.borderRadius = '0.25rem';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
             <svg
               className="w-4 h-4"

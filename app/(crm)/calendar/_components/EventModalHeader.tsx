@@ -3,6 +3,7 @@
 import { CalendarEvent, Contact } from "@/types/firestore";
 import { formatContactDate } from "@/util/contact-utils";
 import OverflowMenu from "./OverflowMenu";
+import { ConflictData } from "./ConflictResolutionModal";
 
 interface EventModalHeaderProps {
   event: CalendarEvent;
@@ -10,7 +11,7 @@ interface EventModalHeaderProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  conflictData?: { googleEvent: any; localEvent: any; cachedEvent: any } | null;
+  conflictData?: ConflictData | null;
 }
 
 // Parse date from Firestore timestamp
@@ -59,8 +60,8 @@ export default function EventModalHeader({
   const segment = linkedContact?.segment || event.contactSnapshot?.segment;
   const tags = linkedContact?.tags || event.contactSnapshot?.tags || [];
 
-  // Event title - prefer summary, fallback to title
-  const eventTitle = event.summary || event.title;
+  // Event title
+  const eventTitle = event.title;
 
   const overflowMenuItems = [
     {
@@ -79,7 +80,7 @@ export default function EventModalHeader({
     <div className="flex items-start justify-between mb-4 gap-2 shrink-0">
       <div className="flex-1 min-w-0">
         {/* Title */}
-        <h2 className="text-2xl font-bold text-theme-darkest mb-2 break-words">
+        <h2 className="text-2xl font-bold text-theme-darkest mb-2 wrap-break-word">
           {eventTitle}
         </h2>
 
@@ -153,7 +154,24 @@ export default function EventModalHeader({
         <OverflowMenu items={overflowMenuItems} />
         <button
           onClick={onClose}
-          className="p-1 rounded-sm hover:bg-theme-light transition-colors text-theme-medium hover:text-theme-darkest focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-1 rounded-sm transition-colors focus:outline-none"
+          style={{
+            color: 'var(--text-muted)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+            e.currentTarget.style.color = 'var(--foreground)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-muted)';
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+          }}
           aria-label="Close event details"
         >
           <svg

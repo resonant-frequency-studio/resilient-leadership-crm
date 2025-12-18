@@ -24,6 +24,37 @@
   --theme-dark: #585550;
   --theme-darker: #292927;
   --theme-darkest: #191919;
+
+  /* SURFACES (semantic) */
+  --surface-modal: var(--card-light);
+  --surface-panel: var(--theme-lightest);
+  --surface-bar: var(--theme-lighter);
+  --surface-hover: rgba(25, 25, 25, 0.06);
+
+  /* BORDERS / DIVIDERS */
+  --border-subtle: rgba(25, 25, 25, 0.10);
+  --border-strong: rgba(25, 25, 25, 0.18);
+  --divider: rgba(25, 25, 25, 0.08);
+
+  /* TEXT */
+  --text-muted: var(--theme-dark);
+  --text-faint: var(--theme-medium);
+
+  /* LINKS (keep brand feel but reduce "neon") */
+  --link: rgba(59, 130, 246, 0.95);
+  --link-hover: rgba(59, 130, 246, 1);
+
+  /* FOCUS */
+  --focus-ring: rgba(59, 130, 246, 0.35);
+
+  /* SHADOWS */
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.25);
+  --shadow-menu: 0 10px 24px rgba(0, 0, 0, 0.22);
+
+  /* STATUS CHIP BACKGROUNDS (use your existing card tints) */
+  --chip-warning-bg: var(--card-upcoming-dark);
+  --chip-danger-bg: var(--card-overdue-dark);
+  --chip-neutral-bg: var(--card-highlight-light);
 }
 
 /* Dark theme via data attribute (manual override) */
@@ -51,6 +82,37 @@
   --theme-dark: #d4d1cc;
   --theme-darker: #ebe7e4;
   --theme-darkest: #fafaf9;
+
+  /* SURFACES */
+  --surface-modal: var(--theme-lighter);
+  --surface-panel: rgba(255, 255, 255, 0.04);
+  --surface-bar: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+
+  /* BORDERS / DIVIDERS (IMPORTANT: softer in dark) */
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --divider: rgba(255, 255, 255, 0.08);
+
+  /* TEXT */
+  --text-muted: rgba(238, 238, 236, 0.78);
+  --text-faint: rgba(238, 238, 236, 0.62);
+
+  /* LINKS (dim slightly in dark mode so they don't compete with CTAs) */
+  --link: rgba(147, 197, 253, 0.92);
+  --link-hover: rgba(147, 197, 253, 1);
+
+  /* FOCUS */
+  --focus-ring: rgba(59, 130, 246, 0.40);
+
+  /* SHADOWS */
+  --shadow-modal: 0 18px 52px rgba(0, 0, 0, 0.55);
+  --shadow-menu: 0 12px 28px rgba(0, 0, 0, 0.60);
+
+  /* STATUS CHIP BACKGROUNDS */
+  --chip-warning-bg: var(--card-upcoming-dark);
+  --chip-danger-bg: var(--card-overdue-dark);
+  --chip-neutral-bg: var(--card-highlight-light);
 }
 
 /* Dark theme via browser preference (when no manual override) */
@@ -76,9 +138,40 @@
     --theme-lighter: #292927;
     --theme-light: #585550;
     --theme-medium: #8d8a85;
-    --theme-dark: #d4d1cc;
-    --theme-darker: #ebe7e4;
-    --theme-darkest: #fafaf9;
+  --theme-dark: #d4d1cc;
+  --theme-darker: #ebe7e4;
+  --theme-darkest: #fafaf9;
+
+  /* SURFACES */
+  --surface-modal: var(--theme-lighter);
+  --surface-panel: rgba(255, 255, 255, 0.04);
+  --surface-bar: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+
+  /* BORDERS / DIVIDERS (IMPORTANT: softer in dark) */
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --divider: rgba(255, 255, 255, 0.08);
+
+  /* TEXT */
+  --text-muted: rgba(238, 238, 236, 0.78);
+  --text-faint: rgba(238, 238, 236, 0.62);
+
+  /* LINKS (dim slightly in dark mode so they don't compete with CTAs) */
+  --link: rgba(147, 197, 253, 0.92);
+  --link-hover: rgba(147, 197, 253, 1);
+
+  /* FOCUS */
+  --focus-ring: rgba(59, 130, 246, 0.40);
+
+  /* SHADOWS */
+  --shadow-modal: 0 18px 52px rgba(0, 0, 0, 0.55);
+  --shadow-menu: 0 12px 28px rgba(0, 0, 0, 0.60);
+
+  /* STATUS CHIP BACKGROUNDS */
+  --chip-warning-bg: var(--card-upcoming-dark);
+  --chip-danger-bg: var(--card-overdue-dark);
+  --chip-neutral-bg: var(--card-highlight-light);
   }
 }
 

@@ -20,27 +20,64 @@ export default function CollapsibleSection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="border border-theme-light rounded-sm">
+    <div 
+      className="rounded-sm"
+      style={{
+        border: '1px solid var(--border-subtle)',
+        backgroundColor: 'var(--surface-panel)',
+      }}
+    >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-3 hover:bg-theme-light transition-colors"
+        className="w-full flex items-center justify-between p-3 transition-colors focus:outline-none"
+        style={{
+          backgroundColor: 'var(--surface-bar)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--surface-bar)';
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         <div className="flex items-center gap-2">
-          {icon && <div className="w-5 h-5 text-theme-medium">{icon}</div>}
-          <span className="text-theme-darkest font-medium">{title}</span>
+          {icon && (
+            <div 
+              className="w-5 h-5"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              {icon}
+            </div>
+          )}
+          <span 
+            className="font-medium"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {title}
+          </span>
           {!isExpanded && preview && (
-            <span className="text-theme-dark text-sm font-normal ml-2">
+            <span 
+              className="text-sm font-normal ml-2"
+              style={{ color: 'var(--text-muted)' }}
+            >
               {preview}
             </span>
           )}
         </div>
         <svg
-          className={`w-5 h-5 text-theme-medium transition-transform shrink-0 ${
+          className={`w-5 h-5 transition-transform shrink-0 ${
             isExpanded ? "rotate-180" : ""
           }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          style={{ color: 'var(--text-muted)' }}
         >
           <path
             strokeLinecap="round"
@@ -51,7 +88,14 @@ export default function CollapsibleSection({
         </svg>
       </button>
       {isExpanded && (
-        <div className="p-3 pt-0 border-t border-theme-light">{children}</div>
+        <div 
+          className="p-3 pt-0"
+          style={{
+            borderTop: '1px solid var(--divider)',
+          }}
+        >
+          {children}
+        </div>
       )}
     </div>
   );

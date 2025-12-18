@@ -158,7 +158,7 @@ export default function Modal({
       role="presentation"
     >
       {showBackdrop && (
-        <div className="absolute inset-0 bg-black/20" aria-hidden="true" />
+        <div className="absolute inset-0 bg-black/20 dark:bg-black/40" aria-hidden="true" />
       )}
       <div
         ref={modalRef}
@@ -166,7 +166,13 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={`relative bg-background rounded-xl shadow-xl p-6 ${maxWidthClasses[maxWidth]} w-full mx-4 z-10 border border-theme-light focus:outline-none ${className}`}
+        className={`relative rounded-xl p-6 ${maxWidthClasses[maxWidth]} w-full mx-4 z-10 focus:outline-none ${className}`}
+        style={{
+          backgroundColor: 'var(--surface-modal)',
+          color: 'var(--foreground)',
+          boxShadow: 'var(--shadow-modal)',
+          border: '1px solid var(--border-subtle)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

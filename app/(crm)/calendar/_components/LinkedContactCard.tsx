@@ -114,7 +114,13 @@ export default function LinkedContactCard({
     ];
 
     return (
-      <div className="border border-theme-light rounded-sm p-4 space-y-3">
+      <div 
+        className="rounded-sm p-4 space-y-3"
+        style={{
+          border: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--surface-panel)',
+        }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between">
           <h4 className="text-theme-darkest font-medium flex items-center gap-2">
@@ -212,23 +218,19 @@ export default function LinkedContactCard({
           </p>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-2 border-t border-theme-light">
-          <Button
-            onClick={onViewContact}
-            variant="primary"
-            size="sm"
-          >
-            View Contact
-          </Button>
-        </div>
       </div>
     );
   }
 
   // Unlinked state
   return (
-    <div className="border border-theme-light rounded-sm p-4 space-y-3">
+    <div 
+      className="rounded-sm p-4 space-y-3"
+      style={{
+        border: '1px solid var(--border-subtle)',
+        backgroundColor: 'var(--surface-panel)',
+      }}
+    >
       <div className="flex items-center justify-between">
         <h4 className="text-theme-darkest font-medium flex items-center gap-2">
           <svg
@@ -255,7 +257,16 @@ export default function LinkedContactCard({
           {contactSuggestions.map((suggestion) => (
             <div
               key={suggestion.contact.contactId}
-              className="flex items-center justify-between p-2 rounded-sm hover:bg-theme-light transition-colors"
+              className="flex items-center justify-between p-2 rounded-sm transition-colors"
+              style={{
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <Link
                 href={`/contacts/${suggestion.contact.contactId}`}
@@ -310,11 +321,22 @@ export default function LinkedContactCard({
               onChange={(e) => onSearchQueryChange(e.target.value)}
               className="w-full"
             />
-            <div className="max-h-48 overflow-y-auto space-y-1 border border-theme-lighter rounded-sm p-2">
+            <div 
+              className="max-h-48 overflow-y-auto space-y-1 rounded-sm p-2"
+              style={{
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
               {filteredContacts.slice(0, 10).map((contact) => (
                 <div
                   key={contact.contactId}
-                  className="flex items-center justify-between p-2 rounded-sm hover:bg-theme-light transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-2 rounded-sm transition-colors cursor-pointer"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
                   onClick={() => onLink(contact.contactId)}
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">

@@ -56,7 +56,24 @@ export default function EventAttendeesSection({
               {attendee.email && (
                 <a
                   href={`mailto:${attendee.email}`}
-                  className="text-theme-dark text-sm hover:text-blue-600 truncate block"
+                  className="text-sm truncate block focus:outline-none"
+                  style={{
+                    color: 'var(--link)',
+                    textDecorationColor: 'var(--divider)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--link-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--link)';
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+                    e.currentTarget.style.borderRadius = '0.25rem';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
                   {attendee.email}
                 </a>

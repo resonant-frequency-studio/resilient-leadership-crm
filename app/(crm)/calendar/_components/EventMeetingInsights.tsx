@@ -2,62 +2,75 @@
 
 import { CalendarEvent, Contact } from "@/types/firestore";
 import { EventContext } from "@/hooks/useCalendarEvents";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import CollapsibleSection from "./CollapsibleSection";
 import { Button } from "@/components/Button";
-import { useRouter } from "next/navigation";
 import { useCreateActionItem } from "@/hooks/useActionItemMutations";
+import { formatContactDate } from "@/util/contact-utils";
 
 interface EventMeetingInsightsProps {
   event: CalendarEvent;
   linkedContact: Contact | null;
+  storedInsights: CalendarEvent["meetingInsights"] | null;
   aiContext: EventContext | null;
   isGenerating: boolean;
   error: Error | null;
-  onGenerate: () => void;
-  onClose: () => void;
+  onGenerate: (regenerate: boolean) => void;
+  onClose?: () => void; // Optional - may be used in future
 }
 
 export default function EventMeetingInsights({
   event,
   linkedContact,
+  storedInsights,
   aiContext,
   isGenerating,
   error,
   onGenerate,
-  onClose,
 }: EventMeetingInsightsProps) {
-  const router = useRouter();
   const createActionItemMutation = useCreateActionItem();
   const [hasExpanded, setHasExpanded] = useState(false);
 
+  // Use stored insights if available, otherwise use aiContext from mutation
+  const insights = useMemo(() => {
+    if (storedInsights) {
+      return {
+        summary: storedInsights.summary,
+        suggestedNextStep: storedInsights.suggestedNextStep,
+        suggestedTouchpointDate: storedInsights.suggestedTouchpointDate,
+        suggestedTouchpointRationale: storedInsights.suggestedTouchpointRationale,
+        suggestedActionItems: storedInsights.suggestedActionItems,
+        followUpEmailDraft: storedInsights.followUpEmailDraft,
+      };
+    }
+    return aiContext;
+  }, [storedInsights, aiContext]);
+
+  // Auto-generate insights on mount if no stored insights exist
+  useEffect(() => {
+    if (!storedInsights && !insights && !isGenerating && !error) {
+      onGenerate(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
   const handleExpand = () => {
-    if (!hasExpanded && !aiContext) {
-      onGenerate();
+    if (!hasExpanded && !insights) {
+      onGenerate(false);
     }
     setHasExpanded(true);
   };
 
-  const handleDraftEmail = () => {
-    if (aiContext?.followUpEmailDraft && linkedContact?.primaryEmail) {
-      const subject = encodeURIComponent(`Follow-up: ${event.title}`);
-      const body = encodeURIComponent(aiContext.followUpEmailDraft);
-      window.open(
-        `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(linkedContact.primaryEmail)}&su=${subject}&body=${body}`,
-        "_blank"
-      );
+  // Format last generated date
+  const lastGeneratedText = useMemo(() => {
+    if (storedInsights?.generatedAt) {
+      return formatContactDate(storedInsights.generatedAt, { relative: true });
     }
-  };
-
-  const handleCreateFollowUp = () => {
-    if (aiContext?.suggestedTouchpointDate && event.matchedContactId) {
-      router.push(`/contacts/${event.matchedContactId}?touchpointDate=${aiContext.suggestedTouchpointDate}`);
-      onClose();
-    }
-  };
+    return null;
+  }, [storedInsights?.generatedAt]);
 
   const handleSaveToNotes = async () => {
-    if (!aiContext || !linkedContact) return;
+    if (!insights || !linkedContact) return;
     
     // Save summary to contact notes
     try {
@@ -66,7 +79,7 @@ export default function EventMeetingInsights({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          notes: aiContext.summary,
+          notes: insights.summary,
         }),
       });
 
@@ -103,7 +116,7 @@ export default function EventMeetingInsights({
       title="Meeting Insights"
       defaultExpanded={false}
       icon={insightsIcon}
-      preview={aiContext ? "Summary & next steps available" : undefined}
+      preview={insights ? "Summary & next steps available" : undefined}
     >
       <div>
         {isGenerating && (
@@ -130,7 +143,7 @@ export default function EventMeetingInsights({
               {error.message || "Failed to generate insights"}
             </p>
             <Button
-              onClick={onGenerate}
+              onClick={() => onGenerate(false)}
               variant="outline"
               size="sm"
             >
@@ -138,13 +151,13 @@ export default function EventMeetingInsights({
             </Button>
           </div>
         )}
-        {aiContext && (
+        {insights && (
           <div className="space-y-4">
             {/* Summary - restructured as "What we discussed" */}
             <div>
               <h5 className="text-theme-darkest font-medium text-sm mb-1">What we discussed</h5>
               <p className="text-theme-dark text-sm whitespace-pre-line">
-                {aiContext.summary}
+                {insights.summary}
               </p>
             </div>
 
@@ -152,16 +165,16 @@ export default function EventMeetingInsights({
             <div>
               <h5 className="text-theme-darkest font-medium text-sm mb-1">Suggested next step</h5>
               <p className="text-theme-dark text-sm">
-                {aiContext.suggestedNextStep}
+                {insights.suggestedNextStep}
               </p>
             </div>
 
             {/* Open loops - from suggested action items */}
-            {aiContext.suggestedActionItems && aiContext.suggestedActionItems.length > 0 && (
+            {insights.suggestedActionItems && insights.suggestedActionItems.length > 0 && (
               <div>
                 <h5 className="text-theme-darkest font-medium text-sm mb-2">Open loops</h5>
                 <ul className="list-disc list-inside space-y-1 mb-3">
-                  {aiContext.suggestedActionItems.map((item: string, idx: number) => (
+                  {insights.suggestedActionItems.map((item: string, idx: number) => (
                     <li key={idx} className="text-theme-dark text-sm">
                       {item}
                     </li>
@@ -169,7 +182,7 @@ export default function EventMeetingInsights({
                 </ul>
                 {event.matchedContactId && (
                   <div className="flex flex-wrap gap-2">
-                    {aiContext.suggestedActionItems.map((item: string, idx: number) => (
+                    {insights.suggestedActionItems.map((item: string, idx: number) => (
                       <Button
                         key={idx}
                         onClick={() => {
@@ -193,27 +206,12 @@ export default function EventMeetingInsights({
             )}
 
             {/* Actions */}
-            <div className="border-t border-theme-light pt-3 space-y-2">
-              {aiContext.followUpEmailDraft && linkedContact?.primaryEmail && (
-                <Button
-                  onClick={handleDraftEmail}
-                  variant="primary"
-                  size="sm"
-                  fullWidth
-                >
-                  Use to draft email
-                </Button>
-              )}
-              {aiContext.suggestedTouchpointDate && event.matchedContactId && (
-                <Button
-                  onClick={handleCreateFollowUp}
-                  variant="primary"
-                  size="sm"
-                  fullWidth
-                >
-                  Create follow-up
-                </Button>
-              )}
+            <div 
+              className="pt-3 space-y-2"
+              style={{
+                borderTop: '1px solid var(--divider)',
+              }}
+            >
               {linkedContact && (
                 <Button
                   onClick={handleSaveToNotes}
@@ -226,9 +224,14 @@ export default function EventMeetingInsights({
               )}
             </div>
 
-            <div className="border-t border-theme-light pt-3">
+            <div 
+              className="pt-3"
+              style={{
+                borderTop: '1px solid var(--divider)',
+              }}
+            >
               <Button
-                onClick={onGenerate}
+                onClick={() => onGenerate(true)}
                 variant="outline"
                 size="sm"
                 disabled={isGenerating}
@@ -236,10 +239,18 @@ export default function EventMeetingInsights({
               >
                 Regenerate
               </Button>
+              {lastGeneratedText && (
+                <p 
+                  className="text-xs mt-2 text-center"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Last generated {lastGeneratedText}
+                </p>
+              )}
             </div>
           </div>
         )}
-        {!aiContext && !isGenerating && !error && (
+        {!insights && !isGenerating && !error && (
           <div className="text-center py-4">
             <Button
               onClick={handleExpand}

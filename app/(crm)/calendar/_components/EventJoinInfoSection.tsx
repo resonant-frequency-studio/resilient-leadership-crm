@@ -72,13 +72,47 @@ export default function EventJoinInfoSection({
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:text-blue-800 truncate flex-1 min-w-0"
+                  className="text-sm truncate flex-1 min-w-0 focus:outline-none"
+                  style={{
+                    color: 'var(--link)',
+                    textDecorationColor: 'var(--divider)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--link-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--link)';
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+                    e.currentTarget.style.borderRadius = '0.25rem';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
                   {link.url}
                 </a>
                 <button
                   onClick={() => handleCopyLink(link.url, index)}
-                  className="p-1 rounded-sm hover:bg-theme-light transition-colors text-theme-medium hover:text-theme-darkest shrink-0"
+                  className="p-1 rounded-sm transition-colors shrink-0 focus:outline-none"
+                  style={{
+                    color: 'var(--text-muted)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+                    e.currentTarget.style.color = 'var(--foreground)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                   aria-label="Copy link"
                   title="Copy link"
                 >
