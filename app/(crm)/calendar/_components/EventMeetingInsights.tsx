@@ -7,6 +7,7 @@ import CollapsibleSection from "./CollapsibleSection";
 import { Button } from "@/components/Button";
 import { useCreateActionItem } from "@/hooks/useActionItemMutations";
 import { formatContactDate } from "@/util/contact-utils";
+import { reportException } from "@/lib/error-reporting";
 
 interface EventMeetingInsightsProps {
   event: CalendarEvent;
@@ -90,7 +91,10 @@ export default function EventMeetingInsights({
       // Show success feedback (could use toast here)
       alert("Saved to contact notes");
     } catch (error) {
-      console.error("Failed to save to notes:", error);
+      reportException(error, {
+        context: "Saving meeting insights to contact notes",
+        tags: { component: "EventMeetingInsights" },
+      });
       alert("Failed to save to notes");
     }
   };

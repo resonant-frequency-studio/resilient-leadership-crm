@@ -30,25 +30,17 @@ export function useCalendarEvents(
       });
 
       const url = `/api/calendar/events?${params.toString()}`;
-      console.log('[useCalendarEvents] Fetching:', url);
       
       const response = await fetch(url, {
         credentials: 'include', // Include session cookie
       });
       
-      console.log('[useCalendarEvents] Response status:', response.status);
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('[useCalendarEvents] Error response:', errorData);
         throw new Error(errorData.error || "Failed to fetch calendar events");
       }
 
       const data = await response.json() as CalendarEventsResponse;
-      console.log('[useCalendarEvents] Success, events count:', data.events?.length || 0);
-      if (data.syncStats) {
-        console.log('[useCalendarEvents] Sync stats:', data.syncStats);
-      }
       return data.events;
     },
     enabled: !!userId && (options?.enabled !== false),

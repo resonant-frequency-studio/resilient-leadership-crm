@@ -3,6 +3,7 @@
 import { CalendarEvent, Contact } from "@/types/firestore";
 import { Button } from "@/components/Button";
 import { useRouter } from "next/navigation";
+import OverflowMenu from "./OverflowMenu";
 
 interface EventNextActionsProps {
   event: CalendarEvent;
@@ -51,43 +52,34 @@ export default function EventNextActions({
     return null;
   }
 
+  const moreActionsItems = [
+    {
+      label: "Draft Follow-up Email",
+      onClick: handleDraftEmail,
+    },
+    {
+      label: "Add Action Item",
+      onClick: handleAddActionItem,
+    },
+    {
+      label: "View Contact",
+      onClick: onViewContact,
+    },
+  ];
+
   return (
     <div 
       className="sticky top-0 z-10 py-4 mb-4"
-      style={{
-        backgroundColor: 'var(--surface-bar)',
-        borderBottom: '1px solid var(--border-subtle)',
-      }}
     >
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex items-center gap-2 justify-end">
         <Button
           onClick={onCreateFollowUp}
           variant="primary"
-          size="md"
+          size="sm"
         >
           Create Follow-up
         </Button>
-        <Button
-          onClick={handleDraftEmail}
-          variant="secondary"
-          size="md"
-        >
-          Draft Follow-up Email
-        </Button>
-        <Button
-          onClick={handleAddActionItem}
-          variant="secondary"
-          size="md"
-        >
-          Add Action Item
-        </Button>
-        <Button
-          onClick={onViewContact}
-          variant="outline"
-          size="md"
-        >
-          View Contact
-        </Button>
+        <OverflowMenu items={moreActionsItems} />
       </div>
     </div>
   );

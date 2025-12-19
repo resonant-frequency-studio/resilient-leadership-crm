@@ -26,6 +26,7 @@ import EventDetailsSection from "./EventDetailsSection";
 import EventAttendeesSection from "./EventAttendeesSection";
 import EventJoinInfoSection from "./EventJoinInfoSection";
 import CollapsibleSection from "./CollapsibleSection";
+import { reportException } from "@/lib/error-reporting";
 
 interface CalendarEventCardProps {
   event: CalendarEvent;
@@ -314,64 +315,123 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
     return links;
   }, [event.description]);
 
-  // Find contact suggestions based on attendees
+  // Find contact suggestions based on attendees (excluding user's email)
   const contactSuggestions = useMemo(() => {
     if (!contacts.length || event.matchedContactId) return [];
     
+    const userEmail = user?.email?.toLowerCase().trim() || null;
     const suggestions: Array<{ contact: Contact; reason: string }> = [];
     const eventEmails = new Set<string>();
-    const eventLastNames = new Set<string>();
+    let extractedFirstName: string | null = null;
+    let extractedLastName: string | null = null;
     
-    // Collect emails from attendees
+    // Collect emails from attendees (excluding user's email)
     if (event.attendees) {
-      event.attendees.forEach((a) => {
-        if (a.email) eventEmails.add(a.email.toLowerCase());
-      });
-    }
-    
-    // Also check description for emails
-    if (event.description) {
-      const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
-      let match;
-      while ((match = emailRegex.exec(event.description)) !== null) {
-        eventEmails.add(match[0].toLowerCase());
+      for (const attendee of event.attendees) {
+        const email = attendee.email?.toLowerCase().trim();
+        if (email && (!userEmail || email !== userEmail)) {
+          eventEmails.add(email);
+          
+          // Try to extract name from attendee displayName (excluding user)
+          if (attendee.displayName && !extractedFirstName && !extractedLastName) {
+            const nameParts = attendee.displayName.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+              extractedFirstName = nameParts[0];
+              extractedLastName = nameParts[nameParts.length - 1];
+            }
+          }
+        }
       }
     }
     
-    // Extract last names from event text (full words only)
-    const eventText = `${event.title} ${event.description || ""}`;
-    // Match full last names (word boundaries, case-insensitive)
-    const words = eventText.toLowerCase().split(/\s+/);
-    words.forEach(word => {
-      // Remove punctuation and check if it's a potential last name (2+ characters)
-      const cleanWord = word.replace(/[^\w]/g, '');
-      if (cleanWord.length >= 2) {
-        eventLastNames.add(cleanWord);
+    // Fallback: Extract names from title (only capitalized first+last name pattern)
+    if (!extractedFirstName || !extractedLastName) {
+      const title = event.title || "";
+      const namePattern = /([A-Z][a-z]+)\s+([A-Z][a-z]+)/g;
+      const matches = Array.from(title.matchAll(namePattern));
+      
+      // Try to get user's name to exclude it
+      let userLastName: string | null = null;
+      if (userEmail && event.attendees) {
+        const userAttendee = event.attendees.find(
+          (a) => a.email?.toLowerCase().trim() === userEmail
+        );
+        if (userAttendee?.displayName) {
+          const userNameParts = userAttendee.displayName.trim().split(/\s+/);
+          if (userNameParts.length >= 2) {
+            userLastName = userNameParts[userNameParts.length - 1];
+          }
+        }
       }
-    });
+      
+      // Use first name that doesn't match user's last name
+      for (const match of matches) {
+        const firstName = match[1];
+        const lastName = match[2];
+        
+        // Skip if this matches the user's last name
+        if (userLastName && lastName.toLowerCase() === userLastName.toLowerCase()) {
+          continue;
+        }
+        
+        if (!extractedFirstName) extractedFirstName = firstName;
+        if (!extractedLastName) extractedLastName = lastName;
+        break;
+      }
+    }
     
-    // First pass: Exact email matches (highest priority)
+    // First pass: Exact email matches (highest priority, excluding user's email)
     for (const contact of contacts) {
+      // Skip if this contact's email matches the user's email
+      if (userEmail && contact.primaryEmail?.toLowerCase().trim() === userEmail) {
+        continue;
+      }
+      
       if (contact.primaryEmail && eventEmails.has(contact.primaryEmail.toLowerCase())) {
         suggestions.push({ contact, reason: "Email match" });
       }
     }
     
-    // Second pass: Full last name matches (only if not already suggested)
-    for (const contact of contacts) {
-      if (suggestions.some((s) => s.contact.contactId === contact.contactId)) continue;
-      
-      // Only match full last name (exact match, not partial)
-      if (contact.lastName) {
-        const lastNameLower = contact.lastName.toLowerCase().trim();
-        if (eventLastNames.has(lastNameLower)) {
+    // Second pass: Exact last name matches (only if not already suggested)
+    if (extractedLastName) {
+      const lastNameLower = extractedLastName.toLowerCase().trim();
+      for (const contact of contacts) {
+        // Skip if already suggested
+        if (suggestions.some((s) => s.contact.contactId === contact.contactId)) continue;
+        
+        // Skip if this contact's email matches the user's email
+        if (userEmail && contact.primaryEmail?.toLowerCase().trim() === userEmail) {
+          continue;
+        }
+        
+        // Only match exact last name
+        if (contact.lastName && contact.lastName.toLowerCase().trim() === lastNameLower) {
           suggestions.push({ contact, reason: "Last name match" });
         }
       }
     }
     
+    // Third pass: Exact first name matches (only if not already suggested)
+    if (extractedFirstName) {
+      const firstNameLower = extractedFirstName.toLowerCase().trim();
+      for (const contact of contacts) {
+        // Skip if already suggested
+        if (suggestions.some((s) => s.contact.contactId === contact.contactId)) continue;
+        
+        // Skip if this contact's email matches the user's email
+        if (userEmail && contact.primaryEmail?.toLowerCase().trim() === userEmail) {
+          continue;
+        }
+        
+        // Only match exact first name
+        if (contact.firstName && contact.firstName.toLowerCase().trim() === firstNameLower) {
+          suggestions.push({ contact, reason: "First name match" });
+        }
+      }
+    }
+    
     return suggestions.slice(0, 5); // Limit to 5 suggestions
-  }, [contacts, event]);
+  }, [contacts, event, user?.email]);
 
   // Get linked contact
   const linkedContact = useMemo(() => {
@@ -496,10 +556,12 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
       // If overwrite-google, show message that user needs to edit again
       if (resolution === "overwrite-google" && data.message) {
         // Could show a toast notification here
-        console.log(data.message);
       }
     } catch (error) {
-      console.error("Failed to resolve conflict:", error);
+      reportException(error, {
+        context: "Resolving calendar event conflict",
+        tags: { component: "CalendarEventCard", eventId: event.eventId },
+      });
       throw error;
     }
   };
@@ -548,16 +610,6 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
     return textLength > 240;
   }, [event.description]);
 
-  // Get description preview (first 1-2 lines)
-  const descriptionPreview = useMemo(() => {
-    if (!event.description || !isDescriptionLong) return undefined;
-    const text = event.description.replace(/<[^>]*>/g, " ").trim();
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length === 0) return undefined;
-    const preview = lines.slice(0, 2).join(' ').substring(0, 100);
-    return preview + (preview.length >= 100 ? "..." : "");
-  }, [event.description, isDescriptionLong]);
-
   return (
     <div className="w-full max-w-full overflow-hidden calendar-event-card flex flex-col">
       {/* 1. Header */}
@@ -567,17 +619,68 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
         onClose={onClose}
         onEdit={handleEdit}
         onDelete={() => setShowDeleteConfirm(true)}
-        conflictData={conflictData ? {
-          googleEvent: conflictData.googleEvent,
-          localEvent: conflictData.localEvent,
-          cachedEvent: conflictData.cachedEvent || conflictData.googleEvent,
-        } : undefined}
+        conflictData={conflictData}
       />
 
       <div className="space-y-6 min-w-0 flex-1 overflow-y-auto">
 
-        {/* Edit Form or Display Mode */}
-        {isEditMode ? (
+        {/* Delete Confirmation */}
+        {showDeleteConfirm ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-theme-darkest">Delete Event</h3>
+            <p className="text-theme-dark">
+              Are you sure you want to delete &quot;{event.title}&quot;? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        ) : showUnlinkConfirm && linkedContact ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-theme-darkest">Unlink Contact</h3>
+            <p className="text-theme-dark">
+              Unlink this event from {linkedContact.firstName || linkedContact.lastName
+                ? `${linkedContact.firstName || ""} ${linkedContact.lastName || ""}`.trim()
+                : linkedContact.primaryEmail}? This will remove follow-up associations.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowUnlinkConfirm(false)}
+                disabled={unlinkMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  unlinkMutation.mutate(event.eventId, {
+                    onSuccess: () => {
+                      setShowUnlinkConfirm(false);
+                      // The optimistic update will immediately show the unlinked state
+                    },
+                  });
+                }}
+                disabled={unlinkMutation.isPending}
+              >
+                {unlinkMutation.isPending ? "Unlinking..." : "Unlink"}
+              </Button>
+            </div>
+          </div>
+        ) : isEditMode ? (
           <div className="space-y-4">
             {/* Title */}
             <div>
@@ -772,7 +875,6 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
               <CollapsibleSection
                 title="Description"
                 defaultExpanded={!isDescriptionLong}
-                preview={descriptionPreview}
                 icon={
                   <svg
                     className="w-5 h-5 text-theme-medium"
@@ -832,84 +934,6 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
           </>
         )}
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/60 flex items-center justify-center z-50">
-            <div 
-              className="rounded-lg p-6 max-w-md w-full mx-4"
-              style={{
-                backgroundColor: 'var(--surface-modal)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <h3 className="text-lg font-semibold text-theme-darkest mb-4">Delete Event</h3>
-              <p className="text-theme-dark mb-6">
-                Are you sure you want to delete &quot;{event.title}&quot;? This action cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                    <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleteMutation.isPending}
-                >
-                  Cancel
-                    </Button>
-                    <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                    </Button>
-                  </div>
-                </div>
-                      </div>
-                    )}
-
-        {/* Unlink Confirmation Modal */}
-        {showUnlinkConfirm && linkedContact && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black/60 flex items-center justify-center z-50">
-            <div 
-              className="rounded-lg p-6 max-w-md w-full mx-4"
-              style={{
-                backgroundColor: 'var(--surface-modal)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <h3 className="text-lg font-semibold text-theme-darkest mb-4">Unlink Contact</h3>
-              <p className="text-theme-dark mb-6">
-                Unlink this event from {linkedContact.firstName || linkedContact.lastName
-                  ? `${linkedContact.firstName || ""} ${linkedContact.lastName || ""}`.trim()
-                  : linkedContact.primaryEmail}? This will remove follow-up associations.
-              </p>
-              <div className="flex gap-2 justify-end">
-                    <Button
-                      variant="outline"
-                  onClick={() => setShowUnlinkConfirm(false)}
-                  disabled={unlinkMutation.isPending}
-                    >
-                  Cancel
-                    </Button>
-                <Button
-                  variant="danger"
-              onClick={() => {
-                    unlinkMutation.mutate(event.eventId, {
-                      onSuccess: () => {
-                        setShowUnlinkConfirm(false);
-                        // The optimistic update will immediately show the unlinked state
-                      },
-                    });
-                  }}
-                  disabled={unlinkMutation.isPending}
-                >
-                  {unlinkMutation.isPending ? "Unlinking..." : "Unlink"}
-                    </Button>
-                  </div>
-                    </div>
-              </div>
-            )}
           </div>
 
       {/* Conflict Resolution Modal */}

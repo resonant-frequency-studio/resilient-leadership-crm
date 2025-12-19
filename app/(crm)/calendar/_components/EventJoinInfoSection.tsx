@@ -25,7 +25,7 @@ export default function EventJoinInfoSection({
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (error) {
-      console.error("Failed to copy link:", error);
+      // Silently fail - clipboard errors are usually user permission issues
     }
   };
 
