@@ -3,7 +3,7 @@
 import ThemedSuspense from "@/components/ThemedSuspense";
 import Card from "@/components/Card";
 import ContactCard from "./ContactCard";
-import { useContacts } from "@/hooks/useContacts";
+import { useContactsRealtime } from "@/hooks/useContactsRealtime";
 import { getDaysUntilTouchpoint } from "@/util/date-utils-server";
 import { Contact } from "@/types/firestore";
 import { useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
@@ -24,7 +24,7 @@ interface ContactWithTouchpoint extends Contact {
 
 function TouchpointsContent({ userId }: { userId: string }) {
   const { user } = useAuth();
-  const { data: contacts = [], isLoading: contactsLoading } = useContacts(userId);
+  const { contacts = [], loading: contactsLoading } = useContactsRealtime(userId);
   const [selectedTouchpointIds, setSelectedTouchpointIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const updateTouchpointStatusMutation = useUpdateTouchpointStatus(user?.uid);
