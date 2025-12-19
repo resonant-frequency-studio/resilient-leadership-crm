@@ -1,6 +1,7 @@
 import { Firestore, Timestamp, Query } from "firebase-admin/firestore";
 import { TimelineItem, CalendarEvent, ActionItem, Thread, Contact } from "@/types/firestore";
 import { DEFAULT_TIMELINE_DAYS } from "./constants";
+import { reportException } from "../error-reporting";
 
 interface GetContactTimelineOptions {
   limit?: number;

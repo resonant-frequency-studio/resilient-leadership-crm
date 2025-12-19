@@ -6,18 +6,15 @@ import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
 import Skeleton from "@/components/Skeleton";
-import SaveButtonWithIndicator from "./SaveButtonWithIndicator";
 import TouchpointStatusActions from "../TouchpointStatusActions";
 import Textarea from "@/components/Textarea";
 import { formatContactDate, getDisplayName } from "@/util/contact-utils";
 import { reportException } from "@/lib/error-reporting";
-import { useSavingState } from "@/contexts/SavingStateContext";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
 import { Button } from "@/components/Button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import ContactGuardedLink from "@/components/contacts/ContactGuardedLink";
 
 interface NextTouchpointCardProps {
   contactId: string;
@@ -30,37 +27,40 @@ export default function NextTouchpointCard({
 }: NextTouchpointCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
-  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
+  const { schedule, flush } = useDebouncedAutosave();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const cardId = `next-touchpoint-${contactId}`;
   
   const prevContactIdRef = useRef<string | null>(null);
+  const lastSavedValuesRef = useRef<{ date: string; message: string } | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [nextTouchpointDate, setNextTouchpointDate] = useState<string>("");
   const [nextTouchpointMessage, setNextTouchpointMessage] = useState<string>("");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isConvertingToEvent, setIsConvertingToEvent] = useState(false);
   
-  // Register/unregister save status with context
-  useEffect(() => {
-    registerSaveStatus(cardId, saveStatus);
-    return () => {
-      unregisterSaveStatus(cardId);
-    };
-  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+  // Use refs to store current values so save function always reads latest state
+  const nextTouchpointDateRef = useRef(nextTouchpointDate);
+  const nextTouchpointMessageRef = useRef(nextTouchpointMessage);
   
-  // Reset form state ONLY when contactId changes (switching to a different contact)
-  // We don't update when updatedAt changes because that would reset our local state
-  // during optimistic updates and refetches. The local state is the source of truth
-  // until we switch to a different contact.
+  // Keep refs in sync with state
+  useEffect(() => {
+    nextTouchpointDateRef.current = nextTouchpointDate;
+  }, [nextTouchpointDate]);
+  
+  useEffect(() => {
+    nextTouchpointMessageRef.current = nextTouchpointMessage;
+  }, [nextTouchpointMessage]);
+  
+  // Reset form state only when contactId changes (switching to a different contact)
+  // Don't reset when contact data updates from our own save
   useEffect(() => {
     if (!contact) return;
     
-    // Only update if we're switching to a different contact
+    // Only reset if we're switching to a different contact
     if (prevContactIdRef.current !== contact.contactId) {
       prevContactIdRef.current = contact.contactId;
+      lastSavedValuesRef.current = null; // Clear saved values when switching contacts
       // Batch state updates to avoid cascading renders
       const dateValue =
         contact.nextTouchpointDate instanceof Timestamp
@@ -70,67 +70,82 @@ export default function NextTouchpointCard({
           : "";
       setNextTouchpointDate(dateValue);
       setNextTouchpointMessage(contact.nextTouchpointMessage ?? "");
-      setSaveStatus("idle");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId]);
-
-  // Track changes using useMemo instead of useEffect
-  const hasUnsavedChanges = useMemo(() => {
-    if (!contact) return false;
+    
+    // If contact data updated but it matches what we just saved, don't reset
+    if (lastSavedValuesRef.current) {
+      const saved = lastSavedValuesRef.current;
+      const contactDate =
+        contact.nextTouchpointDate instanceof Timestamp
+          ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
+          : typeof contact.nextTouchpointDate === "string"
+          ? contact.nextTouchpointDate.split("T")[0]
+          : "";
+      const contactMessage = contact.nextTouchpointMessage ?? "";
+      
+      if (contactDate === saved.date && contactMessage === saved.message) {
+        // This update came from our save, don't reset form
+        return;
+      }
+    }
+    
+    // Only update if form values match the old contact values (user hasn't made changes)
     const contactDate =
       contact.nextTouchpointDate instanceof Timestamp
         ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
         : typeof contact.nextTouchpointDate === "string"
         ? contact.nextTouchpointDate.split("T")[0]
         : "";
-    const dateChanged = nextTouchpointDate !== contactDate;
-    const messageChanged =
-      nextTouchpointMessage !== (contact.nextTouchpointMessage ?? "");
-    return dateChanged || messageChanged;
-  }, [nextTouchpointDate, nextTouchpointMessage, contact]);
+    const contactMessage = contact.nextTouchpointMessage ?? "";
+    
+    if (nextTouchpointDate === contactDate && nextTouchpointMessage === contactMessage) {
+      // Form hasn't been edited, safe to update from contact
+      setNextTouchpointDate(contactDate);
+      setNextTouchpointMessage(contactMessage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.contactId, contact?.nextTouchpointDate, contact?.nextTouchpointMessage]);
 
-  const saveChanges = () => {
-    if (!hasUnsavedChanges || !contact) return;
-
-    setSaveStatus("saving");
-    updateMutation.mutate(
-      {
-        contactId,
-        updates: {
-          nextTouchpointDate: nextTouchpointDate || null,
-          nextTouchpointMessage: nextTouchpointMessage || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        },
-        onError: (error) => {
-          setSaveStatus("error");
-          reportException(error, {
-            context: "Saving next touchpoint in NextTouchpointCard",
-            tags: { component: "NextTouchpointCard", contactId },
-          });
-          setTimeout(() => setSaveStatus("idle"), 3000);
-        },
-      }
-    );
-  };
-
-  // Autosave every 30 seconds when there are unsaved changes
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const interval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        saveChanges();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [hasUnsavedChanges, saveChanges]);
+  // Save function for autosave - reads from refs to always get latest values
+  const saveTouchpoint = useMemo(() => {
+    return async () => {
+      if (!contact) return;
+      
+      // Read current form values from refs (always latest, even if scheduled before state update)
+      const currentDate = nextTouchpointDateRef.current || null;
+      const currentMessage = nextTouchpointMessageRef.current || null;
+      
+      return new Promise<void>((resolve, reject) => {
+        updateMutation.mutate(
+          {
+            contactId,
+            updates: {
+              nextTouchpointDate: currentDate,
+              nextTouchpointMessage: currentMessage,
+            },
+          },
+          {
+            onSuccess: () => {
+              // Remember what we saved so we don't reset form when contact refetches
+              lastSavedValuesRef.current = {
+                date: currentDate ?? "",
+                message: currentMessage ?? "",
+              };
+              resolve();
+            },
+            onError: (error) => {
+              reportException(error, {
+                context: "Saving next touchpoint in NextTouchpointCard",
+                tags: { component: "NextTouchpointCard", contactId },
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+    };
+  }, [contact, contactId, updateMutation]);
 
   // Check if touchpoint is linked to a calendar event
   const isLinkedToEvent = useMemo(() => {
@@ -143,6 +158,9 @@ export default function NextTouchpointCard({
       alert("Please set a touchpoint date first");
       return;
     }
+
+    // Flush any pending saves first
+    await flush("touchpoint");
 
     setIsConvertingToEvent(true);
     try {
@@ -217,11 +235,6 @@ export default function NextTouchpointCard({
             </span>
           )}
         </div>
-        <SaveButtonWithIndicator
-          saveStatus={saveStatus}
-          hasUnsavedChanges={hasUnsavedChanges}
-          onSave={saveChanges}
-        />
       </div>
       <p className="text-sm text-theme-dark mb-4">
         Schedule and plan your next interaction with this contact. Set a date and add notes about what to discuss to maintain consistent, meaningful engagement.
@@ -240,10 +253,13 @@ export default function NextTouchpointCard({
               const dateValue = e.target.value;
               if (dateValue && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 setNextTouchpointDate(dateValue);
+                schedule("touchpoint", saveTouchpoint, 0); // Save immediately on date change
               } else if (!dateValue) {
                 setNextTouchpointDate("");
+                schedule("touchpoint", saveTouchpoint, 0);
               }
             }}
+            onBlur={() => flush("touchpoint")}
           />
         </div>
         <div>
@@ -255,7 +271,11 @@ export default function NextTouchpointCard({
             name="next-touchpoint-message"
             rows={3}
             value={nextTouchpointMessage}
-            onChange={(e) => setNextTouchpointMessage(e.target.value)}
+            onChange={(e) => {
+              setNextTouchpointMessage(e.target.value);
+              schedule("touchpoint", saveTouchpoint);
+            }}
+            onBlur={() => flush("touchpoint")}
             placeholder="What should you discuss in the next touchpoint?"
           />
         </div>
@@ -289,12 +309,12 @@ export default function NextTouchpointCard({
                 This touchpoint is connected to a Google Calendar event
               </p>
             </div>
-            <Link
+            <ContactGuardedLink
               href={`/calendar?eventId=${contact.linkedGoogleEventId}`}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               View Event →
-            </Link>
+            </ContactGuardedLink>
           </div>
         </div>
       )}

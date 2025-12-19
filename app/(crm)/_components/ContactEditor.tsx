@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useContact } from "@/hooks/useContact";
 import Skeleton from "@/components/Skeleton";
 import BasicInfoCard from "./contact-cards/BasicInfoCard";
@@ -10,9 +11,10 @@ import NextTouchpointCard from "./contact-cards/NextTouchpointCard";
 import OutreachDraftCard from "./contact-cards/OutreachDraftCard";
 import ContactInsightsCard from "./contact-cards/ContactInsightsCard";
 import ActivityCard from "./contact-cards/ActivityCard";
-import ArchiveContactCard from "./contact-cards/ArchiveContactCard";
-import DeleteContactCard from "./contact-cards/DeleteContactCard";
 import ContactTimelineCard from "./contact-cards/ContactTimelineCard";
+import { useContactAutosave } from "@/components/contacts/ContactAutosaveProvider";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
+import ContactSaveBar from "@/components/contacts/ContactSaveBar";
 
 interface ContactEditorProps {
   contactDocumentId: string;
@@ -23,7 +25,7 @@ interface ContactEditorProps {
   uniqueSegments?: string[];
 }
 
-export default function ContactEditor({
+function ContactEditorContent({
   contactDocumentId,
   userId,
   initialActionItems,
@@ -32,6 +34,27 @@ export default function ContactEditor({
 }: ContactEditorProps) {
   // Read contact directly from React Query cache for optimistic updates
   const { data: contact } = useContact(userId, contactDocumentId);
+  
+  // Initialize autosave hook (must be inside provider)
+  useDebouncedAutosave();
+  
+  // Browser unload guard
+  const { hasUnsavedChanges, pendingCount, lastError } = useContactAutosave();
+  
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingCount > 0 || hasUnsavedChanges || lastError) {
+        e.preventDefault();
+        e.returnValue = "Changes are still saving. Please wait.";
+        return "Changes are still saving. Please wait.";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, pendingCount, lastError]);
 
   // Show loading state if contact is not available
   if (!contact && !initialContact) {
@@ -73,10 +96,30 @@ export default function ContactEditor({
             initialContact={initialContact}
           />
           <ActivityCard contactId={contactDocumentId} userId={userId} />
-          <ArchiveContactCard contactId={contactDocumentId} userId={userId} />
-          <DeleteContactCard contactId={contactDocumentId} />
+          {/* Save bar - Desktop only, sticky with right column at bottom */}
+          <div className="hidden xl:block">
+            <ContactSaveBar />
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ContactEditor({
+  contactDocumentId,
+  userId,
+  initialActionItems,
+  initialContact,
+  uniqueSegments = [],
+}: ContactEditorProps) {
+  return (
+    <ContactEditorContent
+      contactDocumentId={contactDocumentId}
+      userId={userId}
+      initialActionItems={initialActionItems}
+      initialContact={initialContact}
+      uniqueSegments={uniqueSegments}
+    />
   );
 }

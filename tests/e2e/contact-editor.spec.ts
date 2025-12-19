@@ -6,8 +6,6 @@ import {
   deleteTestContact,
 } from "./helpers/test-data";
 import {
-  expectContactInList,
-  expectContactNotInList,
   expectTouchpointOnDashboard,
   expectTouchpointNotOnDashboard,
   expectTouchpointStatus,
@@ -25,11 +23,11 @@ import { validateTestUserId } from "./helpers/validation";
  * Component-level functionality (form fields, buttons, modals) is tested
  * in unit tests and not duplicated here.
  * 
- * Note: Contact forms use explicit Save buttons for saving changes.
+ * Note: Contact forms use autosave - fields save on blur or after debounce.
  */
 
 /**
- * Helper to edit and save a field using the Save button
+ * Helper to edit and save a field using autosave (blur triggers immediate save)
  */
 async function editFieldAndSave(page: Page, selector: string, newValue: string) {
   const input = page.locator(selector).first();
@@ -41,17 +39,13 @@ async function editFieldAndSave(page: Page, selector: string, newValue: string) 
   
   // Fill new value
   await input.fill(newValue);
-  await page.waitForTimeout(100); // Small delay after fill
+  await page.waitForTimeout(200); // Small delay after fill to ensure value is set
   
-  // Find and click the Save button (should be enabled after making changes)
-  const saveButton = page.locator('button:has-text("Save")').first();
-  await saveButton.waitFor({ state: "visible" });
-  await saveButton.waitFor({ state: "attached" });
-  await page.waitForTimeout(100); // Small delay to ensure button is enabled
-  await saveButton.click();
+  // Blur the field to trigger immediate autosave flush
+  await input.blur();
   
-  // Wait for save to complete (save operation + buffer)
-  await page.waitForTimeout(2000);
+  // Wait a bit for the debounce/flush to trigger
+  await page.waitForTimeout(300);
 }
 
 test.describe("Cross-Page Data Consistency", () => {
@@ -68,9 +62,12 @@ test.describe("Cross-Page Data Consistency", () => {
       await authenticatedPage.goto(`/contacts/${contactId}`);
       await authenticatedPage.waitForURL(/\/contacts\/.+/);
 
+      // Wait for page to fully load - wait for contact name heading
+      await authenticatedPage.waitForSelector('h1', { timeout: 15000 });
+
       // Step 2: Mark touchpoint as contacted
       const markContactedButton = authenticatedPage.locator('button:has-text("Mark as Contacted")').first();
-      await markContactedButton.waitFor({ state: "visible" });
+      await markContactedButton.waitFor({ state: "visible", timeout: 15000 });
       
       // Click button and wait for modal to appear (it's rendered via portal)
       await markContactedButton.click();
@@ -152,21 +149,25 @@ test.describe("Cross-Page Data Consistency", () => {
     });
 
     try {
-      // Step 1: Edit contact on detail page (saves via Save button)
+      // Step 1: Edit contact on detail page (saves via autosave on blur)
       await authenticatedPage.goto(`/contacts/${contactId}`);
       await authenticatedPage.waitForURL(/\/contacts\/.+/);
 
-      // Edit first name - will save when Save button is clicked
-      await Promise.all([
-        editFieldAndSave(authenticatedPage, 'input#contact-first-name, input[id*="contact-first"], input[placeholder="First Name"]', "Updated"),
-        authenticatedPage.waitForResponse(
-          (resp) => {
-            const url = resp.url();
-            return url.includes('/api/contacts/') && !url.includes('/touchpoint-status') && !url.includes('/archive') && resp.status() === 200;
-          },
-          { timeout: 10000 }
-        ).catch(() => null),
-      ]);
+      // Edit first name - will save automatically on blur
+      // Start waiting for response BEFORE triggering the save
+      const responsePromise = authenticatedPage.waitForResponse(
+        (resp) => {
+          const url = resp.url();
+          return url.includes('/api/contacts/') && !url.includes('/touchpoint-status') && !url.includes('/archive') && resp.status() === 200;
+        },
+        { timeout: 10000 }
+      ).catch(() => null);
+      
+      // Trigger the edit and blur (which triggers autosave)
+      await editFieldAndSave(authenticatedPage, 'input#contact-first-name, input[id*="contact-first"], input[placeholder="First Name"]', "Updated");
+      
+      // Wait for the API response
+      await responsePromise;
       
       await authenticatedPage.waitForTimeout(500);
 
@@ -193,47 +194,84 @@ test.describe("Cross-Page Data Consistency", () => {
     });
 
     try {
-      // Step 1: Archive contact on detail page
+      // Step 1: Archive contact on detail page (via three-dot menu)
       await authenticatedPage.goto(`/contacts/${contactId}`);
       await authenticatedPage.waitForURL(/\/contacts\/.+/);
 
-      const archiveButton = authenticatedPage.locator('button:has-text("Archive Contact")').first();
-      await archiveButton.waitFor({ state: "visible" });
+      // Wait for page to fully load - wait for contact name heading and email
+      await authenticatedPage.waitForSelector('h1', { timeout: 15000 });
+      // Wait for contact email to appear (indicates contact data loaded)
+      await authenticatedPage.waitForSelector('text=/.*@.*/', { timeout: 15000 });
+      // Wait for the menu button (only renders when contact is loaded)
+      const menuButton = authenticatedPage.locator('button[aria-label="Contact options"]');
+      await menuButton.waitFor({ state: "visible", timeout: 15000 });
+      await menuButton.click();
+      await authenticatedPage.waitForTimeout(500); // Wait for menu to open
       
-      // Wait for API response when archiving
+      // Click Archive in the dropdown menu
+      const archiveMenuItem = authenticatedPage.getByRole('menuitem', { name: 'Archive' });
+      await archiveMenuItem.waitFor({ state: "visible", timeout: 5000 });
+      await archiveMenuItem.click();
+      
+      // Wait for archive modal to appear
+      const archiveModal = authenticatedPage.locator('[role="dialog"]').filter({ 
+        hasText: /Archive Contact|Archive the contact/ 
+      });
+      await archiveModal.waitFor({ state: "visible" });
+      
+      // Confirm archive in modal
+      const confirmArchiveButton = archiveModal.getByRole('button', { name: 'Archive' });
       await Promise.all([
         authenticatedPage.waitForResponse(
           (resp) => resp.url().includes('/api/contacts/') && resp.url().includes('/archive') && resp.status() === 200,
           { timeout: 10000 }
         ).catch(() => null),
-        archiveButton.click(),
+        confirmArchiveButton.click(),
       ]);
-
-      // Wait for button text to change (indicates archive succeeded)
-      await authenticatedPage.waitForSelector('button:has-text("Unarchive Contact")');
+      
+      await archiveModal.waitFor({ state: "hidden" }).catch(() => {});
 
       await authenticatedPage.getByRole('link', { name: 'Contacts' }).first().click();
       await authenticatedPage.waitForURL(/\/contacts/);
       await expect(authenticatedPage.locator('text="No contacts match your filters"')).toBeVisible();
       await authenticatedPage.getByLabel("Show archived contacts").click();
       await expect(authenticatedPage.locator('text="Original Name"')).toBeVisible();
-      // Step 3: Go back and unarchive
+      // Step 3: Go back and unarchive (via three-dot menu)
       await authenticatedPage.getByRole('link', { name: 'Original Name' }).click();
       await authenticatedPage.waitForURL(/\/contacts\/.+/);
       
-      const unarchiveButton = authenticatedPage.locator('button:has-text("Unarchive Contact")').first();
-      await unarchiveButton.waitFor({ state: "visible" });
+      // Wait for page to fully load - wait for contact name heading and email
+      await authenticatedPage.waitForSelector('h1', { timeout: 15000 });
+      // Wait for contact email to appear (indicates contact data loaded)
+      await authenticatedPage.waitForSelector('text=/.*@.*/', { timeout: 15000 });
+      // Wait for the menu button (only renders when contact is loaded)
+      const menuButton2 = authenticatedPage.locator('button[aria-label="Contact options"]');
+      await menuButton2.waitFor({ state: "visible", timeout: 15000 });
+      await menuButton2.click();
+      await authenticatedPage.waitForTimeout(500); // Wait for menu to open
       
-      // Wait for API response when unarchiving
+      // Click Unarchive in the dropdown menu
+      const unarchiveMenuItem = authenticatedPage.getByRole('menuitem', { name: 'Unarchive' });
+      await unarchiveMenuItem.waitFor({ state: "visible", timeout: 5000 });
+      await unarchiveMenuItem.click();
+      
+      // Wait for unarchive modal to appear
+      const unarchiveModal = authenticatedPage.locator('[role="dialog"]').filter({ 
+        hasText: /Unarchive Contact|Unarchive the contact/ 
+      });
+      await unarchiveModal.waitFor({ state: "visible" });
+      
+      // Confirm unarchive in modal
+      const confirmUnarchiveButton = unarchiveModal.getByRole('button', { name: 'Unarchive' });
       await Promise.all([
         authenticatedPage.waitForResponse(
           (resp) => resp.url().includes('/api/contacts/') && resp.url().includes('/archive') && resp.status() === 200,
           { timeout: 10000 }
         ).catch(() => null),
-        unarchiveButton.click(),
+        confirmUnarchiveButton.click(),
       ]);
       
-      await expect(authenticatedPage.locator('button:has-text("Archive Contact")')).toBeVisible();
+      await unarchiveModal.waitFor({ state: "hidden" }).catch(() => {});
       await expect(authenticatedPage.locator('text="Original Name"')).toBeVisible();
     } finally {
       await deleteTestContact(testUserId, contactId);
@@ -279,8 +317,10 @@ test.describe("Complete User Workflows", () => {
     ]);
 
     await expect(authenticatedPage.getByRole('heading', { name: 'Contacts' })).toBeVisible();
+    // Wait a bit for the list to update
+    await authenticatedPage.waitForTimeout(500);
     // Check for contact in list using link (more specific than getByText)
-    await expect(authenticatedPage.getByRole('link', { name: 'Lifecycle Test' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('link', { name: 'Lifecycle Test' })).toBeVisible({ timeout: 10000 });
 
     // Go to the contact detail page
     await authenticatedPage.getByRole('link', { name: 'Lifecycle Test' }).click();
@@ -289,21 +329,38 @@ test.describe("Complete User Workflows", () => {
     // Verify the contact details (use heading to avoid route announcer)
     await expect(authenticatedPage.getByRole('heading', { name: 'Lifecycle Test' })).toBeVisible();
     
-    // archive the contact
-    const archiveButton = authenticatedPage.locator('button:has-text("Archive Contact")').first();
-    await archiveButton.waitFor({ state: "visible" });
+    // Wait for page to fully load - wait for contact name heading and email
+    await authenticatedPage.waitForSelector('h1', { timeout: 15000 });
+    // Wait for contact email to appear (indicates contact data loaded)
+    await authenticatedPage.waitForSelector('text=/.*@.*/', { timeout: 15000 });
+    // Wait for the menu button (only renders when contact is loaded)
+    const menuButton = authenticatedPage.locator('button[aria-label="Contact options"]');
+    await menuButton.waitFor({ state: "visible", timeout: 15000 });
+    await menuButton.click();
+    await authenticatedPage.waitForTimeout(500); // Wait for menu to open
     
-    // Wait for API response when archiving
+    // Click Archive in the dropdown menu
+    const archiveMenuItem = authenticatedPage.getByRole('menuitem', { name: 'Archive' });
+    await archiveMenuItem.waitFor({ state: "visible", timeout: 5000 });
+    await archiveMenuItem.click();
+    
+    // Wait for archive modal to appear
+    const archiveModal = authenticatedPage.locator('[role="dialog"]').filter({ 
+      hasText: /Archive Contact|Archive the contact/ 
+    });
+    await archiveModal.waitFor({ state: "visible" });
+    
+    // Confirm archive in modal
+    const confirmArchiveButton = archiveModal.getByRole('button', { name: 'Archive' });
     await Promise.all([
       authenticatedPage.waitForResponse(
         (resp) => resp.url().includes('/api/contacts/') && resp.url().includes('/archive') && resp.status() === 200,
         { timeout: 10000 }
       ).catch(() => null),
-      archiveButton.click(),
+      confirmArchiveButton.click(),
     ]);
-
-    // Wait for button text to change (indicates archive succeeded)
-    await authenticatedPage.waitForSelector('button:has-text("Unarchive Contact")');
+    
+    await archiveModal.waitFor({ state: "hidden" }).catch(() => {});
 
     await authenticatedPage.getByRole('link', { name: 'Contacts' }).first().click();
     await authenticatedPage.waitForURL(/\/contacts/);
@@ -319,10 +376,20 @@ test.describe("Complete User Workflows", () => {
     // Verify the contact details (use heading to avoid route announcer)
     await expect(authenticatedPage.getByRole('heading', { name: 'Lifecycle Test' })).toBeVisible();
 
-     // delete the contact
-     const deleteContactButton = authenticatedPage.locator('button:has-text("Delete Contact")').first();
-     await deleteContactButton.waitFor({ state: "visible" });
-     await deleteContactButton.click();
+     // Wait for page to fully load - wait for contact name heading and email
+     await authenticatedPage.waitForSelector('h1', { timeout: 15000 });
+     // Wait for contact email to appear (indicates contact data loaded)
+     await authenticatedPage.waitForSelector('text=/.*@.*/', { timeout: 15000 });
+     // Wait for the menu button (only renders when contact is loaded)
+     const menuButton2 = authenticatedPage.locator('button[aria-label="Contact options"]');
+     await menuButton2.waitFor({ state: "visible", timeout: 15000 });
+     await menuButton2.click();
+     await authenticatedPage.waitForTimeout(500); // Wait for menu to open
+     
+     // Click Delete in the dropdown menu
+     const deleteMenuItem = authenticatedPage.getByRole('menuitem', { name: 'Delete' });
+     await deleteMenuItem.waitFor({ state: "visible", timeout: 5000 });
+     await deleteMenuItem.click();
 
      // confirm deletion in modal
      const deleteModal = authenticatedPage.locator('[role="dialog"]').filter({ 
