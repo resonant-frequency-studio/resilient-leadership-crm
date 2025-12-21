@@ -3,9 +3,10 @@ import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
 import { Contact, ActionItem } from "@/types/firestore";
+import { ContactAutosaveProvider } from "@/components/contacts/ContactAutosaveProvider";
 
 /**
- * Custom render function that wraps components with React Query provider
+ * Custom render function that wraps components with React Query provider and ContactAutosaveProvider
  */
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -22,7 +23,11 @@ export function renderWithProviders(
 
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <ContactAutosaveProvider>
+          {children}
+        </ContactAutosaveProvider>
+      </QueryClientProvider>
     );
   }
 

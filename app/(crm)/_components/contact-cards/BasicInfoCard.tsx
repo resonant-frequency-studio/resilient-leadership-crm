@@ -5,13 +5,9 @@ import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
 import Skeleton from "@/components/Skeleton";
-import SaveButtonWithIndicator from "./SaveButtonWithIndicator";
 import Input from "@/components/Input";
 import { reportException } from "@/lib/error-reporting";
-import { Contact } from "@/types/firestore";
-import { useSavingState } from "@/contexts/SavingStateContext";
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
 
 interface BasicInfoCardProps {
   contactId: string;
@@ -21,91 +17,144 @@ interface BasicInfoCardProps {
 export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
-  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
-  const cardId = `basic-info-${contactId}`;
+  const { schedule, flush } = useDebouncedAutosave();
   
-  const prevContactIdRef = useRef<Contact | null>(null);
+  const prevContactIdRef = useRef<string | null>(null);
+  const lastSavedValuesRef = useRef<{ firstName: string; lastName: string; company: string } | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [company, setCompany] = useState("");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   
-  // Register/unregister save status with context
+  // Use refs to store current values so save function always reads latest state
+  const firstNameRef = useRef(firstName);
+  const lastNameRef = useRef(lastName);
+  const companyRef = useRef(company);
+  
+  // Keep refs in sync with state
   useEffect(() => {
-    registerSaveStatus(cardId, saveStatus);
-    return () => {
-      unregisterSaveStatus(cardId);
-    };
-  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+    firstNameRef.current = firstName;
+  }, [firstName]);
   
-//   Reset form state when contactId changes (different contact loaded)
-//   Using contactId prop as dependency ensures we only update when switching contacts
+  useEffect(() => {
+    lastNameRef.current = lastName;
+  }, [lastName]);
+  
+  useEffect(() => {
+    companyRef.current = company;
+  }, [company]);
+  
+  // Reset form state only when contactId changes (switching to a different contact)
+  // Don't reset when contact data updates from our own save
   useEffect(() => {
     if (!contact) return;
-    if (prevContactIdRef.current !== contact) {
-        prevContactIdRef.current = contact;
-        // Batch state updates to avoid cascading renders
-        setFirstName(contact.firstName ?? "");
-        setLastName(contact.lastName ?? "");
-        setCompany(contact.company ?? "");
-        setSaveStatus("idle");
+    
+    // Only reset if we're switching to a different contact
+    if (prevContactIdRef.current !== contact.contactId) {
+      prevContactIdRef.current = contact.contactId;
+      lastSavedValuesRef.current = null; // Clear saved values when switching contacts
+      // Batch state updates to avoid cascading renders
+      setFirstName(contact.firstName ?? "");
+      setLastName(contact.lastName ?? "");
+      setCompany(contact.company ?? "");
+      return;
+    }
+    
+    // If contact data updated but it matches what we just saved, don't reset
+    if (lastSavedValuesRef.current) {
+      const saved = lastSavedValuesRef.current;
+      const contactMatchesSaved = 
+        (contact.firstName ?? "") === saved.firstName &&
+        (contact.lastName ?? "") === saved.lastName &&
+        (contact.company ?? "") === saved.company;
+      
+      if (contactMatchesSaved) {
+        // This update came from our save, don't reset form
+        return;
+      }
+    }
+    
+    // Only update if form values match the old contact values (user hasn't made changes)
+    // This prevents overwriting user input when contact refetches
+    const formMatchesOldContact = 
+      firstName === (contact.firstName ?? "") &&
+      lastName === (contact.lastName ?? "") &&
+      company === (contact.company ?? "");
+    
+    if (formMatchesOldContact) {
+      // Form hasn't been edited, safe to update from contact
+      setFirstName(contact.firstName ?? "");
+      setLastName(contact.lastName ?? "");
+      setCompany(contact.company ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId, contact?.updatedAt]); // Only depend on contactId prop, not contact object
+  }, [contact?.contactId, contact?.firstName, contact?.lastName, contact?.company]);
 
-  // Track changes using useMemo instead of useEffect
-  const hasChanges = useMemo(() => {
-    if (!contact) return false;
-    const firstNameChanged = firstName !== (contact.firstName ?? "");
-    const lastNameChanged = lastName !== (contact.lastName ?? "");
-    const companyChanged = company !== (contact.company ?? "");
-    return firstNameChanged || lastNameChanged || companyChanged;
-  }, [firstName, lastName, company, contact]);
+  // Save function for autosave - reads from refs to always get latest values
+  const saveBasicInfo = useMemo(() => {
+    return async () => {
+      if (!contact) return;
+      
+      // Read current form values from refs (always latest, even if scheduled before state update)
+      const currentFirstName = firstNameRef.current || null;
+      const currentLastName = lastNameRef.current || null;
+      const currentCompany = companyRef.current || null;
+      
+      return new Promise<void>((resolve, reject) => {
+        updateMutation.mutate(
+          {
+            contactId,
+            updates: {
+              firstName: currentFirstName,
+              lastName: currentLastName,
+              company: currentCompany,
+            },
+          },
+          {
+            onSuccess: () => {
+              // Remember what we saved so we don't reset form when contact refetches
+              lastSavedValuesRef.current = {
+                firstName: currentFirstName ?? "",
+                lastName: currentLastName ?? "",
+                company: currentCompany ?? "",
+              };
+              resolve();
+            },
+            onError: (error) => {
+              reportException(error, {
+                context: "Saving basic info in BasicInfoCard",
+                tags: { component: "BasicInfoCard", contactId },
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+    };
+  }, [contact, contactId, updateMutation]);
 
-  const saveChanges = () => {
-    if (!hasChanges || !contact) return;
-
-    setSaveStatus("saving");
-    updateMutation.mutate(
-      {
-        contactId,
-        updates: {
-          firstName: firstName || null,
-          lastName: lastName || null,
-          company: company || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        },
-        onError: (error) => {
-          setSaveStatus("error");
-          reportException(error, {
-            context: "Saving basic info in BasicInfoCard",
-            tags: { component: "BasicInfoCard", contactId },
-          });
-          setTimeout(() => setSaveStatus("idle"), 3000);
-        },
-      }
-    );
+  // Handle field changes with autosave
+  // Schedule debounced save - refs ensure we always read latest values
+  const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFirstName(e.target.value);
+    schedule("basic", saveBasicInfo);
   };
 
-  // Autosave every 30 seconds when there are unsaved changes
-  useEffect(() => {
-    if (!hasChanges) return;
+  const handleLastNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLastName(e.target.value);
+    schedule("basic", saveBasicInfo);
+  };
 
-    const interval = setInterval(() => {
-      if (hasChanges) {
-        saveChanges();
-      }
-    }, 30000); // 30 seconds
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCompany(e.target.value);
+    schedule("basic", saveBasicInfo);
+  };
 
-    return () => clearInterval(interval);
-  }, [hasChanges, saveChanges]);
+  // Flush on blur (immediate save when user leaves field)
+  const handleBlurFlush = () => {
+    flush("basic");
+  };
 
   if (!contact) {
     return (
@@ -117,7 +166,7 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
 
   return (
     <Card padding="md">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h2 className="text-lg font-semibold text-theme-darkest flex items-center gap-2">
           <svg
             className="w-5 h-5 text-gray-400"
@@ -134,11 +183,6 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
           </svg>
           Basic Information
         </h2>
-        <SaveButtonWithIndicator
-          saveStatus={saveStatus}
-          hasUnsavedChanges={hasChanges}
-          onSave={saveChanges}
-        />
       </div>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -150,7 +194,8 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
               id="contact-first-name"
               name="contact-first-name"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={handleFirstNameChange}
+              onBlur={handleBlurFlush}
               placeholder="First Name"
             />
           </div>
@@ -162,7 +207,8 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
               id="contact-last-name"
               name="contact-last-name"
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              onChange={handleLastNameChange}
+              onBlur={handleBlurFlush}
               placeholder="Last Name"
             />
           </div>
@@ -175,7 +221,8 @@ export default function BasicInfoCard({ contactId, userId }: BasicInfoCardProps)
             id="contact-company"
             name="contact-company"
             value={company}
-            onChange={(e) => setCompany(e.target.value)}
+            onChange={handleCompanyChange}
+            onBlur={handleBlurFlush}
             placeholder="Company"
           />
         </div>

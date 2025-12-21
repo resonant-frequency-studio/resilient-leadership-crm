@@ -24,6 +24,10 @@ export interface Contact {
     touchpointStatus?: "pending" | "completed" | "cancelled" | null;
     touchpointStatusUpdatedAt?: unknown | null;
     touchpointStatusReason?: string | null;
+    // Touchpoint ↔ Calendar Event linkage
+    linkedGoogleEventId?: string | null;
+    linkedGoogleCalendarId?: string | null;
+    linkStatus?: "none" | "linked" | "broken" | null;
   
     // AI fields
     summary?: string | null;
@@ -86,6 +90,7 @@ export interface Contact {
   export interface SyncJob {
     syncJobId: string;
     userId: string;
+    service: "gmail" | "calendar"; // Which service this sync job is for
   
     type: "initial" | "incremental";
     status: "pending" | "running" | "complete" | "error";
@@ -93,10 +98,15 @@ export interface Contact {
     startedAt: unknown;
     finishedAt?: unknown | null;
   
-    processedThreads: number;
-    processedMessages: number;
-  
+    // Gmail-specific fields
+    processedThreads?: number;
+    processedMessages?: number;
     gmailQuery?: string | null;
+  
+    // Calendar-specific fields
+    processedEvents?: number;
+    rangeDays?: number; // Number of days synced (30, 60, 90, or 180)
+  
     errorMessage?: string | null;
   }
 
@@ -113,5 +123,83 @@ export interface Contact {
     
     createdAt: unknown;
     updatedAt: unknown;
+  }
+
+  export interface CalendarEvent {
+    eventId: string;
+    googleEventId: string;
+    userId: string;
+    
+    // Event details
+    title: string;
+    description?: string | null;
+    startTime: unknown; // Firestore timestamp
+    endTime: unknown;
+    location?: string | null;
+    attendees?: Array<{ email: string; displayName?: string }>;
+    
+    // Sync metadata
+    lastSyncedAt: unknown;
+    etag?: string; // For future conflict detection
+    googleUpdated?: unknown; // Google's updated timestamp (Firestore timestamp)
+    sourceOfTruth?: "google" | "crm_touchpoint"; // Where event originated
+    isDirty?: boolean; // Has local changes not synced to Google
+    
+    // Contact matching
+    matchedContactId?: string | null;
+    matchConfidence?: "high" | "medium" | "low";
+    matchMethod?: "email" | "name" | "domain" | "manual";
+    matchOverriddenByUser?: boolean; // User manually changed match
+    matchDeniedContactIds?: string[]; // Contacts user explicitly rejected
+    contactSnapshot?: {
+      name: string;
+      segment?: string | null;
+      tags?: string[];
+      primaryEmail: string;
+      engagementScore?: number | null;
+      snapshotUpdatedAt: unknown;
+    } | null;
+    
+    // Meeting Insights (AI-generated)
+    meetingInsights?: {
+      summary: string;
+      suggestedNextStep: string;
+      suggestedTouchpointDate?: string; // ISO date string
+      suggestedTouchpointRationale?: string;
+      suggestedActionItems?: string[];
+      followUpEmailDraft?: string;
+      generatedAt: unknown; // Firestore timestamp
+      dataSignature: string; // Hash of relevant data for staleness detection
+    } | null;
+    
+    createdAt: unknown;
+    updatedAt: unknown;
+  }
+
+  export interface CalendarSyncSettings {
+    userId: string;
+    lastSyncToken?: string | null; // Google Calendar syncToken for incremental sync
+    lastSyncAt?: unknown | null;
+    calendarId?: string; // Default: 'primary'
+  }
+
+  export type TimelineItemType = "calendar_event" | "touchpoint" | "action_item" | "email";
+
+  export interface TimelineItem {
+    id: string;
+    type: TimelineItemType;
+    timestamp: unknown; // Firestore timestamp
+    title: string;
+    description?: string | null;
+    // Type-specific fields
+    eventId?: string;
+    touchpointId?: string;
+    actionItemId?: string;
+    threadId?: string;
+    // Additional metadata for rendering
+    location?: string | null;
+    attendees?: Array<{ email: string; displayName?: string }>;
+    status?: string; // For action items: "pending" | "completed"
+    isFromUser?: boolean; // For emails
   }
   

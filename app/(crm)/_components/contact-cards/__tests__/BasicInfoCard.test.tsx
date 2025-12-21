@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import BasicInfoCard from "../BasicInfoCard";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useSavingState } from "@/contexts/SavingStateContext";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { renderWithProviders, createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import type { Contact } from "@/types/firestore";
 
 jest.mock("@/hooks/useContact");
@@ -43,7 +43,7 @@ describe("BasicInfoCard", () => {
     it("shows loading state when contact is not loaded", () => {
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(undefined, true));
 
-      const { container } = render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      const { container } = renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
     });
   });
@@ -60,7 +60,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for all inputs to be rendered and initialized with the correct values
       // The component initializes form state in a useEffect, so we need to wait for all fields
@@ -100,7 +100,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for all inputs to be rendered and initialized with empty values
       await waitFor(
@@ -136,7 +136,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered
       const firstNameInput = await waitFor(() => {
@@ -158,7 +158,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered (using placeholder since labels aren't associated)
       const lastNameInput = await waitFor(() => {
@@ -180,7 +180,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered (using placeholder since labels aren't associated)
       const companyInput = await waitFor(() => {
@@ -194,7 +194,7 @@ describe("BasicInfoCard", () => {
       expect(companyInput.value).toBe("New Company");
     });
 
-    it("calls save when Save button is clicked", async () => {
+    it("calls autosave on blur after input change", async () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         firstName: "John",
@@ -202,7 +202,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered
       const firstNameInput = await waitFor(() => {
@@ -212,37 +212,11 @@ describe("BasicInfoCard", () => {
       });
       
       fireEvent.change(firstNameInput, { target: { value: "Jane" } });
-      
-      // Wait for Save button to be enabled
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(firstNameInput);
       
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
-      });
-    });
-
-    it("disables Save button when there are no changes", async () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-        firstName: "John",
-      });
-
-      mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
-
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
-      
-      // Wait for Save button to be rendered
-      await waitFor(() => {
-        const saveButton = screen.getByRole("button", { name: /save/i });
-        expect(saveButton).toBeInTheDocument();
-        expect(saveButton).toBeDisabled();
-      });
+      }, { timeout: 2000 });
     });
   });
 
@@ -257,7 +231,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered and initialized with contact data
       const firstNameInput = await waitFor(() => {
@@ -268,29 +242,16 @@ describe("BasicInfoCard", () => {
       });
 
       fireEvent.change(firstNameInput, { target: { value: "Jane" } });
-
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(firstNameInput);
 
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
-          {
-            contactId: mockContactId,
-            updates: {
-              firstName: "Jane",
-              lastName: "Doe",
-              company: "Company",
-            },
-          },
-          expect.any(Object)
-        );
-      });
+        expect(mockMutate).toHaveBeenCalled();
+        const callArgs = mockMutate.mock.calls[0][0];
+        expect(callArgs.contactId).toBe(mockContactId);
+        expect(callArgs.updates.firstName).toBe("Jane");
+        expect(callArgs.updates.lastName).toBe("Doe");
+        expect(callArgs.updates.company).toBe("Company");
+      }, { timeout: 3000 });
     });
 
     it("saves null for empty fields", async () => {
@@ -303,7 +264,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered and initialized with contact data
       const firstNameInput = await waitFor(() => {
@@ -314,27 +275,14 @@ describe("BasicInfoCard", () => {
       });
 
       fireEvent.change(firstNameInput, { target: { value: "" } });
-
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(firstNameInput);
 
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
-          {
-            contactId: mockContactId,
-            updates: expect.objectContaining({
-              firstName: null,
-            }),
-          },
-          expect.any(Object)
-        );
-      });
+        expect(mockMutate).toHaveBeenCalled();
+        const callArgs = mockMutate.mock.calls[0][0];
+        expect(callArgs.contactId).toBe(mockContactId);
+        expect(callArgs.updates.firstName).toBeNull();
+      }, { timeout: 3000 });
     });
   });
 
@@ -347,24 +295,17 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
-      // Make a change and click Save
+      // Make a change and trigger blur (autosave)
       const firstNameInput = await waitFor(() => screen.getByPlaceholderText("First Name"));
       fireEvent.change(firstNameInput, { target: { value: "Jane" } });
+      fireEvent.blur(firstNameInput);
       
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
-      
-      // Should show "Saving..." text
+      // Autosave should trigger - wait for mutation to be called
       await waitFor(() => {
-        expect(screen.getByText("Saving...")).toBeInTheDocument();
-      });
+        expect(mockMutate).toHaveBeenCalled();
+      }, { timeout: 2000 });
     });
 
     it("only saves when there are unsaved changes", async () => {
@@ -375,7 +316,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<BasicInfoCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const firstNameInput = screen.getByPlaceholderText("First Name");
@@ -386,10 +327,6 @@ describe("BasicInfoCard", () => {
       // The save function should not be called if there are no changes
       // Verify that mutate is not called (because hasChanges would be false)
       expect(mockMutate).not.toHaveBeenCalled();
-      
-      // Save button should be disabled
-      const saveButton = screen.getByRole("button", { name: /save/i });
-      expect(saveButton).toBeDisabled();
     });
   });
 
@@ -409,7 +346,7 @@ describe("BasicInfoCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact1));
 
-      const { rerender } = render(<BasicInfoCard contactId="contact-1" userId={mockUserId} />);
+      const { rerender } = renderWithProviders(<BasicInfoCard contactId="contact-1" userId={mockUserId} />);
       
       // Wait for input to be rendered and initialized (using placeholder since labels aren't associated)
       const firstNameInput = await waitFor(() => {

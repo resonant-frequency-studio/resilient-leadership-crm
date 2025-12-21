@@ -1,15 +1,26 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import NextTouchpointCard from "../NextTouchpointCard";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useSavingState } from "@/contexts/SavingStateContext";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { renderWithProviders, createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import { Timestamp } from "firebase/firestore";
 import type { Contact } from "@/types/firestore";
 
 jest.mock("@/hooks/useContact");
 jest.mock("@/hooks/useContactMutations");
 jest.mock("@/contexts/SavingStateContext");
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+  })),
+}));
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+  })),
+}));
 jest.mock("../../TouchpointStatusActions", () => ({
   __esModule: true,
   default: ({ contactId, contactName }: { contactId: string; contactName: string }) => (
@@ -52,7 +63,7 @@ describe("NextTouchpointCard", () => {
     it("shows loading state when contact is not loaded", () => {
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(undefined, true));
 
-      const { container } = render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      const { container } = renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
     });
   });
@@ -68,7 +79,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for inputs to be rendered and initialized (label is "Date", not "Next Touchpoint Date")
       const dateInput = await waitFor(() => {
@@ -93,7 +104,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for inputs to be rendered and initialized (label is "Date", not "Next Touchpoint Date")
       const dateInput = await waitFor(() => {
@@ -119,7 +130,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered (label is "Date")
       const dateInput = await waitFor(() => {
@@ -141,7 +152,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for textarea to be rendered
       const messageTextarea = await waitFor(() => {
@@ -155,7 +166,7 @@ describe("NextTouchpointCard", () => {
       expect(messageTextarea.value).toBe("Updated message");
     });
 
-    it("calls save when Save button is clicked", async () => {
+    it("calls autosave on blur after input change", async () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         nextTouchpointDate: Timestamp.fromDate(new Date("2024-01-15")),
@@ -163,7 +174,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered
       const dateInput = await waitFor(() => {
@@ -174,14 +185,7 @@ describe("NextTouchpointCard", () => {
       
       fireEvent.change(dateInput, { target: { value: "2024-01-20" } });
       
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(dateInput);
       
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
@@ -199,7 +203,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered
       const dateInput = await waitFor(() => {
@@ -210,14 +214,7 @@ describe("NextTouchpointCard", () => {
       
       fireEvent.change(dateInput, { target: { value: "2024-01-20" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(dateInput);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -241,7 +238,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for input to be rendered
       await waitFor(() => {
@@ -249,9 +246,8 @@ describe("NextTouchpointCard", () => {
         expect(dateInput).toBeInTheDocument();
       });
       
-      // Don't make any changes - Save button should be disabled
-      const saveButton = screen.getByRole("button", { name: /save/i });
-      expect(saveButton).toBeDisabled();
+      // Don't make any changes - verify mutate is not called
+      expect(mockMutate).not.toHaveBeenCalled();
       
       // The save function should not be called if there are no changes
       expect(mockMutate).not.toHaveBeenCalled();
@@ -269,7 +265,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       // Wait for component to render
       const actions = await waitFor(() => {
@@ -299,7 +295,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact1));
 
-      const { rerender } = render(<NextTouchpointCard contactId="contact-1" userId={mockUserId} />);
+      const { rerender } = renderWithProviders(<NextTouchpointCard contactId="contact-1" userId={mockUserId} />);
       
       // Wait for input to be rendered and initialized (label is "Date")
       const dateInput = await waitFor(() => {
@@ -327,7 +323,7 @@ describe("NextTouchpointCard", () => {
 
       mockUseContact.mockReturnValue(createMockUseQueryResult<Contact | null>(mockContact));
 
-      render(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NextTouchpointCard contactId={mockContactId} userId={mockUserId} />);
       
       expect(screen.getByText(/Schedule and plan your next interaction/)).toBeInTheDocument();
     });

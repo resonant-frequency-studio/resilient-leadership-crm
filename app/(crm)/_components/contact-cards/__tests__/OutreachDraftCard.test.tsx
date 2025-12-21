@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import OutreachDraftCard from "../OutreachDraftCard";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useSavingState } from "@/contexts/SavingStateContext";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { renderWithProviders, createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import type { Contact } from "@/types/firestore";
 import type { SavingStateContextType } from "@/contexts/SavingStateContext";
 
@@ -50,7 +50,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(undefined, true, null)
       );
 
-      const { container } = render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      const { container } = renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
     });
   });
@@ -66,7 +66,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...") as HTMLTextAreaElement;
       await waitFor(() => {
@@ -84,7 +84,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...") as HTMLTextAreaElement;
       await waitFor(() => {
@@ -104,7 +104,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...") as HTMLTextAreaElement;
       fireEvent.change(textarea, { target: { value: "Updated draft text" } });
@@ -112,7 +112,7 @@ describe("OutreachDraftCard", () => {
       expect(textarea.value).toBe("Updated draft text");
     });
 
-    it("calls save when Save button is clicked", async () => {
+    it("calls autosave on blur after textarea change", async () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         outreachDraft: "Initial draft",
@@ -122,7 +122,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
@@ -132,21 +132,14 @@ describe("OutreachDraftCard", () => {
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
       fireEvent.change(textarea, { target: { value: "Updated draft" } });
       
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
       
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
       });
     });
 
-    it("disables Save button when there are no changes", () => {
+    it("does not call save when there are no changes", () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         outreachDraft: "Initial draft",
@@ -156,10 +149,10 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
-      const saveButton = screen.getByRole("button", { name: /save/i });
-      expect(saveButton).toBeDisabled();
+      // Verify that mutate is not called when there are no changes
+      expect(mockMutate).not.toHaveBeenCalled();
     });
   });
 
@@ -174,7 +167,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
@@ -184,14 +177,7 @@ describe("OutreachDraftCard", () => {
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
       fireEvent.change(textarea, { target: { value: "Updated draft text" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -216,7 +202,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
@@ -226,14 +212,7 @@ describe("OutreachDraftCard", () => {
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...");
       fireEvent.change(textarea, { target: { value: "" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -249,43 +228,8 @@ describe("OutreachDraftCard", () => {
     });
   });
 
-  describe("Save Status", () => {
-    it("shows saving indicator during save", () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
-      
-      // There may be multiple indicators (mobile and desktop), so get all and check the first one
-      const indicators = screen.getAllByTestId("saving-indicator");
-      expect(indicators.length).toBeGreaterThan(0);
-      expect(indicators[0].getAttribute("data-status")).toBe("idle");
-    });
-
-    it("only saves when there are unsaved changes", () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-        outreachDraft: "Initial draft",
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
-      
-      // Don't make any changes - just render the component
-      // The save function should not be called if there are no changes
-      // Since we mock useDebouncedSave to immediately call the save function,
-      // we verify that mutate is not called (because hasUnsavedChanges would be false)
-      expect(mockMutate).not.toHaveBeenCalled();
-    });
-  });
+  // Note: Save status is now handled globally by ContactSaveBar, not per-card
+  // The "only saves when there are unsaved changes" test is covered by the autosave behavior tests above
 
   describe("State Reset", () => {
     it("resets state when contactId changes", () => {
@@ -303,7 +247,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact1, false, null)
       );
 
-      const { rerender } = render(<OutreachDraftCard contactId="contact-1" userId={mockUserId} />);
+      const { rerender } = renderWithProviders(<OutreachDraftCard contactId="contact-1" userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Write your outreach draft here...") as HTMLTextAreaElement;
       expect(textarea.value).toBe("Draft 1");
@@ -328,7 +272,7 @@ describe("OutreachDraftCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<OutreachDraftCard contactId={mockContactId} userId={mockUserId} />);
       
       expect(screen.getByText(/Draft and refine your email messages/)).toBeInTheDocument();
     });

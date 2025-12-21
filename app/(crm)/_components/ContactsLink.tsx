@@ -1,3 +1,6 @@
+"use client";
+
+import ContactGuardedLink from "@/components/contacts/ContactGuardedLink";
 import Link from "next/link";
 
 interface ContactsLinkProps {
@@ -34,14 +37,17 @@ export default function ContactsLink({
     </svg>
   );
 
+  // Use ContactGuardedLink if we're on a contact page (will fallback to regular Link if context not available)
+  const LinkComponent = ContactGuardedLink;
+
   return (
-    <Link
+    <LinkComponent
       href="/contacts"
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
     >
       {variant !== "error" && iconSvg}
       {children}
-    </Link>
+    </LinkComponent>
   );
 }
 
