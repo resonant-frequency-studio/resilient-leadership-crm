@@ -149,8 +149,8 @@ export default function EventModalHeader({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Actions - extra padding to ensure focus rings aren't clipped */}
+      <div className="flex items-center gap-2 shrink-0" style={{ paddingRight: '4px', paddingTop: '4px' }}>
         <OverflowMenu items={overflowMenuItems} />
         <button
           onClick={onClose}

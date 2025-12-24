@@ -8,6 +8,9 @@ jest.mock("@/lib/firebase-admin", () => {
     adminDb: mockModule.adminDb,
   };
 });
+jest.mock("@/lib/calendar/recurring-events", () => ({
+  findRecurringEventIds: jest.fn().mockResolvedValue([]),
+}));
 jest.mock("@/lib/error-reporting", () => ({
   reportException: jest.fn(),
 }));
@@ -95,6 +98,11 @@ describe("POST /api/calendar/events/[eventId]/link-contact", () => {
       update: mockEventDocUpdate,
     });
 
+    const mockBatch = {
+      update: jest.fn(),
+      commit: jest.fn().mockResolvedValue(undefined),
+    };
+
     const mockEventsCollection = jest.fn().mockReturnValue({
       doc: mockEventDoc,
     });
@@ -113,6 +121,8 @@ describe("POST /api/calendar/events/[eventId]/link-contact", () => {
       }
       return mockEventsCollection();
     });
+
+    (adminDb.batch as jest.Mock) = jest.fn(() => mockBatch);
 
     mockGetContactForUser.mockResolvedValue(mockContact);
 

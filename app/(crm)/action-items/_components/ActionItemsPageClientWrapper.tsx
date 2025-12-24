@@ -14,6 +14,7 @@ interface EnrichedActionItem extends ActionItem {
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
+  contactPhotoUrl?: string | null;
   displayName: string | null;
   initials: string;
   isOverdue: boolean;
@@ -66,6 +67,7 @@ export default function ActionItemsPageClientWrapper() {
       contactEmail: contact?.primaryEmail || undefined,
       contactFirstName: contact?.firstName || undefined,
       contactLastName: contact?.lastName || undefined,
+      contactPhotoUrl: contact?.photoUrl || null,
       displayName,
       initials,
       isOverdue,

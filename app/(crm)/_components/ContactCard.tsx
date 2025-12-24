@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Contact } from "@/types/firestore";
-import { getInitials, getDisplayName, formatContactDate } from "@/util/contact-utils";
+import { getDisplayName, formatContactDate } from "@/util/contact-utils";
 import TouchpointStatusActions from "./TouchpointStatusActions";
 import QuickTag from "./QuickTag";
 import ContactMenuDropdown from "./ContactMenuDropdown";
+import Avatar from "@/components/Avatar";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -97,9 +98,7 @@ export default function ContactCard({
           >
             {/* Avatar */}
             <div className="shrink-0">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm bg-linear-to-br from-blue-500 to-purple-600`}>
-                {getInitials(contact)}
-              </div>
+              <Avatar contact={contact} size="md" />
             </div>
 
             {/* Contact Info */}

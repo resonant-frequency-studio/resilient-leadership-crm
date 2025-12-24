@@ -12,6 +12,7 @@ export interface EnrichedActionItem extends ActionItem {
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
+  contactPhotoUrl?: string | null;
   displayName: string | null;
   initials: string;
   isOverdue: boolean;
@@ -65,11 +66,11 @@ export default function ActionItemsPageClient({
           isLoading={isLoading}
         />
 
-        {/* Filters - Always render, disabled when loading or no items */}
+        {/* Filters - Always render, disabled only when no items (enable as soon as cached data is available) */}
         <ActionItemsFilters
           contacts={contacts}
           uniqueContactIds={uniqueContactIds}
-          disabled={isLoading || initialActionItems.length === 0}
+          disabled={initialActionItems.length === 0}
         />
 
         {/* Action Items List - Always render, show skeletons when loading */}

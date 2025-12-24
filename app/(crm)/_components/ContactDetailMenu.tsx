@@ -204,7 +204,7 @@ export default function ContactDetailMenu({
               aria-hidden="true"
             />
             <div
-              className="absolute left-0 top-full mt-1 z-20 w-48 bg-card-highlight-light border border-theme-lighter rounded-sm shadow-lg py-1"
+              className="absolute right-0 top-full mt-1 z-20 w-48 bg-card-highlight-light border border-theme-lighter rounded-sm shadow-lg py-1"
               role="menu"
             >
               <button

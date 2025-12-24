@@ -166,7 +166,7 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={`relative rounded-xl p-6 ${maxWidthClasses[maxWidth]} w-full mx-4 z-10 focus:outline-none ${className}`}
+        className={`relative rounded-xl pt-10 pr-10 pb-6 pl-6 ${maxWidthClasses[maxWidth]} w-full mx-4 z-10 focus:outline-none ${className}`}
         style={{
           backgroundColor: 'var(--surface-modal)',
           color: 'var(--foreground)',

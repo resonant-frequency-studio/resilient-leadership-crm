@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
     // Next.js doesn't have a direct option to disable .env.local loading,
     // but env-cmd injects vars before Next.js starts, so they take precedence
   }),
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 export default withSentryConfig(nextConfig, {

@@ -151,6 +151,44 @@ export default function ImportContactsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* CSV Format Guide - Top on mobile, Right on desktop */}
         <div className="xl:col-span-1 space-y-6 order-1 xl:order-2">
+          <Card padding="md" className="bg-blue-50 border-blue-200">
+            <div className="flex items-start gap-3 mb-4">
+              <svg
+                className="w-5 h-5 text-blue-600 shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">People API Enrichment</h3>
+                <p className="text-xs text-blue-800 mb-3">
+                  Contacts imported without FirstName, LastName, Company, or profile photo will be automatically enriched using Google People API.
+                </p>
+                <Button
+                  onClick={() => {
+                    window.location.href = "/api/oauth/gmail/start?force=true";
+                  }}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  icon={
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  }
+                >
+                  Reconnect Google Account
+                </Button>
+              </div>
+            </div>
+          </Card>
           <Card padding="md">
             <h3 className="text-lg font-semibold text-theme-darkest mb-2">CSV Format Guide</h3>
             <p className="text-sm text-theme-dark mb-4">

@@ -10,19 +10,34 @@ export function normalizeContactId(email: string): string {
 
 /**
  * Transforms a CSV row into a Contact object
+ * @param row - CSV row data
+ * @param contactId - Contact ID for the contact
+ * @param enrichedData - Optional enriched data from People API (used to fill gaps if CSV doesn't have the field)
  */
-export function csvRowToContact(row: Record<string, string>, contactId: string): Partial<Contact> {
+export function csvRowToContact(
+  row: Record<string, string>,
+  contactId: string,
+  enrichedData?: { firstName?: string | null; lastName?: string | null; company?: string | null; photoUrl?: string | null }
+): Partial<Contact> {
   const email = row.Email?.trim().toLowerCase();
   if (!email) {
     throw new Error("Email is required");
   }
 
+  // CSV data takes precedence, but use enriched data to fill gaps
+  const firstName = row.FirstName?.trim() || enrichedData?.firstName || null;
+  const lastName = row.LastName?.trim() || enrichedData?.lastName || null;
+  const company = row.Company?.trim() || enrichedData?.company || null;
+  // Photo URL only comes from enrichment (not from CSV)
+  const photoUrl = enrichedData?.photoUrl || null;
+
   return {
     contactId,
     primaryEmail: email,
-    firstName: row.FirstName?.trim() || null,
-    lastName: row.LastName?.trim() || null,
-    company: row.Company?.trim() || null,
+    firstName,
+    lastName,
+    company,
+    photoUrl,
 
     // Imported CRM fields
     summary: row.Summary?.trim() || null,

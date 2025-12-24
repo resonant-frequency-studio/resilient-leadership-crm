@@ -653,13 +653,15 @@ export default function CalendarEventCard({ event: eventProp, onClose, contacts:
               </Button>
               <Button
                 variant="danger"
-                onClick={() => {
-                  unlinkMutation.mutate(event.eventId, {
-                    onSuccess: () => {
-                      setShowUnlinkConfirm(false);
-                      // The optimistic update will immediately show the unlinked state
-                    },
-                  });
+                onClick={async () => {
+                  try {
+                    await unlinkMutation.mutateAsync(event.eventId);
+                    setShowUnlinkConfirm(false);
+                    // Firebase listener will update the event prop, which will trigger
+                    // contactSuggestions memo to recalculate and show suggestions
+                  } catch (error) {
+                    // Error handling is done by the mutation hook
+                  }
                 }}
                 disabled={unlinkMutation.isPending}
               >

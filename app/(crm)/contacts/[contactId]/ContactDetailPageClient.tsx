@@ -5,9 +5,10 @@ import ContactsLink from "../../_components/ContactsLink";
 import ContactDetailMenu from "../../_components/ContactDetailMenu";
 import ContactSaveBar from "@/components/contacts/ContactSaveBar";
 import { ContactAutosaveProvider } from "@/components/contacts/ContactAutosaveProvider";
-import { getInitials, getDisplayName } from "@/util/contact-utils";
+import { getDisplayName } from "@/util/contact-utils";
 import { ActionItem, Contact } from "@/types/firestore";
 import Skeleton from "@/components/Skeleton";
+import Avatar from "@/components/Avatar";
 
 interface ContactDetailPageClientProps {
   contactDocumentId: string;
@@ -45,9 +46,7 @@ function ContactDetailContent({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0 flex-1">
-            <div className="w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl shadow-lg shrink-0">
-              {getInitials(contact)}
-            </div>
+            <Avatar contact={contact} size="xl" />
             <div className="min-w-0 flex-1">
               <h1 className="text-3xl font-bold text-theme-darkest mb-1 truncate">
                 {getDisplayName(contact)}

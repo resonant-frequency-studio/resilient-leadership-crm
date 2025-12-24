@@ -89,8 +89,8 @@ export default function ContactsPageClient({
     <ContactsFilterProvider contacts={contacts} itemsPerPage={ITEMS_PER_PAGE} isLoading={isLoading} hasConfirmedNoContacts={hasConfirmedNoContacts}>
       <div className="space-y-6">
         <ContactsPageHeader contacts={contacts} />
-        {/* Always render Filter & Search - disabled when loading or no contacts */}
-        <ContactsFilter contacts={contacts} disabled={!userId || isLoading || contacts.length === 0} />
+        {/* Always render Filter & Search - disabled only when no userId or no contacts (enable as soon as cached data is available) */}
+        <ContactsFilter contacts={contacts} disabled={!userId || contacts.length === 0} />
         {/* Always render Bulk Actions - it handles its own visibility */}
         <ContactsBulkActions userId={userId} contacts={contacts} />
         <ContactsGrid userId={userId} />

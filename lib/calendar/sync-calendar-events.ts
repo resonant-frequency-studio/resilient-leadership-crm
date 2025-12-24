@@ -3,6 +3,7 @@ import { GoogleCalendarEvent } from "./get-calendar-events";
 import { CalendarEvent, Contact } from "@/types/firestore";
 import { reportException } from "@/lib/error-reporting";
 import { matchEventToContact } from "./match-event-to-contact";
+import { findRecurringEventIds } from "./recurring-events";
 
 /**
  * Convert Google Calendar date format to Firestore Timestamp
@@ -253,11 +254,9 @@ export async function syncCalendarEventsToFirestore(
           );
 
           if (matchedContact) {
-            eventData.matchedContactId = match.contactId;
-            eventData.matchConfidence = match.confidence;
             // Map match method to CalendarEvent matchMethod type
             // "lastname" and "firstname" both map to "name" (name-based matching)
-            eventData.matchMethod = match.method === "lastname" || match.method === "firstname" 
+            const matchMethod = match.method === "lastname" || match.method === "firstname" 
               ? "name" 
               : match.method === "email" 
                 ? "email" 
@@ -266,7 +265,7 @@ export async function syncCalendarEventsToFirestore(
                   : undefined;
 
             // Create contact snapshot
-            eventData.contactSnapshot = {
+            const contactSnapshot = {
               name: `${matchedContact.firstName || ""} ${matchedContact.lastName || ""}`.trim() || matchedContact.primaryEmail,
               segment: matchedContact.segment || null,
               tags: matchedContact.tags || [],
@@ -274,6 +273,47 @@ export async function syncCalendarEventsToFirestore(
               engagementScore: matchedContact.engagementScore || null,
               snapshotUpdatedAt: FieldValue.serverTimestamp(),
             };
+            
+            // Set on current event data (will be saved with set() later)
+            eventData.matchedContactId = match.contactId;
+            eventData.matchConfidence = match.confidence;
+            eventData.matchMethod = matchMethod;
+            eventData.contactSnapshot = contactSnapshot;
+
+            // Find and link all recurring events in the series
+            try {
+              const recurringEventIds = await findRecurringEventIds(
+                db,
+                userId,
+                eventForMatching,
+                googleEvent.id // Exclude the current event (we'll update it with set() later)
+              );
+
+              // Update all recurring events (excluding the current one, which will be updated with set() later)
+              if (recurringEventIds.length > 0) {
+                const batch = db.batch();
+                
+                for (const recurringEventId of recurringEventIds) {
+                  const recurringEventRef = eventsCollection.doc(recurringEventId);
+                  batch.update(recurringEventRef, {
+                    matchedContactId: match.contactId,
+                    matchConfidence: match.confidence,
+                    matchMethod: matchMethod,
+                    contactSnapshot: contactSnapshot,
+                    meetingInsights: FieldValue.delete(), // Invalidate insights since contact link changed
+                    updatedAt: FieldValue.serverTimestamp(),
+                  });
+                }
+                
+                await batch.commit();
+              }
+            } catch (recurringError) {
+              // Log but don't fail the sync if recurring event linking fails
+              reportException(recurringError, {
+                context: "Linking recurring events during sync",
+                tags: { component: "sync-calendar-events", userId, eventId: googleEvent.id },
+              });
+            }
           }
         }
         // Note: Medium/low confidence matches are only in suggestions, not stored as matchedContactId

@@ -14,9 +14,9 @@ export default function ChartsPageClient({ userId: ssrUserId }: { userId: string
   const effectiveUserId = ssrUserId || (!authLoading && user?.uid ? user.uid : null);
   
   // Use Firebase real-time listeners
-  const { contacts, loading: contactsLoading } = useContactsRealtime(effectiveUserId);
+  const { contacts, loading: contactsLoading, hasConfirmedNoContacts } = useContactsRealtime(effectiveUserId);
 
-  // Show loading state if we don't have userId yet OR if contacts are loading (initial load)
+  // Show loading state only if we don't have userId yet OR if contacts are loading AND no cached data
   if (!effectiveUserId || (contactsLoading && contacts.length === 0)) {
     return (
       <div className="space-y-6">
@@ -41,8 +41,8 @@ export default function ChartsPageClient({ userId: ssrUserId }: { userId: string
     );
   }
   
-  // Show empty state only after loading completes AND there's no data
-  if (!contactsLoading && contacts.length === 0) {
+  // Show empty state as soon as we have confirmed no contacts (don't wait for loading to complete)
+  if (hasConfirmedNoContacts && contacts.length === 0) {
     return (
       <div className="space-y-6">
         <div>

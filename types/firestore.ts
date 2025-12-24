@@ -6,6 +6,7 @@ export interface Contact {
     firstName?: string | null;
     lastName?: string | null;
     company?: string | null;
+    photoUrl?: string | null; // Profile photo URL from Google People API
   
     // Gmail-derived
     lastEmailDate?: unknown | null; // Firestore timestamp

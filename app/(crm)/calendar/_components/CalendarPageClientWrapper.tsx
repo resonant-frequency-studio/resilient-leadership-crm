@@ -359,12 +359,12 @@ export default function CalendarPageClientWrapper() {
         </>
       )}
 
-      {/* Calendar Filter Bar - ALWAYS render */}
+      {/* Calendar Filter Bar - ALWAYS render - enable as soon as cached data is available */}
       <CalendarFilterBar
         events={events}
         filters={filters}
         onFiltersChange={setFilters}
-        disabled={!effectiveUserId || isLoading || events.length === 0}
+        disabled={!effectiveUserId || events.length === 0}
       />
 
       {/* Empty State - only show when both cache and server confirm no events */}
