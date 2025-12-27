@@ -293,7 +293,7 @@ function TouchpointsContent({ userId }: { userId: string }) {
                 Includes past due and upcoming touchpoints.
               </p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <ViewAllLink href="/touchpoints/today" />
             </div>
           </div>
