@@ -262,8 +262,8 @@ const navigationLinks = [
     ),
   },
   {
-    href: "/calendar",
-    label: "Calendar",
+    href: "/schedule",
+    label: "Schedule",
     iconPath: (
       <path
         strokeLinecap="round"
