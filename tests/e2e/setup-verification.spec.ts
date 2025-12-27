@@ -19,9 +19,5 @@ test("should load the login page", async ({ page }) => {
   // Check that the page has loaded (has some content)
   const body = page.locator("body");
   await expect(body).toBeVisible({ timeout: 10000 });
-  
-  console.log("✓ Playwright setup verification passed!");
-  console.log(`  Page URL: ${page.url()}`);
-  console.log(`  Page title: ${await page.title()}`);
 });
 

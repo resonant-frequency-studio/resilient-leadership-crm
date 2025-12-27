@@ -46,8 +46,6 @@ export async function POST(req: Request) {
       `action-items-${userId}`,
       `action-items-${userId}-${contactId}`,
     ];
-
-    console.log(`[TEST] Invalidating cache tags:`, tags);
     
     // Invalidate all tags
     tags.forEach(tag => {

@@ -227,9 +227,20 @@ export default function SyncPageClient({
       <Card padding="md" className="bg-sync-blue-bg border-sync-blue-border">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-sync-blue-text-primary mb-1">Sync Gmail</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-semibold text-sync-blue-text-primary">Sync Gmail</h3>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Automatic sync active
+              </span>
+            </div>
             <div className="text-xs text-sync-blue-text-secondary mb-3">
-              <p className="mb-1">Fetches new email threads from your Gmail account and links them to your contacts. This will:</p>
+              <p className="mb-1 font-medium text-sync-blue-text-primary">
+                Automatic sync is enabled. Gmail threads sync automatically every 15-30 minutes using efficient incremental sync.
+              </p>
+              <p className="mb-1 mt-2">Click below to manually sync Gmail threads now. This will:</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5">
                 <li>Download recent email threads (or all threads if this is your first sync)</li>
                 <li>Match emails to existing contacts by email address</li>
@@ -407,14 +418,26 @@ export default function SyncPageClient({
       <Card padding="md" className="bg-sync-green-bg border-sync-green-border">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-sync-green-text-primary mb-1">Sync Contacts</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-semibold text-sync-green-text-primary">Sync Contacts</h3>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Automatic sync active
+              </span>
+            </div>
             <div className="text-xs text-sync-green-text-secondary mb-3">
-              <p className="mb-1">Imports contacts from your Google Contacts account. This will:</p>
+              <p className="mb-1 font-medium text-sync-green-text-primary">
+                Automatic sync is enabled. Contacts sync automatically daily and also syncs Gmail threads for newly imported contacts.
+              </p>
+              <p className="mb-1 mt-2">Click below to manually sync contacts now. This will:</p>
               <ul className="list-disc list-inside mt-1 space-y-0.5">
                 <li>Fetch all contacts from your Google Contacts</li>
                 <li>Create new contact records for contacts not already in your CRM</li>
                 <li>Skip contacts that already exist or were previously imported and deleted</li>
                 <li>Import contact names, email addresses, company names, and profile photos</li>
+                <li>Sync Gmail threads and generate insights for newly imported contacts</li>
                 <li>Only add new contacts—never overwrites or modifies existing contacts</li>
               </ul>
             </div>
