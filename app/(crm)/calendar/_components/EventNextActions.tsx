@@ -70,6 +70,9 @@ export default function EventNextActions({
   return (
     <div 
       className="sticky top-0 z-10 py-4 mb-4"
+      style={{
+        backgroundColor: 'var(--surface-modal)',
+      }}
     >
       <div className="flex items-center gap-2 justify-end">
         <Button

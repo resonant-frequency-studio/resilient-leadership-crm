@@ -90,7 +90,7 @@ export default function TouchpointsTodayPageClient() {
           <ThemedSuspense isLoading={true} variant="list" />
         ) : contacts.length === 0 && hasConfirmedNoContacts ? (
           <EmptyState wrapInCard={false} size="lg" />
-        ) : !contactsLoading && contacts.length > 0 && allTodayTouchpoints.length === 0 ? (
+        ) : contacts.length > 0 && allTodayTouchpoints.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">🎉 You&apos;re all caught up! No touchpoints due today.</p>
           </div>

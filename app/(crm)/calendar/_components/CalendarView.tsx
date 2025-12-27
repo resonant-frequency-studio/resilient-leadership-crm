@@ -50,14 +50,19 @@ interface CalendarViewProps {
   onNavigate: (date: Date) => void;
   contacts?: import("@/types/firestore").Contact[]; // Optional contacts for event card
   onSlotSelect?: (start: Date, end: Date) => void; // Callback when slot is selected
+  onViewChange?: (view: View) => void; // Callback when view changes
+  initialView?: View; // Initial view to use
 }
 
-export default function CalendarView({ events, currentDate, onNavigate, contacts, onSlotSelect }: CalendarViewProps) {
+export default function CalendarView({ events, currentDate, onNavigate, contacts, onSlotSelect, onViewChange, initialView }: CalendarViewProps) {
   const { resolvedTheme } = useTheme();
   const isMobile = useIsMobile();
   
-  // Compute the effective view: mobile always uses day, desktop uses saved preference
+  // Compute the effective view: mobile always uses day, desktop uses saved preference or initialView
   const effectiveView = useMemo(() => {
+    if (initialView) {
+      return initialView;
+    }
     if (isMobile) {
       return "day" as View;
     }
@@ -69,21 +74,67 @@ export default function CalendarView({ events, currentDate, onNavigate, contacts
       }
     }
     return "month" as View;
-  }, [isMobile]);
+  }, [isMobile, initialView]);
 
   const [view, setView] = useState<View>(effectiveView);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
-  // Update view when effective view changes (e.g., device type change)
+  // Update view when effective view changes (e.g., device type change or initialView prop)
   useEffect(() => {
     setView(effectiveView);
   }, [effectiveView]);
+
+  // Auto-scroll to current time indicator when viewing week/day on current day
+  useEffect(() => {
+    // Only auto-scroll for week and day views
+    if (view !== "week" && view !== "day") return;
+
+    // Check if currentDate is today
+    const today = new Date();
+    const isToday = 
+      currentDate.getFullYear() === today.getFullYear() &&
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getDate() === today.getDate();
+
+    if (!isToday) return;
+
+    // Wait for calendar to render, then scroll to current time indicator
+    const scrollToCurrentTime = () => {
+      // Find the current time indicator element
+      const timeIndicator = document.querySelector('.rbc-current-time-indicator') as HTMLElement;
+      if (timeIndicator) {
+        // Find the scrollable container (usually .rbc-time-content)
+        const scrollContainer = timeIndicator.closest('.rbc-time-content') as HTMLElement;
+        if (scrollContainer) {
+          // Calculate the position to scroll to (center the indicator in view)
+          const indicatorTop = timeIndicator.offsetTop;
+          const containerHeight = scrollContainer.clientHeight;
+          const scrollPosition = indicatorTop - (containerHeight / 2) + (timeIndicator.offsetHeight / 2);
+          
+          // Smooth scroll to the current time indicator
+          scrollContainer.scrollTo({
+            top: Math.max(0, scrollPosition),
+            behavior: 'smooth'
+          });
+        }
+      }
+    };
+
+    // Use a small delay to ensure the calendar has rendered
+    const timeoutId = setTimeout(scrollToCurrentTime, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [view, currentDate]);
 
   // Save view preference to localStorage when it changes (desktop only)
   const handleViewChange = (newView: View) => {
     setView(newView);
     if (!isMobile && typeof window !== "undefined") {
       localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, newView);
+    }
+    // Notify parent component of view change
+    if (onViewChange) {
+      onViewChange(newView);
     }
   };
 

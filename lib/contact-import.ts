@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import { normalizeContactId, csvRowToContact } from "@/util/csv-utils";
-import { reportException } from "@/lib/error-reporting";
+import { reportException, ErrorLevel } from "@/lib/error-reporting";
 
 export type OverwriteMode = "overwrite" | "skip";
 
@@ -113,8 +113,43 @@ export async function importContact(
     return { success: true, skipped: true };
   }
   
+  // Enrich contact data from Google People API (with fallback to email extraction)
+  // This runs silently - if it fails, we'll just use CSV data
+  let enrichedData: { firstName?: string | null; lastName?: string | null; company?: string | null; photoUrl?: string | null } | undefined;
+  try {
+    const enrichResponse = await fetch("/api/enrich-contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        userId,
+      }),
+    });
+
+    if (enrichResponse.ok) {
+      const enriched = await enrichResponse.json();
+      enrichedData = {
+        firstName: enriched.firstName,
+        lastName: enriched.lastName,
+        company: enriched.company,
+        photoUrl: enriched.photoUrl,
+      };
+    }
+    // If enrichment fails, we silently continue with CSV data only
+  } catch (error) {
+    // Silently continue - enrichment is optional
+    reportException(error, {
+      context: "Failed to enrich contact during import (non-critical)",
+      tags: { component: "contact-import", contactId },
+      level: ErrorLevel.WARNING,
+    });
+  }
+  
   // Prepare contact data (actionItems field is excluded by csvRowToContact)
-  const contactData = csvRowToContact(row, contactId);
+  // Pass enriched data to fill gaps in CSV data
+  const contactData = csvRowToContact(row, contactId, enrichedData);
   
   // Handle createdAt and archived status based on overwrite mode
   if (!exists) {

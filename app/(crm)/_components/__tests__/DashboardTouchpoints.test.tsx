@@ -58,6 +58,7 @@ describe("DashboardTouchpoints", () => {
         contacts: [],
         loading: true,
         error: null,
+        hasConfirmedNoContacts: false,
       });
       
       const { container } = render(<DashboardTouchpoints userId={mockUserId} />);
@@ -90,18 +91,19 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);
 
-      // Wait for Today's Priorities section to render (which includes overdue)
+      // Wait for Your Touchpoints This Week section to render (which includes overdue)
       await waitFor(() => {
-        expect(screen.getByText(/Today's Priorities/)).toBeInTheDocument();
+        expect(screen.getByText(/Your Touchpoints This Week/)).toBeInTheDocument();
       });
       
-      // Find the "Overdue" subsection heading
+      // Find the "Past due" subsection heading
       await waitFor(() => {
-        expect(screen.getByText("Overdue")).toBeInTheDocument();
+        expect(screen.getByText("Past due")).toBeInTheDocument();
       });
       
       // Verify contact-1 is in the overdue section
@@ -135,12 +137,13 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
+        expect(screen.getByText(/Upcoming/)).toBeInTheDocument();
         expect(screen.getAllByTestId("contact-card-contact-1").length).toBeGreaterThan(0);
       });
     });
@@ -161,12 +164,13 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);
 
       waitFor(() => {
-        expect(screen.getByText("Recent Contacts")).toBeInTheDocument();
+        expect(screen.getByText("Recently Active")).toBeInTheDocument();
       });
     });
   });
@@ -189,6 +193,7 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);
@@ -229,6 +234,7 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       mockMutateAsync.mockResolvedValue({});
@@ -237,7 +243,7 @@ describe("DashboardTouchpoints", () => {
 
       // Wait for upcoming section to render
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
+        expect(screen.getByText(/Upcoming/)).toBeInTheDocument();
       });
 
       // Select the checkboxes
@@ -287,6 +293,7 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       mockMutateAsync.mockResolvedValue({});
@@ -295,7 +302,7 @@ describe("DashboardTouchpoints", () => {
 
       // Wait for upcoming section to render
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
+        expect(screen.getByText(/Upcoming/)).toBeInTheDocument();
       });
 
       // Select the checkbox
@@ -344,6 +351,7 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);
@@ -379,6 +387,7 @@ describe("DashboardTouchpoints", () => {
         contacts: mockContacts,
         loading: false,
         error: null,
+        hasConfirmedNoContacts: false,
       });
 
       render(<DashboardTouchpoints userId={mockUserId} />);

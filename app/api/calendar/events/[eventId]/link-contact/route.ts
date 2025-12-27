@@ -6,6 +6,7 @@ import { toUserFriendlyError } from "@/lib/error-utils";
 import { FieldValue } from "firebase-admin/firestore";
 import { getContactForUser } from "@/lib/contacts-server";
 import { CalendarEvent } from "@/types/firestore";
+import { findRecurringEventIds } from "@/lib/calendar/recurring-events";
 
 /**
  * POST /api/calendar/events/[eventId]/link-contact
@@ -64,16 +65,39 @@ export async function POST(
       snapshotUpdatedAt: FieldValue.serverTimestamp(),
     };
 
-    // Update event with linked contact
-    await eventRef.update({
-      matchedContactId: contactId,
-      matchMethod: "manual",
-      matchConfidence: "high", // Manual matches are always high confidence
-      matchOverriddenByUser: true,
-      contactSnapshot: contactSnapshot,
-      meetingInsights: FieldValue.delete(), // Invalidate insights since contact link changed
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    // Get the current event to find recurring events
+    const currentEvent = eventDoc.data() as CalendarEvent;
+    
+    // Find all events in the same recurring series
+    const recurringEventIds = await findRecurringEventIds(
+      adminDb,
+      userId,
+      currentEvent,
+      eventId // Exclude the current event
+    );
+
+    // Update all events in the recurring series (including the current one)
+    const eventsCollection = adminDb
+      .collection("users")
+      .doc(userId)
+      .collection("calendarEvents");
+    const batch = adminDb.batch();
+    const eventsToUpdate = [eventId, ...recurringEventIds];
+    
+    for (const eventIdToUpdate of eventsToUpdate) {
+      const eventRefToUpdate = eventsCollection.doc(eventIdToUpdate);
+      batch.update(eventRefToUpdate, {
+        matchedContactId: contactId,
+        matchMethod: "manual",
+        matchConfidence: "high", // Manual matches are always high confidence
+        matchOverriddenByUser: true,
+        contactSnapshot: contactSnapshot,
+        meetingInsights: FieldValue.delete(), // Invalidate insights since contact link changed
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    
+    await batch.commit();
 
     // Get updated event
     const updatedEventDoc = await eventRef.get();

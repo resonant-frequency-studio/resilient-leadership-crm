@@ -92,7 +92,7 @@ export default function TouchpointsOverduePageClient() {
           <ThemedSuspense isLoading={true} variant="list" />
         ) : contacts.length === 0 && hasConfirmedNoContacts ? (
           <EmptyState wrapInCard={false} size="lg" />
-        ) : !contactsLoading && contacts.length > 0 && allOverdueTouchpoints.length === 0 ? (
+        ) : contacts.length > 0 && allOverdueTouchpoints.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">🎉 You&apos;re all caught up! No overdue touchpoints.</p>
           </div>

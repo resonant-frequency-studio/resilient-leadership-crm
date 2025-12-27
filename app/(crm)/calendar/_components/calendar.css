@@ -108,7 +108,35 @@
 }
 
 .rbc-current-time-indicator {
-  background: var(--card-tag);
+  background: #3b82f6 !important; /* blue-500 - more visible blue */
+  height: 2px !important; /* Make it thicker */
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.5); /* Add subtle glow */
+  z-index: 10; /* Ensure it's above events */
+}
+
+/* Add a circle/dot at the start of the current time line */
+.rbc-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: #3b82f6; /* blue-500 */
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+  z-index: 11;
+}
+
+[data-theme='dark'] .rbc-current-time-indicator {
+  background: #60a5fa !important; /* blue-400 for dark mode */
+  box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
+}
+
+[data-theme='dark'] .rbc-current-time-indicator::before {
+  background: #60a5fa; /* blue-400 for dark mode */
+  box-shadow: 0 0 4px rgba(96, 165, 250, 0.5);
 }
 
 /* ============================================

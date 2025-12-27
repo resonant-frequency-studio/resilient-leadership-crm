@@ -19,6 +19,8 @@ interface TouchpointStatusActionsProps {
   compact?: boolean; // For dashboard cards
   // Optional: for cases where contact data isn't in React Query (e.g., ContactCard in lists)
   currentStatus?: Contact["touchpointStatus"];
+  // Optional: control whether to show Restore button (for 60-second timer logic)
+  showRestoreButton?: boolean;
 }
 
 export default function TouchpointStatusActions({
@@ -28,6 +30,7 @@ export default function TouchpointStatusActions({
   onStatusUpdate,
   compact = false,
   currentStatus: fallbackStatus,
+  showRestoreButton: showRestoreButtonProp,
 }: TouchpointStatusActionsProps) {
   const { user } = useAuth();
   
@@ -96,13 +99,14 @@ export default function TouchpointStatusActions({
     // Compact view for dashboard cards
     return (
       <div className="space-y-2">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex items-center gap-2">
           {currentStatus !== "completed" && (
             <Button
               variant="secondary"
               onClick={() => setShowCompleteModal(true)}
               disabled={mutation.isPending}
-              className="flex-1 cursor-pointer sm:flex-none px-3 py-2 sm:px-2 sm:py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-1"
+              size="sm"
+              className="flex-1 !px-1 !py-0.5 sm:!px-4 sm:!py-2.5 text-[11px] sm:text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               title="I've contacted this person"
             >
               <svg
@@ -126,7 +130,8 @@ export default function TouchpointStatusActions({
               variant="outline"
               onClick={() => setShowCancelModal(true)}
               disabled={mutation.isPending}
-              className="flex-1 sm:flex-none px-3 py-2 sm:px-2 sm:py-1 text-xs font-medium text-foreground border border-theme-medium rounded hover:bg-theme-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-1"
+              size="sm"
+              className="flex-1 !px-1 !py-0.5 sm:!px-4 sm:!py-2.5 text-[11px] sm:text-xs font-medium hover:bg-[var(--btn-secondary-bg-hover)]"
               title="Skip this touchpoint - no action needed"
             >
               <svg
@@ -338,7 +343,8 @@ export default function TouchpointStatusActions({
         </div>
       )}
 
-      {(currentStatus === "completed" || currentStatus === "cancelled") && (
+      {(currentStatus === "completed" || currentStatus === "cancelled") && 
+       (showRestoreButtonProp !== false) && (
         <Button
           onClick={() => handleUpdateStatus(null)}
           disabled={mutation.isPending}

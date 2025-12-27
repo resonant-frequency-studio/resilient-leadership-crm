@@ -90,7 +90,7 @@ export default function TouchpointsUpcomingPageClient() {
           <ThemedSuspense isLoading={true} variant="list" />
         ) : contacts.length === 0 && hasConfirmedNoContacts ? (
           <EmptyState wrapInCard={false} size="lg" />
-        ) : !contactsLoading && contacts.length > 0 && allUpcomingTouchpoints.length === 0 ? (
+        ) : contacts.length > 0 && allUpcomingTouchpoints.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No upcoming touchpoints in the next 60 days.</p>
           </div>

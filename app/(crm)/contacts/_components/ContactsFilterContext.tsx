@@ -21,15 +21,17 @@ interface ContactsFilterContextValue {
   hasConfirmedNoContacts?: boolean;
   hasActiveFilters: boolean;
   lastEmailDateRange: DateRange;
+  includeNewContacts: boolean;
   showArchived: boolean;
   setShowArchived: (value: boolean) => void;
+  setIncludeNewContacts: (value: boolean) => void;
   setSelectedSegment: (segment: string) => void;
   setSelectedTags: (tags: string[]) => void;
   setEmailSearch: (email: string) => void;
   setFirstNameSearch: (firstName: string) => void;
   setLastNameSearch: (lastName: string) => void;
   setCompanySearch: (company: string) => void;
-  setCustomFilter: (filter: "at-risk" | "warm" | null) => void;
+  setCustomFilter: (filter: "at-risk" | "warm" | "needs-attention" | null) => void;
   setLastEmailDateRange: (range: DateRange) => void;
   onClearFilters: () => void;
   
@@ -55,7 +57,7 @@ interface ContactsFilterContextValue {
   firstNameSearch: string;
   lastNameSearch: string;
   companySearch: string;
-  customFilter?: "at-risk" | "warm" | null;
+  customFilter?: "at-risk" | "warm" | "needs-attention" | null;
   
   // Filter change handlers (for ContactsFilter component)
   onSegmentChange: (segment: string) => void;
@@ -65,6 +67,7 @@ interface ContactsFilterContextValue {
   onLastNameSearchChange: (lastName: string) => void;
   onCompanySearchChange: (company: string) => void;
   onShowArchivedChange: (show: boolean) => void;
+  onIncludeNewContactsChange: (include: boolean) => void;
   onCustomFilterChange: (filter: "at-risk" | "warm" | null) => void;
   onLastEmailDateRangeChange: (range: DateRange) => void;
 }

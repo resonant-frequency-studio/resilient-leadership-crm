@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ActionItem, Contact } from "@/types/firestore";
-import { formatContactDate } from "@/util/contact-utils";
-import { getInitials, getDisplayName } from "@/util/contact-utils";
+import { formatContactDate, getInitials, getDisplayName } from "@/util/contact-utils";
 import { Button } from "@/components/Button";
 import ActionItemCheckbox from "@/components/ActionItemCheckbox";
 import Textarea from "@/components/Textarea";
 import Input from "@/components/Input";
 import Skeleton from "@/components/Skeleton";
+import Avatar from "@/components/Avatar";
 
 interface ActionItemCardProps {
   actionItem: ActionItem;
@@ -18,6 +18,7 @@ interface ActionItemCardProps {
   contactEmail?: string;
   contactFirstName?: string;
   contactLastName?: string;
+  contactPhotoUrl?: string | null;
   onComplete: () => void;
   onDelete: () => void;
   onEdit: (text: string, dueDate?: string | null) => void;
@@ -37,6 +38,7 @@ export default function ActionItemCard({
   contactEmail,
   contactFirstName,
   contactLastName,
+  contactPhotoUrl,
   onComplete,
   onDelete,
   onEdit,
@@ -119,16 +121,6 @@ export default function ActionItemCard({
       return "bg-card-overdue border border-card-overdue-dark";
     }
     return "bg-transparent border border-gray-200";
-  };
-
-  const getAvatarStyles = () => {
-    if (actionItem.status === "completed") {
-      return "bg-gradient-to-br from-gray-400 to-gray-500";
-    }
-    if (isOverdue) {
-      return "bg-gradient-to-br from-red-600 to-red-700";
-    }
-    return "bg-gradient-to-br from-blue-500 to-purple-600";
   };
 
   const handleSaveEdit = () => {
@@ -263,9 +255,15 @@ export default function ActionItemCard({
             >
               {/* Avatar */}
               <div className="shrink-0">
-                <div className={`w-8 h-8 ${getAvatarStyles()} rounded-full flex items-center justify-center text-white font-semibold text-xs shadow-sm`}>
-                  {initials}
-                </div>
+                <Avatar
+                  photoUrl={contactPhotoUrl}
+                  firstName={contactFirstName}
+                  lastName={contactLastName}
+                  primaryEmail={contactEmail}
+                  initials={initials}
+                  size="sm"
+                  className={actionItem.status === "completed" ? "opacity-50" : ""}
+                />
               </div>
 
               {/* Contact Info */}

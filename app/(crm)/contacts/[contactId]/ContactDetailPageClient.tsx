@@ -3,11 +3,13 @@
 import ContactEditor from "../../_components/ContactEditor";
 import ContactsLink from "../../_components/ContactsLink";
 import ContactDetailMenu from "../../_components/ContactDetailMenu";
-import ContactSaveBar from "@/components/contacts/ContactSaveBar";
 import { ContactAutosaveProvider } from "@/components/contacts/ContactAutosaveProvider";
-import { getInitials, getDisplayName } from "@/util/contact-utils";
+import { getDisplayName } from "@/util/contact-utils";
 import { ActionItem, Contact } from "@/types/firestore";
 import Skeleton from "@/components/Skeleton";
+import Avatar from "@/components/Avatar";
+import { useAuth } from "@/hooks/useAuth";
+import { isOwnerContact } from "@/lib/contacts/owner-utils";
 
 interface ContactDetailPageClientProps {
   contactDocumentId: string;
@@ -30,6 +32,13 @@ function ContactDetailContent({
   actionItems: ActionItem[];
   uniqueSegments?: string[];
 }) {
+  const { user } = useAuth();
+  
+  // Check if this is the owner contact
+  const isOwner = contact?.primaryEmail && user?.email
+    ? isOwnerContact(user.email, contact.primaryEmail)
+    : false;
+
   if (!contact) {
     return (
       <div className="space-y-6">
@@ -45,13 +54,18 @@ function ContactDetailContent({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0 flex-1">
-            <div className="w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl shadow-lg shrink-0">
-              {getInitials(contact)}
-            </div>
+            <Avatar contact={contact} size="xl" />
             <div className="min-w-0 flex-1">
-              <h1 className="text-3xl font-bold text-theme-darkest mb-1 truncate">
-                {getDisplayName(contact)}
-              </h1>
+              <div className="flex items-center gap-3 mb-1 flex-wrap">
+                <h1 className="text-3xl font-bold text-theme-darkest truncate">
+                  {getDisplayName(contact)}
+                </h1>
+                {isOwner && (
+                  <span className="px-3 py-1.5 text-sm font-semibold rounded-sm whitespace-nowrap border-2 text-card-tag-text border-card-tag">
+                    Owner
+                  </span>
+                )}
+              </div>
               <p className="text-gray-500 flex items-center gap-2 min-w-0">
                 <svg
                   className="w-4 h-4 shrink-0"
@@ -74,10 +88,6 @@ function ContactDetailContent({
             <ContactsLink variant="default" />
             <ContactDetailMenu contactId={contactDocumentId} userId={userId} />
           </div>
-        </div>
-        {/* Mobile: Save bar below header */}
-        <div className="xl:hidden flex items-center justify-end">
-          <ContactSaveBar />
         </div>
       </div>
 

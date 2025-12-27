@@ -45,12 +45,11 @@ function ContactsPageHeader({ contacts }: { contacts: ContactWithId[] }) {
       {/* Buttons - Mobile: below header, Desktop: right side */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 xl:shrink-0 w-full sm:w-auto">
         <ExportContactsButton contacts={filteredContacts} />
-        <Link href="/contacts/new" className="w-full sm:w-auto">
+        <Link href="/contacts/new" className="w-full sm:w-auto flex items-center">
           <Button
             size="sm"
             fullWidth
-            className="whitespace-nowrap shadow-sm
-"
+            className="whitespace-nowrap shadow-sm"
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -89,8 +88,8 @@ export default function ContactsPageClient({
     <ContactsFilterProvider contacts={contacts} itemsPerPage={ITEMS_PER_PAGE} isLoading={isLoading} hasConfirmedNoContacts={hasConfirmedNoContacts}>
       <div className="space-y-6">
         <ContactsPageHeader contacts={contacts} />
-        {/* Always render Filter & Search - disabled when loading or no contacts */}
-        <ContactsFilter contacts={contacts} disabled={!userId || isLoading || contacts.length === 0} />
+        {/* Always render Filter & Search - disabled only when no userId or no contacts (enable as soon as cached data is available) */}
+        <ContactsFilter contacts={contacts} disabled={!userId || contacts.length === 0} />
         {/* Always render Bulk Actions - it handles its own visibility */}
         <ContactsBulkActions userId={userId} contacts={contacts} />
         <ContactsGrid userId={userId} />

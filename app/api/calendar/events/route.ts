@@ -284,15 +284,67 @@ export async function POST(req: Request) {
       updatedAt: FieldValue.serverTimestamp(),
     };
 
-    // Link to contact if provided
-    if (body.contactId) {
-      eventData.matchedContactId = body.contactId;
-      eventData.matchMethod = "manual";
-
-      // Optionally fetch contact for snapshot
+    // Try to auto-link to contact based on email match if contactId not explicitly provided
+    let matchedContactId = body.contactId || null;
+    let matchMethod: "email" | "name" | "domain" | "manual" | undefined = body.contactId ? "manual" : undefined;
+    
+    if (!matchedContactId && eventData.attendees && eventData.attendees.length > 0) {
       try {
         const contacts = await getAllContactsForUserUncached(userId);
-        const contact = contacts.find((c) => c.contactId === body.contactId);
+        
+        // Get user's email to exclude from matching
+        let userEmail: string | null = null;
+        try {
+          const accessToken = await getCalendarAccessToken(userId);
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (userInfoResponse.ok) {
+            const userInfo = await userInfoResponse.json();
+            userEmail = userInfo.email || null;
+          }
+        } catch (error) {
+          // Log but don't fail if user info fetch fails
+          reportException(error, {
+            context: "Fetching user email for event auto-linking",
+            tags: { component: "calendar-events-api", userId },
+          });
+        }
+        
+        // Check for exact email match
+        const userEmailLower = userEmail?.toLowerCase().trim() || null;
+        for (const attendee of eventData.attendees) {
+          const attendeeEmail = attendee.email?.toLowerCase().trim();
+          if (attendeeEmail && (!userEmailLower || attendeeEmail !== userEmailLower)) {
+            const contact = contacts.find(
+              (c) => c.primaryEmail?.toLowerCase().trim() === attendeeEmail
+            );
+            if (contact) {
+              matchedContactId = contact.contactId;
+              matchMethod = "email";
+              break; // Use first match
+            }
+          }
+        }
+      } catch (error) {
+        // Log but don't fail if contact matching fails
+        reportException(error, {
+          context: "Auto-linking contact for event creation",
+          tags: { component: "calendar-events-api", userId },
+        });
+      }
+    }
+    
+    // Link to contact if found (either provided or auto-matched)
+    if (matchedContactId) {
+      eventData.matchedContactId = matchedContactId;
+      eventData.matchMethod = matchMethod;
+      eventData.matchConfidence = "high"; // Both manual and email matches are high confidence
+
+      // Fetch contact for snapshot
+      try {
+        const contacts = await getAllContactsForUserUncached(userId);
+        const contact = contacts.find((c) => c.contactId === matchedContactId);
         if (contact) {
           eventData.contactSnapshot = {
             name: `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.primaryEmail,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { View } from "react-big-calendar";
+import { startOfWeek, endOfWeek, startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useCalendarEventsRealtime } from "@/hooks/useCalendarEventsRealtime";
 import { useContactsRealtime } from "@/hooks/useContactsRealtime";
@@ -18,6 +20,7 @@ import { CalendarEvent } from "@/types/firestore";
 import { reportException } from "@/lib/error-reporting";
 
 const SYNC_RANGE_STORAGE_KEY = "calendar-sync-range-days";
+const CALENDAR_VIEW_STORAGE_KEY = "insight-loop-calendar-view";
 
 export default function CalendarPageClientWrapper() {
   const { user, loading: authLoading } = useAuth();
@@ -27,6 +30,17 @@ export default function CalendarPageClientWrapper() {
   
   // Get userId from auth (no longer passed as prop from SSR)
   const effectiveUserId = !authLoading && user?.uid ? user.uid : null;
+  
+  // Initialize view from localStorage
+  const [currentView, setCurrentView] = useState<View>(() => {
+    if (typeof window !== "undefined") {
+      const savedView = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+      if (savedView && ["month", "week", "day", "agenda"].includes(savedView)) {
+        return savedView as View;
+      }
+    }
+    return "month" as View;
+  });
 
   // Sync range state with localStorage persistence
   const [syncRangeDays, setSyncRangeDays] = useState<number>(() => {
@@ -52,16 +66,32 @@ export default function CalendarPageClientWrapper() {
     }
   }, [syncRangeDays]);
 
-  // Calculate date range for current month view
+  // Calculate date range based on current view
   const [currentDate, setCurrentDate] = useState(new Date());
   
+  // Calculate date range based on view type
   const { timeMin, timeMax } = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const min = new Date(year, month, 1);
-    const max = new Date(year, month + 1, 0, 23, 59, 59);
+    let min: Date;
+    let max: Date;
+    
+    switch (currentView) {
+      case "day":
+        min = startOfDay(currentDate);
+        max = endOfDay(currentDate);
+        break;
+      case "week":
+        min = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday
+        max = endOfWeek(currentDate, { weekStartsOn: 0 }); // Saturday
+        break;
+      case "month":
+      default:
+        min = startOfMonth(currentDate);
+        max = endOfMonth(currentDate);
+        break;
+    }
+    
     return { timeMin: min, timeMax: max };
-  }, [currentDate]);
+  }, [currentDate, currentView]);
 
   // Use Firebase real-time listeners
   const { events = [], loading: isLoading, error, hasConfirmedNoEvents } = useCalendarEventsRealtime(
@@ -339,13 +369,6 @@ export default function CalendarPageClientWrapper() {
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <Button
-                    onClick={() => {
-                      window.location.href = "/api/oauth/gmail/start?redirect=/calendar";
-                    }}
-                  >
-                    Reconnect Google Account
-                  </Button>
                   <Button variant="outline" onClick={() => window.location.reload()}>
                     Retry
                   </Button>
@@ -359,12 +382,12 @@ export default function CalendarPageClientWrapper() {
         </>
       )}
 
-      {/* Calendar Filter Bar - ALWAYS render */}
+      {/* Calendar Filter Bar - ALWAYS render - enable as soon as cached data is available */}
       <CalendarFilterBar
         events={events}
         filters={filters}
         onFiltersChange={setFilters}
-        disabled={!effectiveUserId || isLoading || events.length === 0}
+        disabled={!effectiveUserId || events.length === 0}
       />
 
       {/* Empty State - only show when both cache and server confirm no events */}
@@ -388,6 +411,14 @@ export default function CalendarPageClientWrapper() {
           setCreateModalPrefill({ startTime: start, endTime: end });
           setShowCreateModal(true);
         }}
+        onViewChange={(view) => {
+          setCurrentView(view);
+          // Also save to localStorage (CalendarView does this too, but we want to keep state in sync)
+          if (typeof window !== "undefined") {
+            localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
+          }
+        }}
+        initialView={currentView}
       />
 
       <CreateEventModal

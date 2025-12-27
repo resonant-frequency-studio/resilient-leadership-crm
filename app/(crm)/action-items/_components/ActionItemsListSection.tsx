@@ -358,6 +358,7 @@ export default function ActionItemsListSection({
                       contactEmail={item.contactEmail}
                       contactFirstName={item.contactFirstName}
                       contactLastName={item.contactLastName}
+                      contactPhotoUrl={item.contactPhotoUrl}
                       onComplete={() => handleComplete(item)}
                       onDelete={() => handleDeleteClick(item)}
                       onEdit={(text, dueDate) => handleEdit(item, text, dueDate)}
