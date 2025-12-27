@@ -7,6 +7,14 @@
     {
       "path": "/api/calendar/renew-subscriptions-cron",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/gmail/sync-cron",
+      "schedule": "*/20 * * * *"
+    },
+    {
+      "path": "/api/contacts/sync-cron",
+      "schedule": "0 2 * * *"
     }
   ]
 }

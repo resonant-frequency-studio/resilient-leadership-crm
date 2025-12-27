@@ -906,6 +906,115 @@ describe("SyncPageClient - Clear History", () => {
       }, { timeout: 5000 });
     });
   });
-});
-});
 
+  describe("Automatic Sync Badges", () => {
+    it("should show automatic sync badge for Gmail sync card", () => {
+      renderWithProviders(
+        <SyncPageClient
+          userId={mockUserId}
+          initialLastSync={null}
+          initialSyncHistory={[]}
+        />
+      );
+
+      // Get all "Sync Gmail" elements and find the heading (h3)
+      const gmailElements = screen.getAllByText("Sync Gmail");
+      const gmailHeading = gmailElements.find(el => el.tagName === "H3");
+      expect(gmailHeading).toBeInTheDocument();
+      
+      // Check for badge near Gmail heading
+      const badges = screen.getAllByText("Automatic sync active");
+      expect(badges.length).toBeGreaterThan(0);
+      
+      // Verify Gmail card has the badge
+      const gmailCard = gmailHeading?.closest('[class*="bg-sync-blue-bg"]');
+      expect(gmailCard).toBeInTheDocument();
+      
+      // Check that at least one badge is within the Gmail card
+      const badgeInCard = badges.some(badge => gmailCard?.contains(badge));
+      expect(badgeInCard).toBe(true);
+    });
+
+    it("should show automatic sync badge for Contacts sync card", () => {
+      renderWithProviders(
+        <SyncPageClient
+          userId={mockUserId}
+          initialLastSync={null}
+          initialSyncHistory={[]}
+        />
+      );
+
+      // Check that badge exists (should be 2 badges - one for Gmail, one for Contacts)
+      const badges = screen.getAllByText("Automatic sync active");
+      expect(badges.length).toBeGreaterThanOrEqual(2);
+      
+      // Get all "Sync Contacts" elements and find the heading (h3)
+      const contactsElements = screen.getAllByText("Sync Contacts");
+      const contactsHeading = contactsElements.find(el => el.tagName === "H3");
+      expect(contactsHeading).toBeInTheDocument();
+      
+      // Verify Contacts card has the badge
+      const contactsCard = contactsHeading?.closest('[class*="bg-sync-green-bg"]');
+      expect(contactsCard).toBeInTheDocument();
+      
+      // Check that at least one badge is within the Contacts card
+      const badgeInCard = badges.some(badge => contactsCard?.contains(badge));
+      expect(badgeInCard).toBe(true);
+    });
+
+    it("should show updated description text for Gmail sync mentioning automatic sync", () => {
+      renderWithProviders(
+        <SyncPageClient
+          userId={mockUserId}
+          initialLastSync={null}
+          initialSyncHistory={[]}
+        />
+      );
+
+      // Check that "Automatic sync is enabled" appears (there will be multiple, so use getAllByText)
+      const automaticSyncTexts = screen.getAllByText(/Automatic sync is enabled/);
+      expect(automaticSyncTexts.length).toBeGreaterThan(0);
+      
+      // Check for Gmail-specific text
+      expect(screen.getByText(/Gmail threads sync automatically every 15-30 minutes using efficient incremental sync/)).toBeInTheDocument();
+    });
+
+    it("should show updated description text for Contacts sync mentioning automatic sync", () => {
+      renderWithProviders(
+        <SyncPageClient
+          userId={mockUserId}
+          initialLastSync={null}
+          initialSyncHistory={[]}
+        />
+      );
+
+      // Check that "Automatic sync is enabled" appears (there will be multiple, so use getAllByText)
+      const automaticSyncTexts = screen.getAllByText(/Automatic sync is enabled/);
+      expect(automaticSyncTexts.length).toBeGreaterThan(0);
+      
+      // Check for Contacts-specific text
+      expect(screen.getByText(/Contacts sync automatically daily and also syncs Gmail threads for newly imported contacts/)).toBeInTheDocument();
+    });
+
+    it("should maintain manual sync button functionality when automatic sync is active", async () => {
+      renderWithProviders(
+        <SyncPageClient
+          userId={mockUserId}
+          initialLastSync={null}
+          initialSyncHistory={[]}
+        />
+      );
+
+      const gmailSyncButton = screen.getByRole("button", { name: /Sync Gmail/i });
+      expect(gmailSyncButton).toBeInTheDocument();
+      expect(gmailSyncButton).not.toBeDisabled();
+
+      fireEvent.click(gmailSyncButton);
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith("/api/gmail/sync?type=auto");
+      });
+    });
+  });
+});
+});

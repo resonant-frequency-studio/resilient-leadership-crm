@@ -24,8 +24,6 @@ function logRead(operation: string, path: string, count?: number) {
   if (!ENABLE_LOGGING) return;
   
   // Logging disabled - use error reporting system if needed
-  // const countStr = count !== undefined ? ` (${count} docs)` : "";
-  // console.log(`[FIRESTORE READ ${operation}]: ${path}${countStr}`);
 }
 
 /**
@@ -66,9 +64,6 @@ export function createLoggedFirestore(db: Firestore) {
     collection: (path: string) => {
       const coll = db.collection(path);
       // Logging disabled - use error reporting system if needed
-      // if (ENABLE_LOGGING) {
-      //   console.log(`[FIRESTORE COLLECTION]: ${path}`);
-      // }
       return coll;
     },
   };

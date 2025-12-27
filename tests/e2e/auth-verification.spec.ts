@@ -13,7 +13,6 @@ test("should authenticate using custom token", async ({ authenticatedPage, testU
   
   // Get current URL
   const url = authenticatedPage.url();
-  console.log(`Current URL: ${url}`);
   
   // Should not be on login page
   expect(url).not.toContain("/login");
@@ -32,8 +31,5 @@ test("should authenticate using custom token", async ({ authenticatedPage, testU
   // Page should have loaded content - check for navigation sidebar
   const nav = authenticatedPage.locator("nav, [role='navigation']").first();
   await expect(nav).toBeVisible({ timeout: 5000 });
-  
-  console.log(`✓ Authentication successful for test user: ${testUserId}`);
-  console.log(`  Authenticated URL: ${url}`);
 });
 
