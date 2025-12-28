@@ -78,7 +78,7 @@ export default function InsightsPageClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div id="insights-root" className="space-y-6">
       {/* Header Section */}
       <div>
         <h1 className="text-4xl font-bold text-theme-darkest mb-2">Insights</h1>
@@ -88,7 +88,7 @@ export default function InsightsPageClient({
       </div>
 
       {/* Tier 1 — Suggested Focus */}
-      <div className="space-y-6">
+      <div data-tour="insights-suggested-focus" className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold text-theme-darkest mb-4">
             Suggested Focus
@@ -96,24 +96,30 @@ export default function InsightsPageClient({
           <RelationshipsNeedingAttentionCard contacts={contacts} />
         </div>
 
-        <SentimentAlertsCard contacts={contacts} />
+        <div data-tour="insights-sentiment-alerts">
+          <SentimentAlertsCard contacts={contacts} />
+        </div>
 
-        <EngagementInsightsCard contacts={contacts} />
+        <div data-tour="insights-engagement">
+          <EngagementInsightsCard contacts={contacts} />
+        </div>
       </div>
 
       {/* Tier 2 — Background Awareness */}
       <div className="border-t border-theme-lighter">
         <Card padding="md">
-          <Accordion
-            title="Background Awareness"
-            description="Optional — no action required. These insights are for reflection and context."
-          >
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <MissingLeadSourceCard contacts={contacts} />
-              <SegmentCoverageCard contacts={contacts} />
-              <TagCoverageCard contacts={contacts} />
-            </div>
-          </Accordion>
+          <div data-tour="insights-background-awareness">
+            <Accordion
+              title="Background Awareness"
+              description="Optional — no action required. These insights are for reflection and context."
+            >
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <MissingLeadSourceCard contacts={contacts} />
+                <SegmentCoverageCard contacts={contacts} />
+                <TagCoverageCard contacts={contacts} />
+              </div>
+            </Accordion>
+          </div>
         </Card>
       </div>
     </div>

@@ -162,9 +162,9 @@ export default function CalendarPageClientWrapper() {
   // Don't show empty state while loading - let the calendar view handle loading state
 
   return (
-    <div className="space-y-6 crm-calendar">
+    <div id="schedule-root" className="space-y-6 crm-calendar">
       {/* Header - Mobile: stacked, Desktop: row with buttons on right */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+      <div data-tour="schedule-header" className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-theme-darkest mb-2">Schedule</h1>
           <p className="text-theme-dark text-lg">Plan your week with clarity—sessions, follow-ups, and focus time in one place</p>
@@ -172,6 +172,7 @@ export default function CalendarPageClientWrapper() {
         {/* Buttons - Mobile: below header, Desktop: right side */}
         <div className="flex flex-col items-stretch sm:items-end gap-3 xl:shrink-0 w-full sm:w-auto">
           <Button
+            data-tour="schedule-add-time-block"
             onClick={() => {
               setCreateModalPrefill(null);
               setShowCreateModal(true);
@@ -295,12 +296,14 @@ export default function CalendarPageClientWrapper() {
       )}
 
       {/* Calendar Filter Bar - ALWAYS render - enable as soon as cached data is available */}
-      <CalendarFilterBar
-        events={events}
-        filters={filters}
-        onFiltersChange={setFilters}
-        disabled={!effectiveUserId || events.length === 0}
-      />
+      <div data-tour="schedule-filters">
+        <CalendarFilterBar
+          events={events}
+          filters={filters}
+          onFiltersChange={setFilters}
+          disabled={!effectiveUserId || events.length === 0}
+        />
+      </div>
 
       {/* Empty State - only show when both cache and server confirm no events */}
       {hasConfirmedNoEvents && (
@@ -314,24 +317,26 @@ export default function CalendarPageClientWrapper() {
       )}
 
       {/* Calendar View - ALWAYS render */}
-      <CalendarView
-        events={filteredEvents}
-        currentDate={currentDate}
-        onNavigate={(date) => setCurrentDate(date)}
-        contacts={contacts}
-        onSlotSelect={(start, end) => {
-          setCreateModalPrefill({ startTime: start, endTime: end });
-          setShowCreateModal(true);
-        }}
-        onViewChange={(view) => {
-          setCurrentView(view);
-          // Also save to localStorage (CalendarView does this too, but we want to keep state in sync)
-          if (typeof window !== "undefined") {
-            localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
-          }
-        }}
-        initialView={currentView}
-      />
+      <div data-tour="schedule-calendar-grid">
+        <CalendarView
+          events={filteredEvents}
+          currentDate={currentDate}
+          onNavigate={(date) => setCurrentDate(date)}
+          contacts={contacts}
+          onSlotSelect={(start, end) => {
+            setCreateModalPrefill({ startTime: start, endTime: end });
+            setShowCreateModal(true);
+          }}
+          onViewChange={(view) => {
+            setCurrentView(view);
+            // Also save to localStorage (CalendarView does this too, but we want to keep state in sync)
+            if (typeof window !== "undefined") {
+              localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, view);
+            }
+          }}
+          initialView={currentView}
+        />
+      </div>
 
       <CreateEventModal
         isOpen={showCreateModal}

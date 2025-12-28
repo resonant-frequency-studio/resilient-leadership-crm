@@ -166,18 +166,19 @@ export default function ContactsGrid({ userId }: ContactsGridProps) {
         />
 
         <div className="grid grid-cols-1 gap-4">
-          {paginatedContacts.map((contact) => {
+          {paginatedContacts.map((contact, index) => {
             const isSelected = selectedContactIds.has(contact.id);
             return (
-              <ContactCard
-                key={contact.id}
-                contact={contact}
-                showCheckbox={true}
-                isSelected={isSelected}
-                onSelectChange={toggleContactSelection}
-                variant={isSelected ? "selected" : "default"}
-                userId={userId}
-              />
+              <div key={contact.id} data-tour={index === 0 ? "contacts-row-example" : undefined}>
+                <ContactCard
+                  contact={contact}
+                  showCheckbox={true}
+                  isSelected={isSelected}
+                  onSelectChange={toggleContactSelection}
+                  variant={isSelected ? "selected" : "default"}
+                  userId={userId}
+                />
+              </div>
             );
           })}
         </div>

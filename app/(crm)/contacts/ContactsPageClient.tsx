@@ -33,18 +33,20 @@ function ContactsPageHeader({ contacts }: { contacts: ContactWithId[] }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-4xl font-bold text-theme-darkest mb-2">Contacts</h1>
-          {contacts.length === 0 ? (
-            <p className="text-theme-dark text-lg">No contacts yet</p>
-          ) : (
-            <p className="text-theme-dark text-lg">
-              {filteredContacts.length} of {contacts.length}{" "}
-              {contacts.length === 1 ? "contact" : "contacts"}
-              {hasActiveFilters && " (filtered)"}
-            </p>
-          )}
+          <div data-tour="contacts-header">
+            <h1 className="text-4xl font-bold text-theme-darkest mb-2">Contacts</h1>
+            {contacts.length === 0 ? (
+              <p className="text-theme-dark text-lg">No contacts yet</p>
+            ) : (
+              <p className="text-theme-dark text-lg">
+                {filteredContacts.length} of {contacts.length}{" "}
+                {contacts.length === 1 ? "contact" : "contacts"}
+                {hasActiveFilters && " (filtered)"}
+              </p>
+            )}
+          </div>
           {/* Focus Pill Switcher - Left aligned below heading and count */}
-          <div className="mt-3">
+          <div data-tour="contacts-focus-switcher" className="mt-3">
             <FocusPillSwitcher value={focus || "all"} onChange={setFocus} />
           </div>
         </div>
@@ -96,13 +98,17 @@ export default function ContactsPageClient({
   // Always render structure - provide context even when loading so components don't crash
   return (
     <ContactsFilterProvider contacts={contacts} itemsPerPage={ITEMS_PER_PAGE} isLoading={isLoading} hasConfirmedNoContacts={hasConfirmedNoContacts}>
-      <div className="space-y-6">
+      <div id="contacts-root" className="space-y-6">
         <ContactsPageHeader contacts={contacts} />
         {/* Always render Filter & Search - disabled only when no userId or no contacts (enable as soon as cached data is available) */}
-        <ContactsFilter contacts={contacts} disabled={!userId || contacts.length === 0} />
+        <div data-tour="contacts-filters">
+          <ContactsFilter contacts={contacts} disabled={!userId || contacts.length === 0} />
+        </div>
         {/* Always render Bulk Actions - it handles its own visibility */}
         <ContactsBulkActions userId={userId} contacts={contacts} />
-        <ContactsGrid userId={userId} />
+        <div data-tour="contacts-grid">
+          <ContactsGrid userId={userId} />
+        </div>
       </div>
     </ContactsFilterProvider>
   );
