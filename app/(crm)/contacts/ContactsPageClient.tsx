@@ -45,7 +45,7 @@ function ContactsPageHeader({ contacts }: { contacts: ContactWithId[] }) {
           )}
           {/* Focus Pill Switcher - Left aligned below heading and count */}
           <div className="mt-3">
-            <FocusPillSwitcher value={focus} onChange={setFocus} />
+            <FocusPillSwitcher value={focus || "all"} onChange={setFocus} />
           </div>
         </div>
         {/* Right Column: Buttons */}

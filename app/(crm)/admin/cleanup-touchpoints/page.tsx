@@ -88,9 +88,8 @@ export default function CleanupTouchpointsPage() {
         </p>
       </div>
 
-      <Card 
-        padding="md" 
-        className="border"
+      <div
+        className="rounded-sm border p-4 sm:p-6"
         style={{
           backgroundColor: 'var(--warning-yellow-bg)',
           borderColor: 'var(--warning-yellow-border)',
@@ -127,7 +126,7 @@ export default function CleanupTouchpointsPage() {
             </p>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Card padding="md">
         <div className="space-y-4">
@@ -181,9 +180,8 @@ export default function CleanupTouchpointsPage() {
       </Card>
 
       {error && (
-        <Card 
-          padding="md" 
-          className="border"
+        <div
+          className="rounded-sm border p-4 sm:p-6"
           style={{
             backgroundColor: 'var(--chip-danger-bg)',
             borderColor: 'var(--card-overdue-dark)',
@@ -206,13 +204,12 @@ export default function CleanupTouchpointsPage() {
             </svg>
             <p className="font-medium text-theme-darkest">{error}</p>
           </div>
-        </Card>
+        </div>
       )}
 
       {result && (
-        <Card 
-          padding="md" 
-          className="border"
+        <div
+          className="rounded-sm border p-4 sm:p-6"
           style={{
             backgroundColor: result.success ? 'var(--chip-green-bg)' : 'var(--chip-danger-bg)',
             borderColor: result.success ? 'var(--chip-green-text)' : 'var(--card-overdue-dark)',
@@ -281,7 +278,7 @@ export default function CleanupTouchpointsPage() {
               </Card>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
     </div>

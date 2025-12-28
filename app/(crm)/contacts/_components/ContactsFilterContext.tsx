@@ -58,7 +58,7 @@ interface ContactsFilterContextValue {
   lastNameSearch: string;
   companySearch: string;
   customFilter?: "at-risk" | "warm" | "needs-attention" | null;
-  focus: "all" | "work" | "personal";
+  focus: "all" | "work" | "personal" | undefined;
   setFocus: (focus: "all" | "work" | "personal") => void;
   
   // Filter change handlers (for ContactsFilter component)

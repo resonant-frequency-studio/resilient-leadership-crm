@@ -93,6 +93,8 @@ describe("ContactsFilter", () => {
     lastNameSearch: "",
     companySearch: "",
     customFilter: null,
+    focus: "all" as const,
+    setFocus: jest.fn(),
     onSegmentChange: mockHandlers.onSegmentChange,
     onTagsChange: mockHandlers.onTagsChange,
     onEmailSearchChange: mockHandlers.onEmailSearchChange,
