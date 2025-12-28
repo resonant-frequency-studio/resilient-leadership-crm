@@ -36,7 +36,7 @@ describe("useCsvParser", () => {
         if (config?.complete) {
           completeCallback = config.complete as (results: Papa.ParseResult<Record<string, string>>) => void;
         }
-        // Call complete synchronously to simulate immediate parsing
+        // Delay callback to allow checking isParsing state
         setTimeout(() => {
           if (completeCallback) {
             completeCallback({
@@ -45,7 +45,7 @@ describe("useCsvParser", () => {
               meta: {} as Papa.ParseMeta,
             } as Papa.ParseResult<Record<string, string>>);
           }
-        }, 0);
+        }, 10);
         return {} as Papa.ParseWorker;
       });
 
@@ -55,10 +55,10 @@ describe("useCsvParser", () => {
 
       const parsePromise = result.current.parseCsv(mockFile);
 
-      // isParsing should be true (setIsParsing is called before Papa.parse)
-      // But React state updates might be batched, so we check after a tick
+      // isParsing is set synchronously, but React state updates are batched
+      // Check it's true after React processes the update
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 5));
       });
       expect(result.current.isParsing).toBe(true);
       expect(result.current.parseError).toBeNull();
@@ -66,6 +66,11 @@ describe("useCsvParser", () => {
       const parsedRows = await parsePromise;
 
       expect(parsedRows).toEqual(mockRows);
+      
+      // Wait for React to process the state update from the complete callback
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
       expect(result.current.isParsing).toBe(false);
       expect(result.current.parseError).toBeNull();
       expect(mockPapaParse).toHaveBeenCalledWith(mockFile, expect.objectContaining({
@@ -114,12 +119,12 @@ describe("useCsvParser", () => {
         if (config?.error) {
           errorCallback = config.error as (error: Error) => void;
         }
-        // Call error callback asynchronously
+        // Delay error callback to allow checking isParsing state
         setTimeout(() => {
           if (errorCallback) {
             errorCallback(parseError);
           }
-        }, 0);
+        }, 10);
         return {} as Papa.ParseWorker;
       });
 
@@ -129,9 +134,10 @@ describe("useCsvParser", () => {
 
       const parsePromise = result.current.parseCsv(mockFile);
 
-      // isParsing should be true (setIsParsing is called before Papa.parse)
+      // isParsing is set synchronously, but React state updates are batched
+      // Check it's true after React processes the update
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 5));
       });
       expect(result.current.isParsing).toBe(true);
 
