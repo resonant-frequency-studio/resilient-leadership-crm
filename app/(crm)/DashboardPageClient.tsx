@@ -40,7 +40,7 @@ export default function DashboardPageClient({ userId, contacts }: DashboardPageC
         </h1>
         <div className="flex items-center gap-3 flex-wrap">
           <p className="text-theme-dark text-lg">
-            Here&apos;s a clear view of where your attention can have the most impact this week.
+            A steady rhythm matters more than a full inbox.
           </p>
           <span className="px-3 py-1 text-xs font-medium text-theme-darkest bg-card-highlight-light rounded-full border border-theme-lighter">
             Last 30 days

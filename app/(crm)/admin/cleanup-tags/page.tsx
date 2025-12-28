@@ -169,13 +169,20 @@ export default function CleanupTagsPage() {
         </p>
       </div>
 
-      <Card padding="md" className="bg-yellow-50 border-yellow-200">
+      <div
+        className="rounded-sm border p-4 sm:p-6"
+        style={{
+          backgroundColor: 'var(--warning-yellow-bg)',
+          borderColor: 'var(--warning-yellow-border)',
+        }}
+      >
         <div className="flex items-start gap-3">
           <svg
-            className="w-6 h-6 text-yellow-600 shrink-0 mt-0.5"
+            className="w-6 h-6 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'var(--warning-yellow-text-accent)' }}
           >
             <path
               strokeLinecap="round"
@@ -185,14 +192,22 @@ export default function CleanupTagsPage() {
             />
           </svg>
           <div>
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">Warning</h3>
-            <p className="text-sm text-yellow-800">
+            <h3 
+              className="text-lg font-semibold mb-2"
+              style={{ color: 'var(--warning-yellow-text-primary)' }}
+            >
+              Warning
+            </h3>
+            <p 
+              className="text-sm"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               Removing tags will permanently delete them from all contacts. This action cannot be undone.
               Use dry run mode first to preview changes.
             </p>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Tag Statistics */}
       <Card padding="md">
@@ -208,17 +223,17 @@ export default function CleanupTagsPage() {
           </Button>
         </div>
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-4 bg-gray-50 rounded-sm">
+          <div className="text-center p-4 rounded-sm border border-theme-light bg-card-highlight-light">
             <div className="text-2xl font-bold text-theme-darkest">{tags.length}</div>
             <div className="text-sm text-theme-dark">Total Tags</div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-sm">
-            <div className="text-2xl font-bold text-blue-900">{usedTags.length}</div>
-            <div className="text-sm text-blue-600">In Use</div>
+          <div className="text-center p-4 rounded-sm border border-theme-light" style={{ backgroundColor: 'var(--chip-green-bg)' }}>
+            <div className="text-2xl font-bold" style={{ color: 'var(--chip-green-text)' }}>{usedTags.length}</div>
+            <div className="text-sm" style={{ color: 'var(--chip-green-text)' }}>In Use</div>
           </div>
-          <div className="text-center p-4 bg-red-50 rounded-sm">
-            <div className="text-2xl font-bold text-red-900">{unusedTags.length}</div>
-            <div className="text-sm text-red-600">Unused</div>
+          <div className="text-center p-4 rounded-sm border border-theme-light" style={{ backgroundColor: 'var(--chip-red-bg)' }}>
+            <div className="text-2xl font-bold" style={{ color: 'var(--chip-red-text)' }}>{unusedTags.length}</div>
+            <div className="text-sm" style={{ color: 'var(--chip-red-text)' }}>Unused</div>
           </div>
         </div>
 
@@ -259,11 +274,18 @@ export default function CleanupTagsPage() {
                   <button
                     key={tagUsage.tag}
                     onClick={() => toggleTag(tagUsage.tag)}
-                    className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors border-2 ${
                       selectedTags.has(tagUsage.tag)
-                        ? "bg-red-100 text-red-800 border-2 border-red-300"
-                        : "bg-gray-100 text-theme-darker border-2 border-transparent hover:bg-gray-200"
+                        ? "border-card-overdue-dark"
+                        : "border-transparent hover:bg-theme-light"
                     }`}
+                    style={selectedTags.has(tagUsage.tag) ? {
+                      backgroundColor: 'var(--chip-danger-bg)',
+                      color: 'var(--card-overdue-dark)',
+                    } : {
+                      backgroundColor: 'var(--card-highlight-light)',
+                      color: 'var(--theme-darker)',
+                    }}
                   >
                     {tagUsage.tag} (0)
                   </button>
@@ -283,11 +305,18 @@ export default function CleanupTagsPage() {
                   <button
                     key={tagUsage.tag}
                     onClick={() => toggleTag(tagUsage.tag)}
-                    className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors border-2 ${
                       selectedTags.has(tagUsage.tag)
-                        ? "bg-red-100 text-red-800 border-2 border-red-300"
-                        : "bg-blue-50 text-blue-700 border-2 border-transparent hover:bg-blue-100"
+                        ? "border-card-overdue-dark"
+                        : "border-transparent hover:bg-theme-light"
                     }`}
+                    style={selectedTags.has(tagUsage.tag) ? {
+                      backgroundColor: 'var(--chip-danger-bg)',
+                      color: 'var(--card-overdue-dark)',
+                    } : {
+                      backgroundColor: 'var(--chip-green-bg)',
+                      color: 'var(--chip-green-text)',
+                    }}
                   >
                     {tagUsage.tag} ({tagUsage.count})
                   </button>
@@ -297,7 +326,7 @@ export default function CleanupTagsPage() {
           )}
 
           {tags.length === 0 && (
-            <p className="text-gray-500 text-center py-8">No tags found</p>
+            <p className="text-theme-dark text-center py-8">No tags found</p>
           )}
         </div>
       </Card>
@@ -311,7 +340,10 @@ export default function CleanupTagsPage() {
               id="dryRun"
               checked={dryRun}
               onChange={(e) => setDryRun(e.target.checked)}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-5 h-5 rounded border-theme-light focus:ring-btn-primary-focus-ring"
+              style={{
+                accentColor: 'var(--btn-primary-bg)',
+              }}
             />
             <label htmlFor="dryRun" className="text-sm font-medium text-theme-darkest">
               Dry run mode (preview changes without applying them)
@@ -333,13 +365,20 @@ export default function CleanupTagsPage() {
 
       {/* Error Display */}
       {error && (
-        <Card padding="md" className="bg-red-50 border-red-200">
+        <div
+          className="rounded-sm border p-4 sm:p-6"
+          style={{
+            backgroundColor: 'var(--chip-danger-bg)',
+            borderColor: 'var(--card-overdue-dark)',
+          }}
+        >
           <div className="flex items-start gap-3">
             <svg
-              className="w-5 h-5 text-red-600 shrink-0 mt-0.5"
+              className="w-5 h-5 shrink-0 mt-0.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              style={{ color: 'var(--card-overdue-dark)' }}
             >
               <path
                 strokeLinecap="round"
@@ -349,25 +388,34 @@ export default function CleanupTagsPage() {
               />
             </svg>
             <div>
-              <h3 className="text-lg font-semibold text-red-900 mb-1">Error</h3>
-              <p className="text-sm text-red-800">{error}</p>
+              <h3 className="text-lg font-semibold text-theme-darkest mb-1">Error</h3>
+              <p className="text-sm text-theme-darker">{error}</p>
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Results Display */}
       {result && (
-        <Card padding="md" className={result.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}>
+        <div
+          className="rounded-sm border p-4 sm:p-6"
+          style={{
+            backgroundColor: result.success ? 'var(--chip-green-bg)' : 'var(--chip-danger-bg)',
+            borderColor: result.success ? 'var(--chip-green-text)' : 'var(--card-overdue-dark)',
+          }}
+        >
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <svg
-                className={`w-5 h-5 shrink-0 mt-0.5 ${
-                  result.success ? "text-green-600" : "text-red-600"
-                }`}
+                className="w-5 h-5 shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                style={{ 
+                  color: result.success 
+                    ? 'var(--chip-green-text)' 
+                    : 'var(--card-overdue-dark)' 
+                }}
               >
                 <path
                   strokeLinecap="round"
@@ -379,14 +427,10 @@ export default function CleanupTagsPage() {
                 />
               </svg>
               <div className="flex-1">
-                <h3 className={`text-lg font-semibold mb-1 ${
-                  result.success ? "text-green-900" : "text-red-900"
-                }`}>
+                <h3 className="text-lg font-semibold mb-1 text-theme-darkest">
                   {result.dryRun ? "Dry Run Results" : "Cleanup Complete"}
                 </h3>
-                <p className={`text-sm mb-4 ${
-                  result.success ? "text-green-800" : "text-red-800"
-                }`}>
+                <p className="text-sm mb-4 text-theme-darker">
                   {result.message}
                 </p>
 
@@ -396,23 +440,23 @@ export default function CleanupTagsPage() {
                     <div className="text-xs text-theme-dark">Processed</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-green-900">{result.updated}</div>
-                    <div className="text-xs text-green-600">Updated</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--chip-green-text)' }}>{result.updated}</div>
+                    <div className="text-xs" style={{ color: 'var(--chip-green-text)' }}>Updated</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-theme-darkest">{result.skipped}</div>
                     <div className="text-xs text-theme-dark">Skipped</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-red-900">{result.errors}</div>
-                    <div className="text-xs text-red-600">Errors</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--card-overdue-dark)' }}>{result.errors}</div>
+                    <div className="text-xs" style={{ color: 'var(--card-overdue-dark)' }}>Errors</div>
                   </div>
                 </div>
 
                 {result.errorDetails && result.errorDetails.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-red-900 mb-2">Error Details:</h4>
-                    <ul className="list-disc list-inside text-xs text-red-800 space-y-1">
+                    <h4 className="text-sm font-semibold text-theme-darkest mb-2">Error Details:</h4>
+                    <ul className="list-disc list-inside text-xs space-y-1" style={{ color: 'var(--card-overdue-dark)' }}>
                       {result.errorDetails.slice(0, 10).map((detail, idx) => (
                         <li key={idx}>{detail}</li>
                       ))}
@@ -425,7 +469,7 @@ export default function CleanupTagsPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );

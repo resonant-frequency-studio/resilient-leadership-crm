@@ -76,7 +76,8 @@ describe("ActionItemCard", () => {
         />
       );
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("bg-card-overdue", "border-card-overdue-dark");
+      expect(card).toHaveClass("border-l-4");
+      expect(card).toHaveStyle({ borderLeftColor: "var(--card-overdue-dark)" });
     });
   });
 
@@ -434,7 +435,8 @@ describe("ActionItemCard", () => {
         />
       );
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("bg-card-overdue", "border-card-overdue-dark");
+      expect(card).toHaveClass("border-l-4");
+      expect(card).toHaveStyle({ borderLeftColor: "var(--card-overdue-dark)" });
     });
 
     it("uses pre-computed displayName when provided", () => {

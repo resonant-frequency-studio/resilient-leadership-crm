@@ -27,6 +27,7 @@ interface FilterState {
   lastEmailRecent?: boolean;
   sentimentNegative?: boolean;
   tagsMissing?: string | null;
+  focus?: "all" | "work" | "personal";
 }
 
 interface UseFilterContactsReturn {
@@ -48,6 +49,7 @@ interface UseFilterContactsReturn {
   lastEmailRecent?: boolean;
   sentimentNegative?: boolean;
   tagsMissing?: string | null;
+  focus?: "all" | "work" | "personal";
   setSelectedSegment: (segment: string) => void;
   setSelectedTags: (tags: string[]) => void;
   setEmailSearch: (email: string) => void;
@@ -64,6 +66,7 @@ interface UseFilterContactsReturn {
   setLastEmailRecent: (value: boolean) => void;
   setSentimentNegative: (value: boolean) => void;
   setTagsMissing: (tag: string | null) => void;
+  setFocus: (focus: "all" | "work" | "personal") => void;
   onSegmentChange: (segment: string) => void;
   onTagsChange: (tags: string[]) => void;
   onEmailSearchChange: (email: string) => void;
@@ -93,6 +96,7 @@ export function useFilterContacts(
   const [lastEmailRecent, setLastEmailRecent] = useState<boolean>(false);
   const [sentimentNegative, setSentimentNegative] = useState<boolean>(false);
   const [tagsMissing, setTagsMissing] = useState<string | null>(null);
+  const [focus, setFocus] = useState<"all" | "work" | "personal">("all");
   
   // Default date range: last 12 months
   const getDefaultDateRange = (): DateRange => {
@@ -156,6 +160,7 @@ export function useFilterContacts(
     lastEmailRecent,
     sentimentNegative,
     tagsMissing,
+    focus,
   };
 
   const filteredContacts = useMemo(() => {
@@ -168,6 +173,17 @@ export function useFilterContacts(
     } else {
       // If showing archived, only show archived contacts
       filtered = filtered.filter(c => c.archived === true);
+    }
+
+    // Filter by focus (All, Work, Personal)
+    if (filters.focus && filters.focus !== "all") {
+      if (filters.focus === "personal") {
+        // Show only contacts with "Personal" segment
+        filtered = filtered.filter(c => c.segment === "Personal");
+      } else if (filters.focus === "work") {
+        // Show contacts that do NOT have "Personal" segment
+        filtered = filtered.filter(c => c.segment !== "Personal");
+      }
     }
 
     // Filter by segment
@@ -396,7 +412,7 @@ export function useFilterContacts(
     }
 
     return filtered;
-  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.companySearch, filters.upcomingTouchpoints, filters.showArchived, filters.customFilter, filters.lastEmailDateRange, filters.includeNewContacts, filters.leadSourceMissing, filters.engagementLevel, filters.lastEmailRecent, filters.sentimentNegative, filters.tagsMissing]);
+  }, [contacts, filters.selectedSegment, filters.selectedTags, filters.emailSearch, filters.firstNameSearch, filters.lastNameSearch, filters.companySearch, filters.upcomingTouchpoints, filters.showArchived, filters.customFilter, filters.lastEmailDateRange, filters.includeNewContacts, filters.leadSourceMissing, filters.engagementLevel, filters.lastEmailRecent, filters.sentimentNegative, filters.tagsMissing, filters.focus]);
 
   const clearFilters = () => {
     setSelectedSegment("");
@@ -415,6 +431,7 @@ export function useFilterContacts(
     setLastEmailRecent(false);
     setSentimentNegative(false);
     setTagsMissing(null);
+    setFocus("all");
   };
 
   // Check if date range is different from default (12 months)
@@ -451,7 +468,8 @@ export function useFilterContacts(
     !!engagementLevel ||
     lastEmailRecent ||
     sentimentNegative ||
-    !!tagsMissing;
+    !!tagsMissing ||
+    (focus && focus !== "all");
 
   return {
     filteredContacts,
@@ -483,11 +501,13 @@ export function useFilterContacts(
     lastEmailRecent,
     sentimentNegative,
     tagsMissing,
+    focus,
     setLeadSourceMissing,
     setEngagementLevel,
     setLastEmailRecent,
     setSentimentNegative,
     setTagsMissing,
+    setFocus,
     onSegmentChange: setSelectedSegment,
     onTagsChange: setSelectedTags,
     onEmailSearchChange: setEmailSearch,

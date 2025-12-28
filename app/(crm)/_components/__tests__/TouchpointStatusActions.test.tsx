@@ -72,7 +72,7 @@ describe("TouchpointStatusActions", () => {
     it("renders compact buttons for pending status", () => {
       renderWithQueryClient(<TouchpointStatusActions {...mockProps} compact />);
       expect(screen.getByText(/mark as contacted/i)).toBeInTheDocument();
-      expect(screen.getByText(/skip touchpoint/i)).toBeInTheDocument();
+      expect(screen.getByText(/not needed right now/i)).toBeInTheDocument();
     });
 
     it("hides complete button when already completed", () => {
@@ -84,7 +84,7 @@ describe("TouchpointStatusActions", () => {
         />
       );
       expect(screen.queryByText(/mark as contacted/i)).not.toBeInTheDocument();
-      expect(screen.getByText(/skip touchpoint/i)).toBeInTheDocument();
+      expect(screen.getByText(/not needed right now/i)).toBeInTheDocument();
     });
 
     it("hides skip button when already cancelled", () => {
@@ -95,7 +95,7 @@ describe("TouchpointStatusActions", () => {
           compact
         />
       );
-      expect(screen.queryByText(/skip touchpoint/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/not needed right now/i)).not.toBeInTheDocument();
     });
   });
 
@@ -128,7 +128,7 @@ describe("TouchpointStatusActions", () => {
     it("shows action buttons for pending status", () => {
       renderWithQueryClient(<TouchpointStatusActions {...mockProps} />);
       expect(screen.getByText(/mark as contacted/i)).toBeInTheDocument();
-      expect(screen.getByText(/skip touchpoint/i)).toBeInTheDocument();
+      expect(screen.getByText(/not needed right now/i)).toBeInTheDocument();
     });
 
     it("shows restore button for completed/cancelled", () => {
@@ -150,11 +150,16 @@ describe("TouchpointStatusActions", () => {
       expect(screen.getByText(/mark the touchpoint for/i)).toBeInTheDocument();
     });
 
-    it("opens cancel modal on button click", () => {
+    it("opens cancel modal on button click", async () => {
       renderWithQueryClient(<TouchpointStatusActions {...mockProps} />);
-      const button = screen.getByText(/skip touchpoint/i);
-      fireEvent.click(button);
-      expect(screen.getByText(/skip the touchpoint for/i)).toBeInTheDocument();
+      // Get the button in compact mode (the first one)
+      const buttons = screen.getAllByText(/not needed right now/i);
+      const compactButton = buttons[0];
+      fireEvent.click(compactButton);
+      await waitFor(() => {
+        // Check for modal content
+        expect(screen.getByText(/indicates no action is needed/i)).toBeInTheDocument();
+      });
     });
 
     it("closes modal on cancel", () => {
@@ -192,15 +197,24 @@ describe("TouchpointStatusActions", () => {
 
     it("calls API to cancel touchpoint", async () => {
       renderWithQueryClient(<TouchpointStatusActions {...mockProps} />);
-      const skipButtons = screen.getAllByText(/skip touchpoint/i);
-      fireEvent.click(skipButtons[0]); // Click the main button
-      // Wait for modal to open, then click the confirm button in modal
+      // Get the button in compact mode (the first one)
+      const buttons = screen.getAllByText(/not needed right now/i);
+      const compactButton = buttons[0];
+      fireEvent.click(compactButton); // Click the main button
+      // Wait for modal to open
       await waitFor(() => {
-        const modalButtons = screen.getAllByText(/skip touchpoint/i);
-        expect(modalButtons.length).toBeGreaterThan(1);
+        // Check for modal content
+        expect(screen.getByText(/indicates no action is needed/i)).toBeInTheDocument();
       });
-      const modalButtons = screen.getAllByText(/skip touchpoint/i);
-      fireEvent.click(modalButtons[modalButtons.length - 1]); // Click the confirm button in modal
+      // Find the confirm button in the modal - it should be a button with "Not needed right now" text
+      // Get all buttons with that text, the last one should be the confirm button in the modal
+      await waitFor(() => {
+        const allButtonsWithText = screen.getAllByText(/not needed right now/i);
+        // The last button should be the confirm button in the modal
+        const confirmButton = allButtonsWithText[allButtonsWithText.length - 1];
+        expect(confirmButton).toBeInTheDocument();
+        fireEvent.click(confirmButton);
+      });
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
@@ -210,7 +224,7 @@ describe("TouchpointStatusActions", () => {
             body: expect.stringContaining('"status":"cancelled"'),
           })
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it("calls onStatusUpdate callback after successful update", async () => {

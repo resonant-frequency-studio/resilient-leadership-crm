@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Contact } from "@/types/firestore";
 import Papa from "papaparse";
 import { Button } from "@/components/Button";
@@ -17,8 +17,28 @@ interface ExportContactsButtonProps {
 
 export default function ExportContactsButton({ contacts, disabled = false }: ExportContactsButtonProps) {
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const exportToCSV = () => {
+    setIsDropdownOpen(false);
     if (contacts.length === 0) {
       alert("No contacts to export");
       return;
@@ -84,71 +104,86 @@ export default function ExportContactsButton({ contacts, disabled = false }: Exp
     URL.revokeObjectURL(url);
   };
 
+  const handleExportToGoogle = () => {
+    setIsDropdownOpen(false);
+    setShowExportModal(true);
+  };
+
   return (
     <>
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={exportToCSV}
-            disabled={disabled || contacts.length === 0}
-            variant="secondary"
-            size="sm"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="relative" ref={dropdownRef}>
+        <Button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          disabled={disabled || contacts.length === 0}
+          variant="secondary"
+          size="sm"
+          className="whitespace-nowrap shadow-sm"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          }
+          iconPosition="right"
+        >
+          Export
+        </Button>
+
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <>
+            {/* Backdrop to close menu */}
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setIsDropdownOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute left-0 top-full mt-1 z-20 w-56 bg-card-highlight-light border border-theme-lighter rounded-sm shadow-lg py-1"
+              role="menu"
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleExportToGoogle();
+                }}
+                disabled={disabled || contacts.length === 0}
+                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-selected-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                role="menuitem"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            }
-            className="whitespace-nowrap shadow-sm"
-          >
-            Download Contacts
-          </Button>
-          {contacts.length > 0 && (
-            <span className="text-sm text-theme-dark whitespace-nowrap">
-              ({contacts.length})
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowExportModal(true)}
-            disabled={disabled || contacts.length === 0}
-            variant="secondary"
-            size="sm"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                Export to Google Contacts
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  exportToCSV();
+                }}
+                disabled={disabled || contacts.length === 0}
+                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-selected-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                role="menuitem"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-            }
-            className="whitespace-nowrap shadow-sm"
-          >
-            Export to Google
-          </Button>
-          {contacts.length > 0 && (
-            <span className="text-sm text-theme-dark whitespace-nowrap">
-              ({contacts.length})
-            </span>
-          )}
-        </div>
+                Download CSV
+              </button>
+              {/* Helper text inside dropdown */}
+              {contacts.length > 0 && (
+                <div className="px-4 py-2 border-t border-theme-light mt-1">
+                  <p className="text-xs text-theme-dark">
+                    Applies to {contacts.length} {contacts.length === 1 ? "contact" : "contacts"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
       <ExportToGoogleModal
         isOpen={showExportModal}

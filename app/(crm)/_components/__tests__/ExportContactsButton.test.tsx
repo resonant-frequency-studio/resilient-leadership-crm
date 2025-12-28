@@ -64,57 +64,59 @@ describe("ExportContactsButton", () => {
     }),
   ];
 
-  it("renders Download Contacts button with contact count", () => {
+  it("renders Export button with dropdown", () => {
     render(<ExportContactsButton contacts={mockContacts} />);
-    const button = screen.getByRole("button", { name: /download contacts/i });
+    const button = screen.getByRole("button", { name: /export/i });
     expect(button).toBeInTheDocument();
-    // Both buttons show the count, so check that at least one exists
-    const counts = screen.getAllByText("(2)");
-    expect(counts.length).toBeGreaterThanOrEqual(1);
+    // Click to open dropdown
+    fireEvent.click(button);
+    // Check that dropdown items are present
+    expect(screen.getByText("Export to Google Contacts")).toBeInTheDocument();
+    expect(screen.getByText("Download CSV")).toBeInTheDocument();
+    // Check helper text
+    expect(screen.getByText(/applies to 2 contacts/i)).toBeInTheDocument();
   });
 
-  it("renders Export to Google button with contact count", () => {
+  it("renders Export to Google option in dropdown", () => {
     render(<ExportContactsButton contacts={mockContacts} />);
-    const button = screen.getByRole("button", { name: /export to google/i });
-    expect(button).toBeInTheDocument();
+    const exportButton = screen.getByRole("button", { name: /export/i });
+    fireEvent.click(exportButton);
+    expect(screen.getByText("Export to Google Contacts")).toBeInTheDocument();
   });
 
-  it("renders buttons without count when no contacts", () => {
+  it("renders Export button disabled when no contacts", () => {
     render(<ExportContactsButton contacts={[]} />);
-    const downloadButton = screen.getByRole("button", { name: /download contacts/i });
-    const exportButton = screen.getByRole("button", { name: /export to google/i });
-    expect(downloadButton).toBeInTheDocument();
+    const exportButton = screen.getByRole("button", { name: /export/i });
     expect(exportButton).toBeInTheDocument();
-    // Count spans should not be rendered when contacts.length === 0
-    const countSpans = screen.queryAllByText(/^\(\d+\)$/);
-    expect(countSpans).toHaveLength(0);
+    expect(exportButton).toBeDisabled();
+    // Helper text should not be rendered when contacts.length === 0
+    fireEvent.click(exportButton);
+    expect(screen.queryByText(/applies to/i)).not.toBeInTheDocument();
   });
 
-  it("disables buttons when no contacts", () => {
+  it("disables Export button when no contacts", () => {
     render(<ExportContactsButton contacts={[]} />);
-    const buttons = screen.getAllByRole("button");
-    buttons.forEach((button) => {
-      if (button.textContent?.includes("Download") || button.textContent?.includes("Export")) {
-        expect(button).toBeDisabled();
-      }
-    });
-  });
-
-  it("disables buttons when disabled prop is true", () => {
-    render(<ExportContactsButton contacts={mockContacts} disabled />);
-    const downloadButton = screen.getByRole("button", { name: /download contacts/i });
-    const exportButton = screen.getByRole("button", { name: /export to google/i });
-    expect(downloadButton).toBeDisabled();
+    const exportButton = screen.getByRole("button", { name: /export/i });
     expect(exportButton).toBeDisabled();
   });
 
-  it("opens ExportToGoogleModal when Export to Google button is clicked", () => {
+  it("disables Export button when disabled prop is true", () => {
+    render(<ExportContactsButton contacts={mockContacts} disabled />);
+    const exportButton = screen.getByRole("button", { name: /export/i });
+    expect(exportButton).toBeDisabled();
+  });
+
+  it("opens ExportToGoogleModal when Export to Google option is clicked", () => {
     render(<ExportContactsButton contacts={mockContacts} />);
-    const exportButton = screen.getByRole("button", { name: /export to google/i });
+    const exportButton = screen.getByRole("button", { name: /export/i });
     
     expect(screen.queryByTestId("export-to-google-modal")).not.toBeInTheDocument();
     
+    // Open dropdown
     fireEvent.click(exportButton);
+    // Click "Export to Google Contacts" option
+    const googleOption = screen.getByText("Export to Google Contacts");
+    fireEvent.click(googleOption);
     
     expect(screen.getByTestId("export-to-google-modal")).toBeInTheDocument();
   });
@@ -122,7 +124,11 @@ describe("ExportContactsButton", () => {
 
   it("generates CSV data with correct structure", () => {
     render(<ExportContactsButton contacts={mockContacts} />);
-    const button = screen.getByRole("button", { name: /download contacts/i });
+    const exportButton = screen.getByRole("button", { name: /export/i });
+    
+    // Open dropdown
+    fireEvent.click(exportButton);
+    const csvOption = screen.getByText("Download CSV");
     
     // Mock Blob and URL methods
     global.Blob = jest.fn().mockImplementation((content) => ({ content })) as unknown as typeof Blob;
@@ -136,7 +142,7 @@ describe("ExportContactsButton", () => {
     jest.spyOn(document.body, "appendChild").mockImplementation(() => link);
     jest.spyOn(document.body, "removeChild").mockImplementation(() => link);
 
-    fireEvent.click(button);
+    fireEvent.click(csvOption);
 
     // Verify mockUnparse was called with correct data structure
     expect(mockUnparse).toHaveBeenCalled();
@@ -150,8 +156,10 @@ describe("ExportContactsButton", () => {
 
   it("formats tags as comma-separated string", () => {
     render(<ExportContactsButton contacts={mockContacts} />);
-    const button = screen.getByRole("button", { name: /download contacts/i });
-    fireEvent.click(button);
+    const exportButton = screen.getByRole("button", { name: /export/i });
+    fireEvent.click(exportButton);
+    const csvOption = screen.getByText("Download CSV");
+    fireEvent.click(csvOption);
 
     expect(mockUnparse).toHaveBeenCalled();
     const csvData = mockUnparse.mock.calls[0][0] as Array<Record<string, string>>;
@@ -165,8 +173,10 @@ describe("ExportContactsButton", () => {
       nextTouchpointDate: new Date("2024-01-15").toISOString(),
     });
     render(<ExportContactsButton contacts={[contactWithDate]} />);
-    const button = screen.getByRole("button", { name: /download contacts/i });
-    fireEvent.click(button);
+    const exportButton = screen.getByRole("button", { name: /export/i });
+    fireEvent.click(exportButton);
+    const csvOption = screen.getByText("Download CSV");
+    fireEvent.click(csvOption);
 
     const csvData = mockUnparse.mock.calls[0][0] as Array<Record<string, string>>;
     expect(csvData[0].NextTouchpointDate).toBe("2024-01-15");

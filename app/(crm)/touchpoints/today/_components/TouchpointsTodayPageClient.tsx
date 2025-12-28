@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Card from "@/components/Card";
-import ContactCard from "@/app/(crm)/_components/ContactCard";
+import TouchpointCard from "@/app/(crm)/_components/TouchpointCard";
 import { useContactsRealtime } from "@/hooks/useContactsRealtime";
 import { getDaysUntilTouchpoint } from "@/util/date-utils-server";
 import { Contact } from "@/types/firestore";
@@ -110,11 +110,10 @@ export default function TouchpointsTodayPageClient() {
 
             <div className="grid grid-cols-1 gap-4 mb-6">
               {paginatedTouchpoints.map((contact) => (
-                <ContactCard
+                <TouchpointCard
                   key={contact.id}
                   contact={contact}
                   variant="touchpoint-upcoming"
-                  showArrow={false}
                   touchpointDate={contact.touchpointDate}
                   daysUntil={contact.daysUntil}
                   needsReminder={false}

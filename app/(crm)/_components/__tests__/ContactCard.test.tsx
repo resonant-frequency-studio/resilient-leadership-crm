@@ -2,16 +2,6 @@ import { screen, fireEvent } from "@testing-library/react";
 import ContactCard from "../ContactCard";
 import { createMockContact, renderWithProviders } from "@/components/__tests__/test-utils";
 
-// Mock TouchpointStatusActions
-jest.mock("../TouchpointStatusActions", () => ({
-  __esModule: true,
-  default: ({ contactId, contactName }: { contactId: string; contactName: string }) => (
-    <div data-testid="touchpoint-actions">
-      Actions for {contactName} ({contactId})
-    </div>
-  ),
-}));
-
 // Mock ContactMenuDropdown to avoid QueryClient dependency
 jest.mock("../ContactMenuDropdown", () => ({
   __esModule: true,
@@ -120,130 +110,6 @@ describe("ContactCard", () => {
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass("ring-2", "ring-blue-500", "bg-card-active");
     });
-
-    it("touchpoint-upcoming variant shows correct styling", () => {
-      const { container } = renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          touchpointDate={new Date()}
-          daysUntil={5}
-        />
-      );
-      const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("border", "border-theme-light");
-    });
-
-    it("touchpoint-overdue variant shows correct styling", () => {
-      const { container } = renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-overdue"
-          touchpointDate={new Date()}
-          daysUntil={-2}
-        />
-      );
-      const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("bg-card-overdue", "border", "border-card-overdue-dark");
-    });
-  });
-
-  describe("Touchpoint Badges", () => {
-    it("'Due Soon' badge appears when needsReminder is true", () => {
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          touchpointDate={new Date()}
-          daysUntil={2}
-          needsReminder
-        />
-      );
-      expect(screen.getByText("Due Soon")).toBeInTheDocument();
-    });
-
-    it("'Overdue' badge appears for touchpoint-overdue variant", () => {
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-overdue"
-          touchpointDate={new Date()}
-          daysUntil={-1}
-        />
-      );
-      expect(screen.getByText("Overdue")).toBeInTheDocument();
-    });
-
-    it("formats touchpoint date as 'Today' when daysUntil is 0", () => {
-      const today = new Date();
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          touchpointDate={today}
-          daysUntil={0}
-        />
-      );
-      expect(screen.getByText("Today")).toBeInTheDocument();
-    });
-
-    it("formats touchpoint date as 'Tomorrow' when daysUntil is 1", () => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          touchpointDate={tomorrow}
-          daysUntil={1}
-        />
-      );
-      expect(screen.getByText("Tomorrow")).toBeInTheDocument();
-    });
-  });
-
-  describe("Touchpoint Message", () => {
-    it("touchpoint message displays for touchpoint variants", () => {
-      const contactWithMessage = createMockContact({
-        ...mockContact,
-        nextTouchpointMessage: "Follow up on proposal",
-      });
-      renderWithProviders(
-        <ContactCard
-          contact={contactWithMessage}
-          variant="touchpoint-upcoming"
-          touchpointDate={new Date()}
-          daysUntil={5}
-        />
-      );
-      expect(screen.getByText("Follow up on proposal")).toBeInTheDocument();
-    });
-  });
-
-  describe("Touchpoint Actions", () => {
-    it("touchpoint actions render when showTouchpointActions is true", () => {
-      const mockOnUpdate = jest.fn();
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          showTouchpointActions
-          onTouchpointStatusUpdate={mockOnUpdate}
-        />
-      );
-      expect(screen.getByTestId("touchpoint-actions")).toBeInTheDocument();
-    });
-
-    it("touchpoint actions do not render when showTouchpointActions is false", () => {
-      renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          showTouchpointActions={false}
-        />
-      );
-      expect(screen.queryByTestId("touchpoint-actions")).not.toBeInTheDocument();
-    });
   });
 
   describe("Segment and Tags", () => {
@@ -301,18 +167,6 @@ describe("ContactCard", () => {
       );
       const arrow = container.querySelector(".opacity-0.group-hover\\:opacity-100");
       expect(arrow).toBeInTheDocument();
-    });
-
-    it("arrow icon does not show for touchpoint variants", () => {
-      const { container } = renderWithProviders(
-        <ContactCard
-          contact={mockContact}
-          variant="touchpoint-upcoming"
-          showArrow
-        />
-      );
-      const arrow = container.querySelector(".opacity-0.group-hover\\:opacity-100");
-      expect(arrow).not.toBeInTheDocument();
     });
   });
 });

@@ -102,13 +102,20 @@ export default function EnrichContactsPage() {
         </p>
       </div>
 
-      <Card padding="md" className="bg-blue-50 border-blue-200">
+      <div
+        style={{
+          backgroundColor: 'var(--chip-blue-bg)',
+          borderColor: 'var(--chip-blue-text)',
+        }}
+        className="rounded-sm border p-4 sm:p-6"
+      >
         <div className="flex items-start gap-3">
           <svg
-            className="w-6 h-6 text-blue-600 shrink-0 mt-0.5"
+            className="w-6 h-6 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'var(--chip-blue-text)' }}
           >
             <path
               strokeLinecap="round"
@@ -118,8 +125,16 @@ export default function EnrichContactsPage() {
             />
           </svg>
           <div>
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">How it works</h3>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <h3 
+              className="text-lg font-semibold mb-2"
+              style={{ color: 'var(--chip-blue-text)' }}
+            >
+              How it works
+            </h3>
+            <ul 
+              className="text-sm space-y-1 list-disc list-inside"
+              style={{ color: 'var(--chip-blue-text)' }}
+            >
               <li>Uses Google People API to search your contacts for matching email addresses</li>
               <li>Extracts first name, last name, company, and profile photo from Google Contacts</li>
               <li>Falls back to email-based name extraction if People API doesn&apos;t find the contact</li>
@@ -129,7 +144,7 @@ export default function EnrichContactsPage() {
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Card padding="md">
         <div className="space-y-4">
@@ -145,14 +160,17 @@ export default function EnrichContactsPage() {
             </ul>
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-sm">
+          <div className="flex items-center gap-3 p-3 rounded-sm border border-theme-light bg-card-highlight-light">
             <input
               type="checkbox"
               id="dryRun"
               checked={dryRun}
               onChange={(e) => setDryRun(e.target.checked)}
               disabled={running}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 rounded border-theme-light focus:ring-btn-primary-focus-ring"
+              style={{
+                accentColor: 'var(--btn-primary-bg)',
+              }}
             />
             <label htmlFor="dryRun" className="text-sm font-medium text-theme-darker cursor-pointer">
               Dry run (preview changes without updating)
@@ -173,13 +191,21 @@ export default function EnrichContactsPage() {
       </Card>
 
       {error && (
-        <Card padding="md" className="bg-red-50 border-red-200">
-          <div className="flex items-center gap-3">
+        <div
+          style={{
+            backgroundColor: 'var(--chip-danger-bg)',
+            borderColor: 'var(--card-overdue-dark)',
+          }}
+          className="rounded-sm border"
+        >
+          <Card padding="md" className="bg-transparent border-0 shadow-none">
+            <div className="flex items-center gap-3">
             <svg
-              className="w-5 h-5 text-red-600"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              style={{ color: 'var(--card-overdue-dark)' }}
             >
               <path
                 strokeLinecap="round"
@@ -188,20 +214,29 @@ export default function EnrichContactsPage() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-red-800 font-medium">{error}</p>
+            <p className="font-medium text-theme-darkest">{error}</p>
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {result && (
-        <Card padding="md" className="bg-green-50 border-green-200">
-          <div className="space-y-4">
+        <div
+          style={{
+            backgroundColor: 'var(--chip-green-bg)',
+            borderColor: 'var(--chip-green-text)',
+          }}
+          className="rounded-sm border"
+        >
+          <Card padding="md" className="bg-transparent border-0 shadow-none">
+            <div className="space-y-4">
             <div className="flex items-center gap-3">
               <svg
-                className="w-5 h-5 text-green-600"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                style={{ color: 'var(--chip-green-text)' }}
               >
                 <path
                   strokeLinecap="round"
@@ -210,33 +245,34 @@ export default function EnrichContactsPage() {
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <h3 className="text-lg font-semibold text-green-900">
+              <h3 className="text-lg font-semibold text-theme-darkest">
                 {result.message}
               </h3>
             </div>
 
-            <div className="bg-[#EEEEEC] rounded-sm p-4 space-y-2">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Processed</p>
-                  <p className="text-lg font-bold text-theme-darkest">{result.processed}</p>
+            <Card padding="md" className="bg-card-highlight-light border border-theme-light">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-theme-dark">Processed</p>
+                    <p className="text-lg font-bold text-theme-darkest">{result.processed}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-theme-dark">Updated</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--chip-green-text)' }}>{result.updated}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-theme-dark">Skipped</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--chip-yellow-text)' }}>{result.skipped}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-theme-dark">Errors</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--chip-red-text)' }}>{result.errors}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Updated</p>
-                  <p className="text-lg font-bold text-green-600">{result.updated}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Skipped</p>
-                  <p className="text-lg font-bold text-yellow-600">{result.skipped}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Errors</p>
-                  <p className="text-lg font-bold text-red-600">{result.errors}</p>
-                </div>
-              </div>
 
               {result.details && result.details.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-theme-light">
                   <p className="text-xs font-medium text-theme-darker mb-2">
                     Sample Results (showing first 20):
                   </p>
@@ -244,18 +280,28 @@ export default function EnrichContactsPage() {
                     {result.details.slice(0, 20).map((detail, idx) => (
                       <div
                         key={idx}
-                        className={`text-xs p-2 rounded ${
+                        className="text-xs p-2 rounded border"
+                        style={
                           detail.action === "updated"
-                            ? "bg-green-50 border border-green-200"
+                            ? {
+                                backgroundColor: 'var(--chip-green-bg)',
+                                borderColor: 'var(--chip-green-text)',
+                              }
                             : detail.action === "skipped"
-                            ? "bg-yellow-50 border border-yellow-200"
-                            : "bg-red-50 border border-red-200"
-                        }`}
+                            ? {
+                                backgroundColor: 'var(--chip-yellow-bg)',
+                                borderColor: 'var(--chip-yellow-text)',
+                              }
+                            : {
+                                backgroundColor: 'var(--chip-red-bg)',
+                                borderColor: 'var(--chip-red-text)',
+                              }
+                        }
                       >
                         <div className="font-medium text-theme-darkest mb-1">
                           {detail.email}
                           {detail.enriched?.source && (
-                            <span className="ml-2 text-xs text-gray-500">
+                            <span className="ml-2 text-xs text-theme-dark">
                               (source: {detail.enriched.source === "people_api" ? "People API" : "Email extraction"})
                             </span>
                           )}
@@ -276,34 +322,43 @@ export default function EnrichContactsPage() {
                           <div className="text-theme-dark">
                             Already has: {detail.current?.firstName || "—"} {detail.current?.lastName || "—"}
                             {detail.current?.company && ` (${detail.current.company})`}
-                            {detail.error && <span className="text-gray-500"> - {detail.error}</span>}
+                            {detail.error && <span className="text-theme-dark"> - {detail.error}</span>}
                           </div>
                         )}
                         {detail.action === "error" && (
-                          <div className="text-red-600">{detail.error}</div>
+                          <div style={{ color: 'var(--chip-red-text)' }}>{detail.error}</div>
                         )}
                       </div>
                     ))}
                   </div>
                   {result.details.length > 20 && (
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-theme-dark mt-2">
                       ... and {result.details.length - 20} more results
                     </p>
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            </Card>
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
 
-      <Card padding="md" className="bg-yellow-50 border-yellow-200">
+      <div
+        style={{
+          backgroundColor: 'var(--warning-yellow-bg)',
+          borderColor: 'var(--warning-yellow-border)',
+        }}
+        className="rounded-sm border p-4 sm:p-6"
+      >
         <div className="flex items-start gap-3">
           <svg
-            className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
+            className="w-5 h-5 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'var(--warning-yellow-text-accent)' }}
           >
             <path
               strokeLinecap="round"
@@ -313,18 +368,29 @@ export default function EnrichContactsPage() {
             />
           </svg>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-yellow-900 mb-1">Requirements</h3>
-            <p className="text-xs text-yellow-800">
+            <h3 
+              className="text-sm font-semibold mb-1"
+              style={{ color: 'var(--warning-yellow-text-primary)' }}
+            >
+              Requirements
+            </h3>
+            <p 
+              className="text-xs"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               For this to work, you need to:
             </p>
-            <ul className="text-xs text-yellow-800 list-disc list-inside mt-2 space-y-1">
+            <ul 
+              className="text-xs list-disc list-inside mt-2 space-y-1"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               <li>Have your Google account linked to the CRM</li>
               <li>Have granted the contacts.readonly scope (may require re-authentication)</li>
               <li>Have contacts in your Google Contacts that match the email addresses in the CRM</li>
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -45,21 +45,6 @@ const adminPages: AdminPageLink[] = [
     title: "Cleanup Action Items",
     description: "Remove completed or outdated action items from contacts",
   },
-  {
-    href: "/admin/bulk-unlink-events",
-    title: "Bulk Unlink Events",
-    description: "Unlink calendar events from contacts in bulk",
-  },
-  {
-    href: "/admin/extract-names",
-    title: "Extract Names from Emails",
-    description: "Extract first and last names from email addresses and update contact records",
-  },
-  {
-    href: "/admin/migrate-action-items",
-    title: "Migrate Action Items",
-    description: "Migrate action items between different data structures or formats",
-  },
 ];
 
 export default function AdminPage() {
@@ -90,13 +75,25 @@ export default function AdminPage() {
       </div>
 
       {/* Reconnect Google Account */}
-      <Card padding="lg" className="bg-warning-yellow-bg border-warning-yellow-border">
+      <div
+        style={{
+          backgroundColor: 'var(--warning-yellow-bg)',
+          borderColor: 'var(--warning-yellow-border)',
+        }}
+        className="rounded-sm border p-6 sm:p-8"
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-warning-yellow-text-primary mb-2">
+            <h2 
+              className="text-xl font-semibold mb-2"
+              style={{ color: 'var(--warning-yellow-text-primary)' }}
+            >
               Reconnect Google Account
             </h2>
-            <p className="text-sm text-warning-yellow-text-secondary mb-4">
+            <p 
+              className="text-sm mb-4"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               If you&apos;re experiencing issues with Gmail, Calendar, or Contacts sync, you may need to reconnect your Google account. 
               This will refresh your OAuth permissions and restore access to Google services.
             </p>
@@ -111,10 +108,11 @@ export default function AdminPage() {
           </div>
           <div className="hidden md:block">
             <svg
-              className="w-24 h-24 text-warning-yellow-text-accent opacity-50"
+              className="w-24 h-24 opacity-50"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              style={{ color: 'var(--warning-yellow-text-accent)' }}
             >
               <path
                 strokeLinecap="round"
@@ -131,7 +129,7 @@ export default function AdminPage() {
             </svg>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Admin Tools Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

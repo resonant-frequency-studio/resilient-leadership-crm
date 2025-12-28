@@ -128,12 +128,12 @@ export default function FAQPageClient({ faqData, categories }: FAQPageClientProp
       </div>
 
       {/* Contact Support */}
-      <Card padding="lg" className="bg-linear-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card padding="lg" className="bg-card-highlight-light border border-theme-light">
         <div className="flex items-start gap-4">
           <div className="shrink-0">
-            <div className="w-12 h-12 bg-blue-600 rounded-sm flex items-center justify-center">
+            <div className="w-12 h-12 bg-btn-primary-bg rounded-sm flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-6 h-6 text-btn-primary-fg"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

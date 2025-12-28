@@ -11,6 +11,7 @@ import { getInitials, getDisplayName } from "@/util/contact-utils";
 import { ContactsFilterProvider, useContactsFilter } from "./_components/ContactsFilterContext";
 import ContactsGrid from "./_components/ContactsGrid";
 import ContactsBulkActions from "./_components/ContactsBulkActions";
+import FocusPillSwitcher from "./_components/FocusPillSwitcher";
 
 
 interface ContactWithId extends Contact {
@@ -26,44 +27,53 @@ interface ContactsPageClientProps {
 const ITEMS_PER_PAGE = 20;
 
 function ContactsPageHeader({ contacts }: { contacts: ContactWithId[] }) {
-  const { filteredContacts, hasActiveFilters } = useContactsFilter();
+  const { filteredContacts, hasActiveFilters, focus, setFocus } = useContactsFilter();
 
   return (
-    <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-      <div>
-        <h1 className="text-4xl font-bold text-theme-darkest mb-2">Contacts</h1>
-        {contacts.length === 0 ? (
-          <p className="text-theme-dark text-lg">No contacts yet</p>
-        ) : (
-          <p className="text-theme-dark text-lg">
-            {filteredContacts.length} of {contacts.length}{" "}
-            {contacts.length === 1 ? "contact" : "contacts"}
-            {hasActiveFilters && " (filtered)"}
-          </p>
-        )}
-      </div>
-      {/* Buttons - Mobile: below header, Desktop: right side */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 xl:shrink-0 w-full sm:w-auto">
-        <ExportContactsButton contacts={filteredContacts} />
-        <Link href="/contacts/new" className="w-full sm:w-auto flex items-center">
-          <Button
-            size="sm"
-            fullWidth
-            className="whitespace-nowrap shadow-sm"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            }
-          >
-            Add Contact
-          </Button>
-        </Link>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-4xl font-bold text-theme-darkest mb-2">Contacts</h1>
+          {contacts.length === 0 ? (
+            <p className="text-theme-dark text-lg">No contacts yet</p>
+          ) : (
+            <p className="text-theme-dark text-lg">
+              {filteredContacts.length} of {contacts.length}{" "}
+              {contacts.length === 1 ? "contact" : "contacts"}
+              {hasActiveFilters && " (filtered)"}
+            </p>
+          )}
+          {/* Focus Pill Switcher - Left aligned below heading and count */}
+          <div className="mt-3">
+            <FocusPillSwitcher value={focus} onChange={setFocus} />
+          </div>
+        </div>
+        {/* Right Column: Buttons */}
+        <div className="flex flex-col items-stretch sm:items-end gap-3 xl:shrink-0 w-full sm:w-auto">
+          {/* Buttons Row */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <ExportContactsButton contacts={filteredContacts} />
+            <Link href="/contacts/new" className="w-full sm:w-auto flex items-center">
+              <Button
+                size="sm"
+                fullWidth
+                className="whitespace-nowrap shadow-sm"
+                icon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                }
+              >
+                Add Contact
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

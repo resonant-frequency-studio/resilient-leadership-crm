@@ -66,9 +66,9 @@ describe("TouchpointBulkActions", () => {
       expect(screen.getByRole("button", { name: "Mark as Contacted" })).toBeInTheDocument();
     });
 
-    it("renders 'Skip Touchpoint' action", () => {
+    it("renders 'Not needed right now' action", () => {
       render(<TouchpointBulkActions {...defaultProps} />);
-      expect(screen.getByRole("button", { name: "Skip Touchpoint" })).toBeInTheDocument();
+      expect(screen.getByText("Not needed right now")).toBeInTheDocument();
     });
 
     it("calls onMarkAsContacted when 'Mark as Contacted' is clicked", () => {
@@ -86,7 +86,7 @@ describe("TouchpointBulkActions", () => {
       expect(handleMarkAsContacted).toHaveBeenCalledTimes(1);
     });
 
-    it("calls onSkip when 'Skip Touchpoint' is clicked", () => {
+    it("calls onSkip when 'Not needed right now' is clicked", () => {
       const handleSkip = jest.fn();
       render(
         <TouchpointBulkActions
@@ -95,7 +95,7 @@ describe("TouchpointBulkActions", () => {
         />
       );
       
-      const button = screen.getByRole("button", { name: "Skip Touchpoint" });
+      const button = screen.getByText("Not needed right now");
       fireEvent.click(button);
       
       expect(handleSkip).toHaveBeenCalledTimes(1);
@@ -107,7 +107,7 @@ describe("TouchpointBulkActions", () => {
       render(<TouchpointBulkActions {...defaultProps} isLoading={true} />);
       
       const markButton = screen.getByRole("button", { name: "Mark as Contacted" });
-      const skipButton = screen.getByRole("button", { name: "Skip Touchpoint" });
+      const skipButton = screen.getByText("Not needed right now");
       
       expect(markButton).toBeDisabled();
       expect(skipButton).toBeDisabled();
@@ -117,7 +117,7 @@ describe("TouchpointBulkActions", () => {
       render(<TouchpointBulkActions {...defaultProps} isLoading={true} />);
       
       const markButton = screen.getByRole("button", { name: "Mark as Contacted" });
-      const skipButton = screen.getByRole("button", { name: "Skip Touchpoint" });
+      const skipButton = screen.getByText("Not needed right now");
       
       expect(markButton).toHaveAttribute("data-loading", "true");
       expect(skipButton).toHaveAttribute("data-loading", "true");
@@ -127,7 +127,7 @@ describe("TouchpointBulkActions", () => {
       render(<TouchpointBulkActions {...defaultProps} isLoading={false} />);
       
       const markButton = screen.getByRole("button", { name: "Mark as Contacted" });
-      const skipButton = screen.getByRole("button", { name: "Skip Touchpoint" });
+      const skipButton = screen.getByText("Not needed right now");
       
       expect(markButton).not.toBeDisabled();
       expect(skipButton).not.toBeDisabled();
@@ -154,7 +154,7 @@ describe("TouchpointBulkActions", () => {
       // We verify it renders successfully
       render(<TouchpointBulkActions {...defaultProps} />);
       expect(screen.getByRole("button", { name: "Mark as Contacted" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Skip Touchpoint" })).toBeInTheDocument();
+      expect(screen.getByText("Not needed right now")).toBeInTheDocument();
     });
   });
 

@@ -38,6 +38,7 @@ jest.mock("@/hooks/useFilterContacts", () => ({
     setLastEmailRecent: jest.fn(),
     setSentimentNegative: jest.fn(),
     setTagsMissing: jest.fn(),
+    setFocus: jest.fn(),
     setEmailSearch: jest.fn(),
     setFirstNameSearch: jest.fn(),
     setLastNameSearch: jest.fn(),
@@ -57,6 +58,7 @@ jest.mock("@/hooks/useFilterContacts", () => ({
     lastEmailRecent: false,
     sentimentNegative: false,
     tagsMissing: null,
+    focus: "all",
   })),
 }));
 

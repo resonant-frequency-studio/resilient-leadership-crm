@@ -6,31 +6,22 @@ import { ErrorLevel, reportException, reportMessage } from "@/lib/error-reportin
 
 /**
  * POST /api/admin/cleanup-old-touchpoints
- * ONE-TIME SCRIPT: Skip all touchpoints overdue by more than 30 days
+ * Skip all touchpoints overdue by more than specified days
  * 
- * ⚠️ This is a cleanup script - run once and then delete this file
+ * Body: { days: number } - defaults to 30 if not provided
  */
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const userId = await getUserId();
     
-    // Optional: Add a confirmation token to prevent accidental runs
-    // const body = await req.json().catch(() => ({}));
-    // const confirmToken = body.confirmToken;
-    
-    // Uncomment this if you want extra safety (set an env var)
-    // if (confirmToken !== process.env.CLEANUP_CONFIRM_TOKEN) {
-    //   return NextResponse.json(
-    //     { error: "Confirmation token required" },
-    //     { status: 403 }
-    //   );
-    // }
+    const body = await req.json().catch(() => ({}));
+    const days = typeof body.days === 'number' && body.days > 0 ? body.days : 30;
 
     const now = new Date();
-    const cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const cutoffTimestamp = cutoffDate.getTime();
 
-    reportMessage(`Cleaning up touchpoints overdue by more than 30 days (older than ${cutoffDate.toISOString()})`, ErrorLevel.INFO);
+    reportMessage(`Cleaning up touchpoints overdue by more than ${days} days (older than ${cutoffDate.toISOString()})`, ErrorLevel.INFO);
     // Get all contacts with touchpoints
     const contactsSnapshot = await adminDb
       .collection(`users/${userId}/contacts`)
@@ -65,7 +56,7 @@ export async function POST() {
 
       if (!dateObj || isNaN(dateObj.getTime())) continue;
 
-      // Check if overdue by more than 30 days
+      // Check if overdue by more than specified days
       if (dateObj.getTime() < cutoffTimestamp) {
         // Also only update if status is pending or null (not already completed/cancelled)
         const status = contact.touchpointStatus;
@@ -92,7 +83,7 @@ export async function POST() {
           .update({
             touchpointStatus: "cancelled",
             touchpointStatusUpdatedAt: FieldValue.serverTimestamp(),
-            touchpointStatusReason: "Auto-skipped: Overdue by more than 30 days (cleanup script)",
+            touchpointStatusReason: `Auto-skipped: Overdue by more than ${days} days (cleanup script)`,
             updatedAt: FieldValue.serverTimestamp(),
           });
         successCount++;

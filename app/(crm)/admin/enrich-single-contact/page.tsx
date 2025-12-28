@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import Loading from "@/components/Loading";
 import Card from "@/components/Card";
 import { Button } from "@/components/Button";
-import Input from "@/components/Input";
 import Textarea from "@/components/Textarea";
 import { reportException } from "@/lib/error-reporting";
 
@@ -176,13 +175,20 @@ export default function EnrichSingleContactPage() {
         </p>
       </div>
 
-      <Card padding="md" className="bg-blue-50 border-blue-200">
+      <div
+        style={{
+          backgroundColor: 'var(--chip-blue-bg)',
+          borderColor: 'var(--chip-blue-text)',
+        }}
+        className="rounded-sm border p-4 sm:p-6"
+      >
         <div className="flex items-start gap-3">
           <svg
-            className="w-6 h-6 text-blue-600 shrink-0 mt-0.5"
+            className="w-6 h-6 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'var(--chip-blue-text)' }}
           >
             <path
               strokeLinecap="round"
@@ -192,8 +198,16 @@ export default function EnrichSingleContactPage() {
             />
           </svg>
           <div>
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">How it works</h3>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <h3 
+              className="text-lg font-semibold mb-2"
+              style={{ color: 'var(--chip-blue-text)' }}
+            >
+              How it works
+            </h3>
+            <ul 
+              className="text-sm space-y-1 list-disc list-inside"
+              style={{ color: 'var(--chip-blue-text)' }}
+            >
               <li>Enter one or more email addresses (one per line or comma-separated)</li>
               <li>Uses Google People API to search for matching contacts</li>
               <li>Extracts first name, last name, company, and profile photo from Google Contacts</li>
@@ -203,7 +217,7 @@ export default function EnrichSingleContactPage() {
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Card padding="md">
         <div className="space-y-4">
@@ -225,14 +239,17 @@ export default function EnrichSingleContactPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-sm">
+          <div className="flex items-center gap-3 p-3 rounded-sm border border-theme-light bg-card-highlight-light">
             <input
               type="checkbox"
               id="dryRun"
               checked={dryRun}
               onChange={(e) => setDryRun(e.target.checked)}
               disabled={processing}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 rounded border-theme-light focus:ring-btn-primary-focus-ring"
+              style={{
+                accentColor: 'var(--btn-primary-bg)',
+              }}
             />
             <label htmlFor="dryRun" className="text-sm font-medium text-theme-darker cursor-pointer">
               Dry run (preview changes without updating)
@@ -265,13 +282,20 @@ export default function EnrichSingleContactPage() {
       </Card>
 
       {error && (
-        <Card padding="md" className="bg-red-50 border-red-200">
+        <div
+          className="rounded-sm border p-4 sm:p-6"
+          style={{
+            backgroundColor: 'var(--chip-danger-bg)',
+            borderColor: 'var(--card-overdue-dark)',
+          }}
+        >
           <div className="flex items-center gap-3">
             <svg
-              className="w-5 h-5 text-red-600"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              style={{ color: 'var(--card-overdue-dark)' }}
             >
               <path
                 strokeLinecap="round"
@@ -280,19 +304,25 @@ export default function EnrichSingleContactPage() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-red-800 font-medium">{error}</p>
+            <p className="font-medium text-theme-darkest">{error}</p>
           </div>
-        </Card>
+        </div>
       )}
 
       {results.length > 0 && (
-        <Card padding="md" className="bg-green-50 border-green-200">
+        <div
+          className="rounded-sm border p-4 sm:p-6"
+          style={{
+            backgroundColor: 'var(--chip-green-bg)',
+            borderColor: 'var(--chip-green-text)',
+          }}
+        >
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-green-900">
+              <h3 className="text-lg font-semibold text-theme-darkest">
                 Results ({results.length} processed)
               </h3>
-              <div className="text-sm text-green-800">
+              <div className="text-sm" style={{ color: 'var(--chip-green-text)' }}>
                 {results.filter((r) => r.action === "updated").length} updated,{" "}
                 {results.filter((r) => r.action === "skipped").length} skipped
               </div>
@@ -302,13 +332,23 @@ export default function EnrichSingleContactPage() {
               {results.map((result, idx) => (
                 <div
                   key={idx}
-                  className={`p-4 rounded-sm border ${
+                  className="p-4 rounded-sm border"
+                  style={
                     result.action === "updated"
-                      ? "bg-white border-green-300"
+                      ? {
+                          backgroundColor: 'var(--chip-green-bg)',
+                          borderColor: 'var(--chip-green-text)',
+                        }
                       : result.error
-                      ? "bg-red-50 border-red-300"
-                      : "bg-yellow-50 border-yellow-300"
-                  }`}
+                      ? {
+                          backgroundColor: 'var(--chip-red-bg)',
+                          borderColor: 'var(--chip-red-text)',
+                        }
+                      : {
+                          backgroundColor: 'var(--chip-yellow-bg)',
+                          borderColor: 'var(--chip-yellow-text)',
+                        }
+                  }
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
@@ -316,62 +356,72 @@ export default function EnrichSingleContactPage() {
                         {result.contact.email}
                       </div>
                       {result.enriched?.source && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-theme-dark">
                           Source: {result.enriched.source === "people_api" ? "People API" : "Email extraction"}
                         </span>
                       )}
                     </div>
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded ${
+                      className="px-2 py-1 text-xs font-semibold rounded"
+                      style={
                         result.action === "updated"
-                          ? "bg-green-100 text-green-800"
+                          ? {
+                              backgroundColor: 'var(--chip-green-bg)',
+                              color: 'var(--chip-green-text)',
+                            }
                           : result.error
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
+                          ? {
+                              backgroundColor: 'var(--chip-red-bg)',
+                              color: 'var(--chip-red-text)',
+                            }
+                          : {
+                              backgroundColor: 'var(--chip-yellow-bg)',
+                              color: 'var(--chip-yellow-text)',
+                            }
+                      }
                     >
                       {result.action === "updated" ? "Updated" : result.error ? "Error" : "Skipped"}
                     </span>
                   </div>
 
                   {result.error && (
-                    <div className="text-sm text-red-600 mb-2">{result.error}</div>
+                    <div className="text-sm mb-2" style={{ color: 'var(--chip-red-text)' }}>{result.error}</div>
                   )}
 
                   {result.reason && (
-                    <div className="text-sm text-gray-600 mb-2">{result.reason}</div>
+                    <div className="text-sm text-theme-dark mb-2">{result.reason}</div>
                   )}
 
                   {result.action === "updated" && result.current && result.new && (
                     <div className="space-y-2 text-sm">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Current:</p>
+                          <p className="text-xs text-theme-dark mb-1">Current:</p>
                           <div className="text-theme-dark">
                             <div>
                               {result.current.firstName || "—"} {result.current.lastName || "—"}
                             </div>
                             {result.current.company && (
-                              <div className="text-xs text-gray-600">{result.current.company}</div>
+                              <div className="text-xs text-theme-dark">{result.current.company}</div>
                             )}
                             {result.current.photoUrl && (
-                              <div className="text-xs text-gray-600">
+                              <div className="text-xs text-theme-dark">
                                 Photo: {result.current.photoUrl.includes('/cm/') ? "Default avatar" : "Yes"}
                               </div>
                             )}
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">New:</p>
+                          <p className="text-xs text-theme-dark mb-1">New:</p>
                           <div className="text-theme-dark">
                             <div>
                               {result.new.firstName || "—"} {result.new.lastName || "—"}
                             </div>
                             {result.new.company && (
-                              <div className="text-xs text-gray-600">{result.new.company}</div>
+                              <div className="text-xs text-theme-dark">{result.new.company}</div>
                             )}
                             {result.new.photoUrl && (
-                              <div className="text-xs text-gray-600">
+                              <div className="text-xs text-theme-dark">
                                 Photo: {result.new.photoUrl.includes('/cm/') ? "Default avatar" : "Yes"}
                               </div>
                             )}
@@ -379,7 +429,7 @@ export default function EnrichSingleContactPage() {
                         </div>
                       </div>
                       {result.updates && result.updates.length > 0 && (
-                        <div className="text-xs text-gray-500 mt-2">
+                        <div className="text-xs text-theme-dark mt-2">
                           Updated fields: {result.updates.join(", ")}
                         </div>
                       )}
@@ -392,7 +442,7 @@ export default function EnrichSingleContactPage() {
                         {result.current.firstName || "—"} {result.current.lastName || "—"}
                       </div>
                       {result.current.company && (
-                        <div className="text-xs text-gray-600">{result.current.company}</div>
+                        <div className="text-xs text-theme-dark">{result.current.company}</div>
                       )}
                     </div>
                   )}
@@ -400,16 +450,23 @@ export default function EnrichSingleContactPage() {
               ))}
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
-      <Card padding="md" className="bg-yellow-50 border-yellow-200">
+      <div
+        style={{
+          backgroundColor: 'var(--warning-yellow-bg)',
+          borderColor: 'var(--warning-yellow-border)',
+        }}
+        className="rounded-sm border p-4 sm:p-6"
+      >
         <div className="flex items-start gap-3">
           <svg
-            className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5"
+            className="w-5 h-5 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'var(--warning-yellow-text-accent)' }}
           >
             <path
               strokeLinecap="round"
@@ -419,18 +476,29 @@ export default function EnrichSingleContactPage() {
             />
           </svg>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-yellow-900 mb-1">Requirements</h3>
-            <p className="text-xs text-yellow-800">
+            <h3 
+              className="text-sm font-semibold mb-1"
+              style={{ color: 'var(--warning-yellow-text-primary)' }}
+            >
+              Requirements
+            </h3>
+            <p 
+              className="text-xs"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               For this to work, you need to:
             </p>
-            <ul className="text-xs text-yellow-800 list-disc list-inside mt-2 space-y-1">
+            <ul 
+              className="text-xs list-disc list-inside mt-2 space-y-1"
+              style={{ color: 'var(--warning-yellow-text-secondary)' }}
+            >
               <li>Have your Google account linked to the CRM</li>
               <li>Have granted the contacts.readonly scope (may require re-authentication)</li>
               <li>Have contacts in your Google Contacts that match the email addresses</li>
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

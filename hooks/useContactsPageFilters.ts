@@ -71,6 +71,8 @@ interface UseContactsPageFiltersReturn {
   lastNameSearch: string;
   companySearch: string;
   customFilter?: "at-risk" | "warm" | "needs-attention" | null;
+  focus: "all" | "work" | "personal" | undefined;
+  setFocus: (focus: "all" | "work" | "personal") => void;
 }
 
 const DEFAULT_ITEMS_PER_PAGE = 20;
@@ -104,6 +106,8 @@ export function useContactsPageFilters({
     setLastEmailRecent,
     setSentimentNegative,
     setTagsMissing,
+    focus,
+    setFocus,
     selectedSegment,
     selectedTags,
     emailSearch,
@@ -248,6 +252,7 @@ export function useContactsPageFilters({
     showArchived,
     includeNewContacts,
     lastEmailDateRange,
+    focus,
     filterContacts.leadSourceMissing,
     filterContacts.engagementLevel,
     filterContacts.lastEmailRecent,
@@ -385,6 +390,8 @@ export function useContactsPageFilters({
     lastNameSearch,
     companySearch,
     customFilter,
+    focus,
+    setFocus,
   };
 }
 

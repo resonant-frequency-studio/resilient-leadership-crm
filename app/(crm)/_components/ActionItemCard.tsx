@@ -118,7 +118,7 @@ export default function ActionItemCard({
       return "bg-card-highlight-light border border-gray-200";
     }
     if (isOverdue) {
-      return "bg-card-overdue border border-card-overdue-dark";
+      return "border border-theme-light border-l-4";
     }
     return "bg-transparent border border-gray-200";
   };
@@ -140,8 +140,18 @@ export default function ActionItemCard({
     setIsEditing(false);
   };
 
+  const getBorderLeftStyle = () => {
+    if (isOverdue) {
+      return { borderLeftColor: "var(--card-overdue-dark)", borderLeftWidth: "4px" };
+    }
+    return {};
+  };
+
   return (
-    <div className={`rounded-sm p-3 sm:p-4 transition-all duration-200 min-w-0 overflow-hidden ${getVariantStyles()}`}>
+    <div 
+      className={`rounded-sm p-3 sm:p-4 transition-all duration-200 min-w-0 overflow-hidden ${getVariantStyles()}`}
+      style={getBorderLeftStyle()}
+    >
       {isEditing ? (
         <div className="space-y-3">
           <Textarea

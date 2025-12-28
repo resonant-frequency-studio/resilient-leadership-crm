@@ -322,6 +322,27 @@
     --sync-green-border: rgba(20, 83, 45, 0.25);
     --sync-green-text-primary: #bbf7d0;
     --sync-green-text-secondary: #86efac;
+
+  /* Warning Colors - Yellow */
+  --warning-yellow-bg: rgba(113, 63, 18, 0.06);
+  --warning-yellow-border: #854d0e;
+  --warning-yellow-text-primary: #fde047;
+  --warning-yellow-text-secondary: #facc15;
+  --warning-yellow-text-accent: #eab308;
+
+  /* Status Chip Colors */
+  --chip-blue-bg: rgba(30, 58, 138, 0.06);
+  --chip-blue-text: #93c5fd;
+  --chip-green-bg: rgba(6, 95, 70, 0.2);
+  --chip-green-text: #6ee7b7;
+  --chip-yellow-bg: rgba(146, 64, 14, 0.2);
+  --chip-yellow-text: #fde047;
+  --chip-red-bg: rgba(220, 38, 38, 0.3);
+  --chip-red-text: #fca5a5;
+  --chip-purple-bg: rgba(107, 33, 168, 0.2);
+  --chip-purple-text: #c4b5fd;
+  --chip-gray-bg: rgba(55, 65, 81, 0.2);
+  --chip-gray-text: #9ca3af;
 }
 
 /* Dark theme via browser preference (when no manual override) */
@@ -468,8 +489,8 @@
   --error-red-bg-hover: rgba(127, 29, 29, 0.2);
 
   /* Warning Colors - Yellow */
-  --warning-yellow-bg: rgba(133, 77, 14, 0.2);
-  --warning-yellow-border: #a16207;
+  --warning-yellow-bg: rgba(113, 63, 18, 0.06);
+  --warning-yellow-border: #854d0e;
   --warning-yellow-text-primary: #fde047;
   --warning-yellow-text-secondary: #facc15;
   --warning-yellow-text-accent: #eab308;
@@ -485,13 +506,13 @@
   --gradient-indigo-to: rgba(30, 58, 138, 0.05);
 
   /* Status Chip Colors */
-  --chip-blue-bg: rgba(30, 64, 175, 0.2);
+  --chip-blue-bg: rgba(30, 58, 138, 0.06);
   --chip-blue-text: #93c5fd;
   --chip-green-bg: rgba(6, 95, 70, 0.2);
   --chip-green-text: #6ee7b7;
   --chip-yellow-bg: rgba(146, 64, 14, 0.2);
   --chip-yellow-text: #fde047;
-  --chip-red-bg: rgba(153, 27, 27, 0.2);
+  --chip-red-bg: rgba(220, 38, 38, 0.3);
   --chip-red-text: #fca5a5;
   --chip-purple-bg: rgba(107, 33, 168, 0.2);
   --chip-purple-text: #c4b5fd;

@@ -261,7 +261,7 @@ const faqData: FAQItem[] = [
   {
     category: "Admin Tools",
     question: "What admin tools are available?",
-    answer: "The Admin page provides several tools for managing and maintaining your CRM data: Process Segment Contacts (sync Gmail threads and generate insights for specific segments), Enrich Contacts (bulk enrich contacts with People API data), Cleanup Tags/Touchpoints/Action Items (remove duplicate or outdated data), Bulk Unlink Events (unlink calendar events from contacts), Extract Names (extract names from email addresses), and Migrate Action Items (migrate between data structures).",
+    answer: "The Admin page provides several tools for managing and maintaining your CRM data: Process Segment Contacts (sync Gmail threads and generate insights for specific segments), Enrich Contacts (bulk enrich contacts with People API data), and Cleanup Tags/Touchpoints/Action Items (remove duplicate or outdated data).",
   },
   {
     category: "Admin Tools",
