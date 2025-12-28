@@ -3,9 +3,11 @@ export interface Contact {
   
     // Identity
     primaryEmail: string;
+    secondaryEmails?: string[]; // Additional email addresses for merged contacts
     firstName?: string | null;
     lastName?: string | null;
     company?: string | null;
+    photoUrl?: string | null; // Profile photo URL from Google People API
   
     // Gmail-derived
     lastEmailDate?: unknown | null; // Firestore timestamp
@@ -24,6 +26,10 @@ export interface Contact {
     touchpointStatus?: "pending" | "completed" | "cancelled" | null;
     touchpointStatusUpdatedAt?: unknown | null;
     touchpointStatusReason?: string | null;
+    // Touchpoint ↔ Calendar Event linkage
+    linkedGoogleEventId?: string | null;
+    linkedGoogleCalendarId?: string | null;
+    linkStatus?: "none" | "linked" | "broken" | null;
   
     // AI fields
     summary?: string | null;
@@ -86,6 +92,7 @@ export interface Contact {
   export interface SyncJob {
     syncJobId: string;
     userId: string;
+    service: "gmail" | "calendar" | "contacts"; // Which service this sync job is for
   
     type: "initial" | "incremental";
     status: "pending" | "running" | "complete" | "error";
@@ -93,10 +100,59 @@ export interface Contact {
     startedAt: unknown;
     finishedAt?: unknown | null;
   
-    processedThreads: number;
-    processedMessages: number;
-  
+    // Gmail-specific fields
+    processedThreads?: number;
+    processedMessages?: number;
     gmailQuery?: string | null;
+  
+    // Calendar-specific fields
+    processedEvents?: number;
+    rangeDays?: number; // Number of days synced (30, 60, 90, or 180)
+  
+    // Contacts-specific fields
+    processedContacts?: number;
+    skippedContacts?: number;
+    totalContacts?: number; // Total contacts expected to be processed
+    currentStep?: string; // Current step: "importing", "syncing_gmail", "generating_insights"
+  
+    errorMessage?: string | null;
+  }
+
+  export interface AdminJob {
+    jobId: string;
+    userId: string;
+    jobType: "process-unknown-segment" | string; // Type of admin job
+    
+    status: "pending" | "running" | "complete" | "error";
+    
+    startedAt: unknown;
+    finishedAt?: unknown | null;
+    
+    // Progress tracking
+    processed?: number;
+    skipped?: number;
+    errors?: number;
+    total?: number; // Total items expected to be processed
+    currentStep?: string; // Current step description
+    
+    // Configuration
+    dryRun?: boolean;
+    limit?: number;
+    segment?: string; // Segment being processed
+    
+    // Results
+    details?: Array<{
+      contactId: string;
+      contactEmail: string;
+      contactName: string;
+      action: "processed" | "skipped" | "error";
+      threadsSynced?: number;
+      threadsSummarized?: number;
+      insightsGenerated?: boolean;
+      tagsGenerated?: string[];
+      error?: string;
+    }>;
+    
     errorMessage?: string | null;
   }
 
@@ -113,5 +169,108 @@ export interface Contact {
     
     createdAt: unknown;
     updatedAt: unknown;
+  }
+
+  export interface CalendarEvent {
+    eventId: string;
+    googleEventId: string;
+    userId: string;
+    
+    // Event details
+    title: string;
+    description?: string | null;
+    startTime: unknown; // Firestore timestamp
+    endTime: unknown;
+    location?: string | null;
+    attendees?: Array<{ email: string; displayName?: string }>;
+    
+    // Sync metadata
+    lastSyncedAt: unknown;
+    etag?: string; // For future conflict detection
+    googleUpdated?: unknown; // Google's updated timestamp (Firestore timestamp)
+    sourceOfTruth?: "google" | "crm_touchpoint"; // Where event originated
+    isDirty?: boolean; // Has local changes not synced to Google
+    // Bidirectional sync tracking
+    syncInProgress?: boolean; // Prevent concurrent syncs
+    lastSyncAttempt?: unknown; // Track sync attempts (Firestore timestamp)
+    lastSyncedFrom?: "google" | "crm"; // Track sync direction
+    syncLockUntil?: unknown; // Temporary lock to prevent rapid re-syncs (Firestore timestamp)
+    // Conflict tracking
+    hasConflict?: boolean; // Event has a conflict that needs user resolution
+    conflictType?: "simple" | "complex"; // Type of conflict
+    conflictDetectedAt?: unknown; // When conflict was detected (Firestore timestamp)
+    
+    // Contact matching
+    matchedContactId?: string | null;
+    matchConfidence?: "high" | "medium" | "low";
+    matchMethod?: "email" | "name" | "domain" | "manual";
+    matchOverriddenByUser?: boolean; // User manually changed match
+    matchDeniedContactIds?: string[]; // Contacts user explicitly rejected
+    contactSnapshot?: {
+      name: string;
+      segment?: string | null;
+      tags?: string[];
+      primaryEmail: string;
+      engagementScore?: number | null;
+      snapshotUpdatedAt: unknown;
+    } | null;
+    
+    // Meeting Insights (AI-generated)
+    meetingInsights?: {
+      summary: string;
+      suggestedNextStep: string;
+      suggestedTouchpointDate?: string; // ISO date string
+      suggestedTouchpointRationale?: string;
+      suggestedActionItems?: string[];
+      followUpEmailDraft?: string;
+      generatedAt: unknown; // Firestore timestamp
+      dataSignature: string; // Hash of relevant data for staleness detection
+    } | null;
+    
+    createdAt: unknown;
+    updatedAt: unknown;
+  }
+
+  export interface CalendarSyncSettings {
+    userId: string;
+    lastSyncToken?: string | null; // Google Calendar syncToken for incremental sync
+    lastSyncAt?: unknown | null;
+    calendarId?: string; // Default: 'primary'
+  }
+
+  export type TimelineItemType = "calendar_event" | "touchpoint" | "action_item" | "email";
+
+  export interface TimelineItem {
+    id: string;
+    type: TimelineItemType;
+    timestamp: unknown; // Firestore timestamp
+    title: string;
+    description?: string | null;
+    // Type-specific fields
+    eventId?: string;
+    touchpointId?: string;
+    actionItemId?: string;
+    threadId?: string;
+    // Additional metadata for rendering
+    location?: string | null;
+    attendees?: Array<{ email: string; displayName?: string }>;
+    status?: string; // For action items: "pending" | "completed"
+    isFromUser?: boolean; // For emails
+  }
+
+  export interface ExportJob {
+    jobId: string;
+    userId: string;
+    status: "pending" | "running" | "complete" | "error";
+    startedAt: unknown;
+    finishedAt?: unknown | null;
+    totalContacts: number;
+    processedContacts: number;
+    skippedContacts: number;
+    errors: number;
+    currentStep?: string;
+    errorMessage?: string | null;
+    groupId?: string | null;
+    groupName?: string | null;
   }
   

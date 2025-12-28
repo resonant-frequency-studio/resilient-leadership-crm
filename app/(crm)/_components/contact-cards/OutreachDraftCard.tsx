@@ -4,16 +4,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
-import SaveButtonWithIndicator from "./SaveButtonWithIndicator";
 import { Button } from "@/components/Button";
 import Skeleton from "@/components/Skeleton";
 import Modal from "@/components/Modal";
 import Textarea from "@/components/Textarea";
 import { reportException } from "@/lib/error-reporting";
-import { Contact } from "@/types/firestore";
-import { useSavingState } from "@/contexts/SavingStateContext";
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
+import SavingIndicator from "@/components/contacts/SavingIndicator";
 
 interface OutreachDraftCardProps {
   contactId: string;
@@ -26,82 +23,86 @@ export default function OutreachDraftCard({
 }: OutreachDraftCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
-  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
-  const cardId = `outreach-draft-${contactId}`;
+  const { schedule, flush } = useDebouncedAutosave();
   
-  const prevContactIdRef = useRef<Contact | null>(null);
+  const prevContactIdRef = useRef<string | null>(null);
+  const lastSavedValuesRef = useRef<string | null>(null);
   
   const [localDraft, setLocalDraft] = useState<string>("");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [modalContent, setModalContent] = useState<"no-email" | "no-draft" | null>(null);
   
-  // Register/unregister save status with context
-  useEffect(() => {
-    registerSaveStatus(cardId, saveStatus);
-    return () => {
-      unregisterSaveStatus(cardId);
-    };
-  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+  // Use ref to store current value so save function always reads latest state
+  const localDraftRef = useRef(localDraft);
   
-  // Reset form state when contactId changes (different contact loaded)
-  // Using contactId prop as dependency ensures we only update when switching contacts
+  // Keep ref in sync with state
+  useEffect(() => {
+    localDraftRef.current = localDraft;
+  }, [localDraft]);
+  
+  // Reset form state only when contactId changes (switching to a different contact)
+  // Don't reset when contact data updates from our own save
   useEffect(() => {
     if (!contact) return;
-    if (prevContactIdRef.current !== contact) {
-      prevContactIdRef.current = contact;
-      // Batch state updates to avoid cascading renders
+    
+    // Only reset if we're switching to a different contact
+    if (prevContactIdRef.current !== contact.contactId) {
+      prevContactIdRef.current = contact.contactId;
+      lastSavedValuesRef.current = null; // Clear saved values when switching contacts
       setLocalDraft(contact.outreachDraft ?? "");
-      setSaveStatus("idle");
+      return;
+    }
+    
+    // If contact data updated but it matches what we just saved, don't reset
+    if (lastSavedValuesRef.current !== null) {
+      const contactDraft = contact.outreachDraft ?? "";
+      if (contactDraft === lastSavedValuesRef.current) {
+        // This update came from our save, don't reset form
+        return;
+      }
+    }
+    
+    // Only update if form value matches the old contact value (user hasn't made changes)
+    if (localDraft === (contact.outreachDraft ?? "")) {
+      // Form hasn't been edited, safe to update from contact
+      setLocalDraft(contact.outreachDraft ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId, contact?.updatedAt]);
+  }, [contact?.contactId, contact?.outreachDraft]);
 
-  // Track changes using useMemo instead of useEffect
-  const hasUnsavedChanges = useMemo(() => {
-    if (!contact) return false;
-    return localDraft !== (contact.outreachDraft ?? "");
-  }, [localDraft, contact]);
+  // Save function for autosave - reads from ref to always get latest value
+  const saveDraft = useMemo(() => {
+    return async () => {
+      if (!contact) return;
+      
+      // Read current form value from ref (always latest, even if scheduled before state update)
+      const currentDraft = localDraftRef.current || null;
+      
+      return new Promise<void>((resolve, reject) => {
+        updateMutation.mutate(
+          {
+            contactId,
+            updates: { outreachDraft: currentDraft },
+          },
+          {
+            onSuccess: () => {
+              // Remember what we saved so we don't reset form when contact refetches
+              lastSavedValuesRef.current = currentDraft ?? "";
+              resolve();
+            },
+            onError: (error) => {
+              reportException(error, {
+                context: "Saving outreach draft in OutreachDraftCard",
+                tags: { component: "OutreachDraftCard", contactId },
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+    };
+  }, [contact, contactId, updateMutation]);
 
-  const saveChanges = () => {
-    if (!hasUnsavedChanges || !contact) return;
-
-    setSaveStatus("saving");
-    updateMutation.mutate(
-      {
-        contactId,
-        updates: { outreachDraft: localDraft || null },
-      },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        },
-        onError: (error) => {
-          setSaveStatus("error");
-          reportException(error, {
-            context: "Saving outreach draft in OutreachDraftCard",
-            tags: { component: "OutreachDraftCard", contactId },
-          });
-          setTimeout(() => setSaveStatus("idle"), 3000);
-        },
-      }
-    );
-  };
-
-  // Autosave every 30 seconds when there are unsaved changes
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const interval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        saveChanges();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [hasUnsavedChanges, saveChanges]);
-
-  const openGmailCompose = () => {
+  const openGmailCompose = async () => {
     if (!contact?.primaryEmail) {
       setModalContent("no-email");
       return;
@@ -112,49 +113,23 @@ export default function OutreachDraftCard({
       return;
     }
 
-    // Auto-save the draft before opening Gmail (if there are unsaved changes)
-    if (hasUnsavedChanges) {
-      setSaveStatus("saving");
-      updateMutation.mutate(
-        {
-          contactId,
-          updates: { outreachDraft: localDraft || null },
-        },
-        {
-          onSuccess: () => {
-            setSaveStatus("saved");
-            // Open Gmail after save completes
-            const email = encodeURIComponent(contact.primaryEmail);
-            const body = encodeURIComponent(localDraft);
-            const subject = encodeURIComponent("Follow up");
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${email}&body=${body}&su=${subject}`;
-            window.open(gmailUrl, "_blank");
-            setTimeout(() => setSaveStatus("idle"), 2000);
-          },
-          onError: (error) => {
-            setSaveStatus("error");
-            reportException(error, {
-              context: "Auto-saving outreach draft before opening Gmail in OutreachDraftCard",
-              tags: { component: "OutreachDraftCard", contactId },
-            });
-            // Continue anyway - don't block user from opening Gmail
-            const email = encodeURIComponent(contact.primaryEmail);
-            const body = encodeURIComponent(localDraft);
-            const subject = encodeURIComponent("Follow up");
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${email}&body=${body}&su=${subject}`;
-            window.open(gmailUrl, "_blank");
-            setTimeout(() => setSaveStatus("idle"), 3000);
-          },
-        }
-      );
-    } else {
-      // No changes, just open Gmail
-      const email = encodeURIComponent(contact.primaryEmail);
-      const body = encodeURIComponent(localDraft);
-      const subject = encodeURIComponent("Follow up");
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${email}&body=${body}&su=${subject}`;
-      window.open(gmailUrl, "_blank");
+    // Flush any pending saves before opening Gmail
+    try {
+      await flush("draft");
+    } catch (error) {
+      // Continue anyway - don't block user from opening Gmail
+      reportException(error as Error, {
+        context: "Auto-saving outreach draft before opening Gmail in OutreachDraftCard",
+        tags: { component: "OutreachDraftCard", contactId },
+      });
     }
+
+    // Open Gmail
+    const email = encodeURIComponent(contact.primaryEmail);
+    const body = encodeURIComponent(localDraft);
+    const subject = encodeURIComponent("Follow up");
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${email}&body=${body}&su=${subject}`;
+    window.open(gmailUrl, "_blank");
   };
 
   if (!contact) {
@@ -190,6 +165,7 @@ export default function OutreachDraftCard({
       </Modal>
 
       <Card padding="md" className="relative">
+        <SavingIndicator cardKey="draft" />
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 mb-2">
           <h2 className="text-lg font-semibold text-theme-darkest flex items-center gap-2">
             <svg
@@ -208,11 +184,6 @@ export default function OutreachDraftCard({
             <span className="truncate">Outreach Draft</span>
           </h2>
           <div className="flex items-center gap-3 shrink-0">
-            <SaveButtonWithIndicator
-              saveStatus={saveStatus}
-              hasUnsavedChanges={hasUnsavedChanges}
-              onSave={saveChanges}
-            />
             {localDraft.trim() && contact.primaryEmail && (
               <Button
                 onClick={openGmailCompose}
@@ -250,7 +221,11 @@ export default function OutreachDraftCard({
         id="outreach-draft"
         name="outreach-draft"
         value={localDraft}
-        onChange={(e) => setLocalDraft(e.target.value)}
+        onChange={(e) => {
+          setLocalDraft(e.target.value);
+          schedule("draft", saveDraft);
+        }}
+        onBlur={() => flush("draft")}
         placeholder="Write your outreach draft here..."
         className="min-h-[120px] text-foreground resize-y font-sans text-sm leading-relaxed"
       />

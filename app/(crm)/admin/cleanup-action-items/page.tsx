@@ -13,6 +13,7 @@ export default function CleanupActionItemsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [running, setRunning] = useState(false);
+  const [daysBack, setDaysBack] = useState<number>(90);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
@@ -36,7 +37,7 @@ export default function CleanupActionItemsPage() {
   const handleCleanup = async () => {
     if (
       !confirm(
-        "This will DELETE ALL action items from contacts whose last email was more than 90 days ago. " +
+        `This will DELETE ALL action items from contacts whose last email was more than ${daysBack} days ago. ` +
           "This action cannot be undone. Continue?"
       )
     ) {
@@ -51,7 +52,7 @@ export default function CleanupActionItemsPage() {
       const response = await fetch("/api/admin/cleanup-action-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ days: daysBack }),
       });
 
       const data = await response.json();
@@ -88,7 +89,7 @@ export default function CleanupActionItemsPage() {
           Cleanup Action Items
         </h1>
         <p className="text-theme-dark">
-          Delete all action items from contacts whose last email was more than 90 days ago
+          Delete all action items from contacts whose last email was more than a specified number of days ago
         </p>
       </div>
 
@@ -99,13 +100,38 @@ export default function CleanupActionItemsPage() {
               What this script does:
             </h2>
             <ul className="list-disc list-inside space-y-2 text-theme-darker">
-              <li>Finds all contacts where <code className="bg-gray-100 px-1 rounded">lastEmailDate</code> is more than 90 days old</li>
+              <li>Finds all contacts where <code className="bg-theme-light text-foreground px-1 rounded">lastEmailDate</code> is more than {daysBack} days old</li>
               <li>Deletes ALL action items for those contacts</li>
               <li>This action cannot be undone</li>
             </ul>
           </div>
 
-          <div className="border-t pt-6">
+          <div className="border-t border-theme-light pt-6">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-theme-darkest mb-2">
+                Select time period:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[30, 60, 90, 120].map((days) => (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setDaysBack(days)}
+                    disabled={running}
+                    className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+                      daysBack === days
+                        ? "bg-btn-primary-bg text-btn-primary-fg border-2 border-btn-primary-border"
+                        : "bg-transparent text-theme-darker border-2 border-theme-light hover:bg-theme-light"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {days} days
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-theme-dark mt-2">
+                Action items from contacts with last email more than {daysBack} days ago will be deleted
+              </p>
+            </div>
             <Button
               onClick={handleCleanup}
               disabled={running}
@@ -118,37 +144,37 @@ export default function CleanupActionItemsPage() {
           </div>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-sm">
-              <p className="text-red-800 font-semibold">Error</p>
-              <p className="text-red-700">{error}</p>
+            <div 
+              className="rounded-sm border p-4 sm:p-6 mt-4"
+              style={{
+                backgroundColor: 'var(--chip-danger-bg)',
+                borderColor: 'var(--card-overdue-dark)',
+              }}
+            >
+              <p className="font-semibold text-theme-darkest">Error</p>
+              <p className="text-theme-darker">{error}</p>
             </div>
           )}
 
           {result && (
             <div className="mt-4 space-y-4">
               <div
-                className={`p-4 rounded-sm border ${
-                  result.success
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                }`}
+                className="rounded-sm border p-4 sm:p-6"
+                style={{
+                  backgroundColor: result.success ? 'var(--chip-green-bg)' : 'var(--chip-danger-bg)',
+                  borderColor: result.success ? 'var(--chip-green-text)' : 'var(--card-overdue-dark)',
+                }}
               >
-                <p
-                  className={`font-semibold ${
-                    result.success ? "text-green-800" : "text-red-800"
-                  }`}
-                >
+                <p className="font-semibold text-theme-darkest">
                   {result.success ? "Success" : "Failed"}
                 </p>
-                <p
-                  className={result.success ? "text-green-700" : "text-red-700"}
-                >
+                <p className="text-theme-darker">
                   {result.message}
                 </p>
               </div>
 
               {result.stats && (
-                <div className="bg-gray-50 p-4 rounded-sm border border-gray-200">
+                <Card padding="md" className="bg-card-highlight-light border border-theme-light">
                   <h3 className="font-semibold text-theme-darkest mb-3">Statistics</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -203,7 +229,7 @@ export default function CleanupActionItemsPage() {
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
               )}
             </div>
           )}

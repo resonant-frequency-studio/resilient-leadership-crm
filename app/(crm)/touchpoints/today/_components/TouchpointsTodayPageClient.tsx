@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Card from "@/components/Card";
-import ContactCard from "@/app/(crm)/_components/ContactCard";
-import { useContacts } from "@/hooks/useContacts";
+import TouchpointCard from "@/app/(crm)/_components/TouchpointCard";
+import { useContactsRealtime } from "@/hooks/useContactsRealtime";
 import { getDaysUntilTouchpoint } from "@/util/date-utils-server";
 import { Contact } from "@/types/firestore";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,37 +22,14 @@ const ITEMS_PER_PAGE = 20;
 
 export default function TouchpointsTodayPageClient() {
   const { user } = useAuth();
-  const userId = user?.uid || "";
-  const { data: contacts = [], isLoading: contactsLoading } = useContacts(userId);
+  const userId = user?.uid || null;
+  const { contacts = [], loading: contactsLoading, hasConfirmedNoContacts } = useContactsRealtime(userId);
+  const userIdString = user?.uid || "";
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Show loading state if contacts are loading (suspense mode)
-  if (contactsLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold text-theme-darkest mb-2">Today&apos;s Touchpoints</h1>
-          <p className="text-theme-dark text-lg">Loading touchpoints...</p>
-        </div>
-        <Card padding="md">
-          <ThemedSuspense isLoading={true} variant="list" />
-        </Card>
-      </div>
-    );
-  }
-  
-  // Show empty state if no contacts
-  if (contacts.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold text-theme-darkest mb-2">Today&apos;s Touchpoints</h1>
-          <p className="text-theme-dark text-lg">Touchpoints due today</p>
-        </div>
-        <EmptyState wrapInCard={true} size="lg" />
-      </div>
-    );
-  }
+  // Always render - no early returns
+  // Show skeletons only when loading AND no contacts available
+  const showSkeletons = contactsLoading && contacts.length === 0;
 
   const serverTime = new Date();
   const todayStart = new Date(serverTime);
@@ -109,11 +86,15 @@ export default function TouchpointsTodayPageClient() {
       </div>
 
       <Card padding="md">
-        {paginatedTouchpoints.length === 0 ? (
+        {showSkeletons ? (
+          <ThemedSuspense isLoading={true} variant="list" />
+        ) : contacts.length === 0 && hasConfirmedNoContacts ? (
+          <EmptyState wrapInCard={false} size="lg" />
+        ) : contacts.length > 0 && allTodayTouchpoints.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">🎉 You&apos;re all caught up! No touchpoints due today.</p>
           </div>
-        ) : (
+        ) : allTodayTouchpoints.length > 0 ? (
           <>
             {/* Top Pagination */}
             <Pagination
@@ -129,16 +110,15 @@ export default function TouchpointsTodayPageClient() {
 
             <div className="grid grid-cols-1 gap-4 mb-6">
               {paginatedTouchpoints.map((contact) => (
-                <ContactCard
+                <TouchpointCard
                   key={contact.id}
                   contact={contact}
                   variant="touchpoint-upcoming"
-                  showArrow={false}
                   touchpointDate={contact.touchpointDate}
                   daysUntil={contact.daysUntil}
                   needsReminder={false}
                   showTouchpointActions={true}
-                  userId={userId}
+                  userId={userIdString}
                   onTouchpointStatusUpdate={() => {}}
                 />
               ))}
@@ -155,7 +135,7 @@ export default function TouchpointsTodayPageClient() {
               onPageChange={setCurrentPage}
             />
           </>
-        )}
+        ) : null}
       </Card>
     </div>
   );

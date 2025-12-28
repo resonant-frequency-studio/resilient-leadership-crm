@@ -19,6 +19,8 @@ interface TouchpointStatusActionsProps {
   compact?: boolean; // For dashboard cards
   // Optional: for cases where contact data isn't in React Query (e.g., ContactCard in lists)
   currentStatus?: Contact["touchpointStatus"];
+  // Optional: control whether to show Restore button (for 60-second timer logic)
+  showRestoreButton?: boolean;
 }
 
 export default function TouchpointStatusActions({
@@ -28,6 +30,7 @@ export default function TouchpointStatusActions({
   onStatusUpdate,
   compact = false,
   currentStatus: fallbackStatus,
+  showRestoreButton: showRestoreButtonProp,
 }: TouchpointStatusActionsProps) {
   const { user } = useAuth();
   
@@ -96,13 +99,14 @@ export default function TouchpointStatusActions({
     // Compact view for dashboard cards
     return (
       <div className="space-y-2">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex items-center gap-2">
           {currentStatus !== "completed" && (
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={() => setShowCompleteModal(true)}
               disabled={mutation.isPending}
-              className="flex-1 cursor-pointer sm:flex-none px-3 py-2 sm:px-2 sm:py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-1"
+              size="sm"
+              className="flex-1 !px-1 !py-0.5 sm:!px-4 sm:!py-2.5 text-[11px] sm:text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               title="I've contacted this person"
             >
               <svg
@@ -122,28 +126,14 @@ export default function TouchpointStatusActions({
             </Button>
           )}
           {currentStatus !== "cancelled" && (
-            <Button
-              variant="outline"
+            <button
               onClick={() => setShowCancelModal(true)}
               disabled={mutation.isPending}
-              className="flex-1 sm:flex-none px-3 py-2 sm:px-2 sm:py-1 text-xs font-medium text-foreground border border-theme-medium rounded hover:bg-theme-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-1"
+              className="text-sm text-theme-dark hover:text-theme-darker underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
               title="Skip this touchpoint - no action needed"
             >
-              <svg
-                className="w-3.5 h-3.5 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              <span className="whitespace-nowrap">Skip Touchpoint</span>
-            </Button>
+              Not needed right now
+            </button>
           )}
         </div>
         {error && (
@@ -216,7 +206,7 @@ export default function TouchpointStatusActions({
               onClick={() => handleUpdateStatus("completed", reason)}
               disabled={mutation.isPending}
               loading={mutation.isPending}
-              variant="secondary"
+              variant="primary"
               size="sm"
             >
               Mark as Contacted
@@ -232,7 +222,7 @@ export default function TouchpointStatusActions({
               setError(null);
             }
           }}
-          title="Skip Touchpoint"
+          title="Not needed right now"
           closeOnBackdropClick={!mutation.isPending}
         >
           <p className="text-sm text-theme-dark mb-4">
@@ -288,7 +278,7 @@ export default function TouchpointStatusActions({
               variant="outline"
               size="sm"
             >
-              Skip Touchpoint
+              Not needed right now
             </Button>
           </div>
         </Modal>
@@ -322,23 +312,23 @@ export default function TouchpointStatusActions({
           <Button
             onClick={() => setShowCompleteModal(true)}
             disabled={mutation.isPending}
-            variant="secondary"
+            variant="primary"
             size="sm"
           >
             Mark as Contacted
           </Button>
-          <Button
+          <button
             onClick={() => setShowCancelModal(true)}
             disabled={mutation.isPending}
-            variant="outline"
-            size="sm"
+            className="text-sm text-theme-dark hover:text-theme-darker underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
           >
-            Skip Touchpoint
-          </Button>
+            Not needed right now
+          </button>
         </div>
       )}
 
-      {(currentStatus === "completed" || currentStatus === "cancelled") && (
+      {(currentStatus === "completed" || currentStatus === "cancelled") && 
+       (showRestoreButtonProp !== false) && (
         <Button
           onClick={() => handleUpdateStatus(null)}
           disabled={mutation.isPending}
@@ -440,11 +430,11 @@ export default function TouchpointStatusActions({
             setError(null);
           }
         }}
-        title="Skip Touchpoint"
+        title="Not needed right now"
         closeOnBackdropClick={!mutation.isPending}
       >
         <p className="text-sm text-theme-dark mb-4">
-          Skip the touchpoint for <strong>{contactName}</strong>? This indicates no action is needed at this time.
+          Mark this touchpoint for <strong>{contactName}</strong> as not needed right now? This indicates no action is needed at this time.
         </p>
         <div className="mb-4">
           <label htmlFor="touchpoint-skip-reason" className="block text-sm font-medium text-theme-darker mb-2">
@@ -496,7 +486,7 @@ export default function TouchpointStatusActions({
             variant="outline"
             size="sm"
           >
-            Skip Touchpoint
+            Not needed right now
           </Button>
         </div>
       </Modal>

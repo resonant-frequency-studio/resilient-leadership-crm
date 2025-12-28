@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useRef, DragEvent } from "react";
+import { useState, useRef, DragEvent, useMemo } from "react";
 import { useContactImportPage } from "@/hooks/useContactImportPage";
+import { useContactsSyncJob } from "@/hooks/useContactsSyncJob";
+import { useAuth } from "@/hooks/useAuth";
+import { useSyncStatus } from "@/hooks/useSyncStatus";
 import Modal from "@/components/Modal";
 import Card from "@/components/Card";
 import Loading from "@/components/Loading";
 import { Button } from "@/components/Button";
 import Link from "next/link";
+import { ErrorMessage, extractErrorMessage } from "@/components/ErrorMessage";
+import { reportException } from "@/lib/error-reporting";
 
 export default function ImportContactsPage() {
   const {
@@ -31,6 +36,54 @@ export default function ImportContactsPage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<string | null>(null);
   const dragCounter = useRef(0);
+  const [syncingGoogleContacts, setSyncingGoogleContacts] = useState(false);
+  const [googleContactsError, setGoogleContactsError] = useState<string | null>(null);
+  const [currentGoogleContactsSyncJobId, setCurrentGoogleContactsSyncJobId] = useState<string | null>(null);
+  const { user: authUser } = useAuth();
+
+  // Track the current Google Contacts sync job if one is running
+  const { syncJob: googleContactsSyncJob } = useContactsSyncJob(
+    authUser?.uid || null,
+    currentGoogleContactsSyncJobId
+  );
+
+  // Get sync status to check for recent automatic syncs
+  const { syncHistory } = useSyncStatus(authUser?.uid || null);
+  
+  // Find the most recent contacts sync job
+  const lastContactsSync = useMemo(() => {
+    return syncHistory.find(job => job.service === "contacts") || null;
+  }, [syncHistory]);
+
+  // Format last sync time
+  const formatLastSyncTime = (syncJob: typeof lastContactsSync) => {
+    if (!syncJob?.startedAt) return null;
+    
+    let syncDate: Date;
+    if (typeof syncJob.startedAt === 'string') {
+      syncDate = new Date(syncJob.startedAt);
+    } else if (syncJob.startedAt && typeof syncJob.startedAt === 'object' && 'toDate' in syncJob.startedAt) {
+      // Firestore Timestamp
+      syncDate = (syncJob.startedAt as { toDate: () => Date }).toDate();
+    } else if (syncJob.startedAt instanceof Date) {
+      syncDate = syncJob.startedAt;
+    } else {
+      return null;
+    }
+    
+    if (isNaN(syncDate.getTime())) return null;
+    
+    const now = new Date();
+    const diffMs = now.getTime() - syncDate.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) return "less than an hour ago";
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays === 1) return "yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return syncDate.toLocaleDateString();
+  };
 
   if (loading) {
     return <Loading />;
@@ -144,7 +197,7 @@ export default function ImportContactsPage() {
       <div>
         <h1 className="text-4xl font-bold text-theme-darkest mb-2">Import Contacts</h1>
         <p className="text-theme-dark text-lg">
-          Upload a CSV file to import contacts into your CRM
+          Upload a CSV file or import directly from Google Contacts
         </p>
       </div>
 
@@ -212,10 +265,37 @@ export default function ImportContactsPage() {
       <Card padding="lg">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-theme-darkest mb-2">CSV File Upload</h2>
-          <p className="text-sm text-gray-500">
-                Select a CSV file with contact information. The file should include columns like
+          <p className="text-sm text-gray-500 mb-4">
+                Or upload a CSV file with contact information. The file should include columns like
                 Email, FirstName, LastName, and other CRM fields.
           </p>
+          
+          {/* People API Enrichment Info */}
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-sm">
+            <div className="flex items-start gap-2">
+              <svg
+                className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-1">
+                  Automatic Enrichment
+                </p>
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  Contacts imported without FirstName, LastName, Company, or profile photo will be automatically enriched using Google People API.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -446,7 +526,7 @@ export default function ImportContactsPage() {
                       </Button>
                     </Link>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         setSelectedFileName(null);
@@ -480,6 +560,213 @@ export default function ImportContactsPage() {
       </Card>
         </div>
       </div>
+
+      {/* Google Contacts Import Option - Moved below CSV, less prominent since automatic sync is active */}
+      <Card padding="md" className="bg-sync-green-bg border-sync-green-border">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-lg font-semibold text-sync-green-text-primary">Import from Google Contacts</h2>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Automatic sync active
+              </span>
+            </div>
+            <div className="text-sm text-sync-green-text-secondary mb-3">
+              <p className="mb-1 font-medium text-sync-green-text-primary">
+                <strong>Automatic sync is enabled.</strong> Your contacts sync automatically daily and also syncs Gmail threads for newly imported contacts.
+              </p>
+              {lastContactsSync && lastContactsSync.status === "complete" && (
+                <p className="text-xs text-sync-green-text-secondary mb-2">
+                  Last synced: {formatLastSyncTime(lastContactsSync)} • View sync status and history on the{" "}
+                  <Link href="/sync" className="underline font-medium hover:text-sync-green-text-primary">
+                    Sync page
+                  </Link>
+                  .
+                </p>
+              )}
+              {(!lastContactsSync || lastContactsSync?.status !== "complete") && (
+                <p className="text-xs text-sync-green-text-secondary mb-2">
+                  View sync status and history on the{" "}
+                  <Link href="/sync" className="underline font-medium hover:text-sync-green-text-primary">
+                    Sync page
+                  </Link>
+                  .
+                </p>
+              )}
+              <p className="text-xs text-sync-green-text-secondary mt-1">
+                You can also manually trigger a sync now if needed.
+              </p>
+            </div>
+            {googleContactsError && (
+              <ErrorMessage
+                message={googleContactsError}
+                dismissible
+                onDismiss={() => setGoogleContactsError(null)}
+                className="mb-4"
+              />
+            )}
+            {googleContactsSyncJob && googleContactsSyncJob.status === "running" && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-theme-darker">
+                    {googleContactsSyncJob.currentStep === "importing" && "Importing contacts from Google..."}
+                    {googleContactsSyncJob.currentStep === "syncing_gmail" && "Syncing Gmail threads..."}
+                    {googleContactsSyncJob.currentStep === "generating_insights" && "Generating contact insights..."}
+                    {!googleContactsSyncJob.currentStep && "Processing contacts..."}
+                  </span>
+                  {googleContactsSyncJob.totalContacts && googleContactsSyncJob.processedContacts !== undefined && (
+                    <span className="text-sm text-theme-dark">
+                      {googleContactsSyncJob.processedContacts + (googleContactsSyncJob.skippedContacts || 0)} / {googleContactsSyncJob.totalContacts}
+                    </span>
+                  )}
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{
+                      width: googleContactsSyncJob.totalContacts && googleContactsSyncJob.processedContacts !== undefined
+                        ? `${((googleContactsSyncJob.processedContacts + (googleContactsSyncJob.skippedContacts || 0)) / googleContactsSyncJob.totalContacts) * 100}%`
+                        : "0%",
+                    }}
+                  ></div>
+                </div>
+                <p className="text-xs text-theme-dark mt-2">
+                  {googleContactsSyncJob.processedContacts || 0} imported, {googleContactsSyncJob.skippedContacts || 0} skipped
+                  {googleContactsSyncJob.currentStep === "syncing_gmail" || googleContactsSyncJob.currentStep === "generating_insights"
+                    ? " • Syncing Gmail and generating insights for imported contacts..."
+                    : ""}
+                </p>
+                <p className="text-xs text-theme-dark mt-1 italic">
+                  You can navigate away - processing will continue in the background
+                </p>
+              </div>
+            )}
+            {googleContactsSyncJob && googleContactsSyncJob.status === "complete" && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-sm">
+                <div className="flex items-start gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Import completed successfully
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      {googleContactsSyncJob.processedContacts || 0} contacts imported, {googleContactsSyncJob.skippedContacts || 0} skipped
+                    </p>
+                    <div className="mt-2">
+                      <Link href="/contacts">
+                        <Button variant="primary" size="sm">
+                          View Contacts
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {googleContactsSyncJob && googleContactsSyncJob.status === "error" && (
+              <ErrorMessage
+                message={googleContactsSyncJob.errorMessage || "Import failed"}
+                dismissible
+                onDismiss={() => setCurrentGoogleContactsSyncJobId(null)}
+                className="mb-4"
+              />
+            )}
+            <Button
+              onClick={async () => {
+                setSyncingGoogleContacts(true);
+                setGoogleContactsError(null);
+                setCurrentGoogleContactsSyncJobId(null);
+
+                try {
+                  const response = await fetch("/api/contacts/sync");
+
+                  // Check if response is OK before parsing JSON
+                  if (!response.ok) {
+                    // Try to get error message from response
+                    let errorMessage = `Import failed with status ${response.status}`;
+                    try {
+                      const errorData = await response.json();
+                      errorMessage = errorData.error || errorMessage;
+                    } catch {
+                      // If response is not JSON, use status text
+                      errorMessage = response.statusText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
+                  }
+
+                  // Parse JSON response with error handling
+                  let data;
+                  try {
+                    const text = await response.text();
+                    if (!text || text.trim() === "") {
+                      throw new Error("Empty response from server");
+                    }
+                    data = JSON.parse(text);
+                  } catch (parseError) {
+                    if (parseError instanceof SyntaxError) {
+                      throw new Error("Invalid response from server. Please try again.");
+                    }
+                    throw parseError;
+                  }
+
+                  if (!data.ok) {
+                    const errorMessage = data.error || "Import failed";
+                    throw new Error(errorMessage);
+                  }
+
+                  // Success - start tracking the sync job
+                  setCurrentGoogleContactsSyncJobId(data.syncJobId);
+                  setSyncingGoogleContacts(false); // Button is no longer "loading" since job runs in background
+                } catch (error) {
+                  const errorMessage = extractErrorMessage(error);
+                  setGoogleContactsError(errorMessage);
+                  reportException(error, {
+                    context: "Google Contacts import error",
+                    tags: { component: "ImportContactsPage" },
+                  });
+                  setSyncingGoogleContacts(false);
+                }
+              }}
+              disabled={syncingGoogleContacts || isImporting || (googleContactsSyncJob?.status === "running")}
+              loading={syncingGoogleContacts}
+              variant="secondary"
+              size="md"
+              icon={
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              }
+            >
+              Sync Contacts Now
+            </Button>
+          </div>
+        </div>
+      </Card>
 
             {/* Overwrite Modal */}
       <Modal isOpen={showOverwriteModal} onClose={handleCancelModalWithReset} title="Import Options">

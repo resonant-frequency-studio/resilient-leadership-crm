@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import TagsClassificationCard from "../TagsClassificationCard";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useSavingState } from "@/contexts/SavingStateContext";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { renderWithProviders, createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import type { Contact } from "@/types/firestore";
 import type { SavingStateContextType } from "@/contexts/SavingStateContext";
 
@@ -62,8 +62,8 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(undefined, true, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
-      const { container } = render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      const { container } = renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
     });
   });
@@ -81,7 +81,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3") as HTMLInputElement;
       const segmentInput = screen.getByTestId("segment-input") as HTMLInputElement;
@@ -104,7 +104,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3") as HTMLInputElement;
       fireEvent.change(tagsInput, { target: { value: "Tag1, Tag2, New Tag" } });
@@ -122,7 +122,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3") as HTMLInputElement;
       fireEvent.change(tagsInput, { target: { value: "Tag1, Tag2, Tag3" } });
@@ -144,7 +144,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3") as HTMLInputElement;
       fireEvent.change(tagsInput, { target: { value: "Project Manager, Marketing Lead,Referral, VIP" } });
@@ -164,7 +164,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const segmentInput = screen.getByTestId("segment-input") as HTMLInputElement;
       fireEvent.change(segmentInput, { target: { value: "SMB" } });
@@ -182,7 +182,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       const leadSourceInput = screen.getByPlaceholderText("Enter lead source...") as HTMLInputElement;
       fireEvent.change(leadSourceInput, { target: { value: "Website" } });
@@ -202,7 +202,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3");
@@ -212,14 +212,7 @@ describe("TagsClassificationCard", () => {
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3");
       fireEvent.change(tagsInput, { target: { value: "Tag1, Tag2" } });
       
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(tagsInput);
       
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
@@ -238,7 +231,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3");
@@ -248,14 +241,7 @@ describe("TagsClassificationCard", () => {
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3");
       fireEvent.change(tagsInput, { target: { value: "Tag1, Tag2, Tag3" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(tagsInput);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -282,11 +268,10 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<TagsClassificationCard contactId={mockContactId} userId={mockUserId} />);
       
-      // Don't make any changes - Save button should be disabled
-      const saveButton = screen.getByRole("button", { name: /save/i });
-      expect(saveButton).toBeDisabled();
+      // Don't make any changes - verify mutate is not called
+      expect(mockMutate).not.toHaveBeenCalled();
 
       // Should not call mutate if there are no changes
       expect(mockMutate).not.toHaveBeenCalled();
@@ -311,7 +296,7 @@ describe("TagsClassificationCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact1, false, null)
       );
 
-      const { rerender } = render(<TagsClassificationCard contactId="contact-1" userId={mockUserId} />);
+      const { rerender } = renderWithProviders(<TagsClassificationCard contactId="contact-1" userId={mockUserId} />);
       
       const tagsInput = screen.getByPlaceholderText("tag1, tag2, tag3") as HTMLInputElement;
       expect(tagsInput.value).toBe("Tag1");

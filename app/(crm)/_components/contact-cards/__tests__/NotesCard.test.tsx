@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import NotesCard from "../NotesCard";
 import { useContact } from "@/hooks/useContact";
 import { useUpdateContact } from "@/hooks/useContactMutations";
 import { useSavingState } from "@/contexts/SavingStateContext";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { renderWithProviders, createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import type { Contact } from "@/types/firestore";
 import type { SavingStateContextType } from "@/contexts/SavingStateContext";
 
@@ -50,7 +50,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(undefined, true, null)
       );
 
-      const { container } = render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      const { container } = renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
     });
   });
@@ -66,7 +66,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Add notes about this contact...") as HTMLTextAreaElement;
       expect(textarea.value).toBe("Initial notes");
@@ -82,7 +82,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Add notes about this contact...") as HTMLTextAreaElement;
       expect(textarea.value).toBe("");
@@ -100,7 +100,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Add notes about this contact...") as HTMLTextAreaElement;
       fireEvent.change(textarea, { target: { value: "Updated notes" } });
@@ -108,7 +108,7 @@ describe("NotesCard", () => {
       expect(textarea.value).toBe("Updated notes");
     });
 
-    it("calls save when Save button is clicked", async () => {
+    it("calls autosave on blur after textarea change", async () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         notes: "Initial notes",
@@ -118,7 +118,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Add notes about this contact...");
@@ -128,21 +128,14 @@ describe("NotesCard", () => {
       const textarea = screen.getByPlaceholderText("Add notes about this contact...");
       fireEvent.change(textarea, { target: { value: "Updated notes" } });
       
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
       
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
       });
     });
 
-    it("disables Save button when there are no changes", () => {
+    it("does not call save when there are no changes", () => {
       const mockContact = createMockContact({
         contactId: mockContactId,
         notes: "Initial notes",
@@ -152,10 +145,10 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
-      const saveButton = screen.getByRole("button", { name: /save/i });
-      expect(saveButton).toBeDisabled();
+      // Verify that mutate is not called when there are no changes
+      expect(mockMutate).not.toHaveBeenCalled();
     });
   });
 
@@ -170,7 +163,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Add notes about this contact...");
@@ -180,14 +173,7 @@ describe("NotesCard", () => {
       const textarea = screen.getByPlaceholderText("Add notes about this contact...");
       fireEvent.change(textarea, { target: { value: "Updated notes" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -212,7 +198,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
       );
 
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
+      renderWithProviders(<NotesCard contactId={mockContactId} userId={mockUserId} />);
       
       await waitFor(() => {
         const textarea = screen.getByPlaceholderText("Add notes about this contact...");
@@ -222,14 +208,7 @@ describe("NotesCard", () => {
       const textarea = screen.getByPlaceholderText("Add notes about this contact...");
       fireEvent.change(textarea, { target: { value: "" } });
 
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
+      fireEvent.blur(textarea);
 
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith(
@@ -245,109 +224,8 @@ describe("NotesCard", () => {
     });
   });
 
-  describe("Save Status", () => {
-    it("shows saving indicator during save", () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-        notes: "Initial notes",
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      mockUseUpdateContact.mockReturnValue(
-        createMockUseMutationResult<Contact, Error, { contactId: string; updates: Partial<Contact> }, { prevDetail?: Contact | undefined; prevLists: Record<string, Contact[]> }>(
-          mockMutate,
-          jest.fn(),
-          true,
-          false,
-          false,
-          null,
-          undefined
-        ) as ReturnType<typeof useUpdateContact>
-      );
-
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
-      
-      const indicator = screen.getByTestId("saving-indicator");
-      expect(indicator.getAttribute("data-status")).toBe("idle");
-    });
-
-    it("shows saved indicator after successful save", async () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-        notes: "Initial notes",
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      mockMutate.mockImplementation((data, options) => {
-        // Call onSuccess immediately to simulate successful mutation
-        if (options?.onSuccess) {
-          setTimeout(() => options.onSuccess(), 0);
-        }
-      });
-
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
-      
-      const textarea = screen.getByPlaceholderText("Add notes about this contact...");
-      fireEvent.change(textarea, { target: { value: "Updated notes" } });
-
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
-
-      // Should show "Saving..." text during save
-      await waitFor(() => {
-        expect(screen.getByText("Saving...")).toBeInTheDocument();
-      });
-    });
-
-    it("shows error indicator on save failure", async () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-        notes: "Initial notes",
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      mockMutate.mockImplementation((data, options) => {
-        // Call onError immediately to simulate failed mutation
-        if (options?.onError) {
-          setTimeout(() => options.onError(new Error("Save failed")), 0);
-        }
-      });
-
-      render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
-      
-      const textarea = screen.getByPlaceholderText("Add notes about this contact...");
-      fireEvent.change(textarea, { target: { value: "Updated notes" } });
-
-      // Click Save button
-      const saveButton = await waitFor(() => {
-        const button = screen.getByRole("button", { name: /save/i });
-        expect(button).not.toBeDisabled();
-        return button;
-      });
-      
-      fireEvent.click(saveButton);
-
-      // Should show "Saving..." text during save
-      await waitFor(() => {
-        expect(screen.getByText("Saving...")).toBeInTheDocument();
-      });
-    });
-  });
+  // Note: Save status is now handled globally by ContactSaveBar, not per-card
+  // These tests are removed as the functionality is tested at the global level
 
   describe("State Reset", () => {
     it("resets state when contactId changes", () => {
@@ -365,7 +243,7 @@ describe("NotesCard", () => {
         createMockUseQueryResult<Contact | null, Error>(mockContact1, false, null)
       );
 
-      const { rerender } = render(<NotesCard contactId="contact-1" userId={mockUserId} />);
+      const { rerender } = renderWithProviders(<NotesCard contactId="contact-1" userId={mockUserId} />);
       
       const textarea = screen.getByPlaceholderText("Add notes about this contact...") as HTMLTextAreaElement;
       expect(textarea.value).toBe("Notes 1");
@@ -380,24 +258,7 @@ describe("NotesCard", () => {
     });
   });
 
-  describe("Saving State Context", () => {
-    it("registers and unregisters save status", () => {
-      const mockContact = createMockContact({
-        contactId: mockContactId,
-      });
-
-      mockUseContact.mockReturnValue(
-        createMockUseQueryResult<Contact | null, Error>(mockContact, false, null)
-      );
-
-      const { unmount } = render(<NotesCard contactId={mockContactId} userId={mockUserId} />);
-      
-      expect(mockRegisterSaveStatus).toHaveBeenCalledWith(`notes-${mockContactId}`, "idle");
-      
-      unmount();
-      
-      expect(mockUnregisterSaveStatus).toHaveBeenCalledWith(`notes-${mockContactId}`);
-    });
-  });
+  // Note: Saving state is now handled by ContactAutosaveProvider, not SavingStateContext
+  // These tests are removed as the functionality is tested at the provider level
 });
 

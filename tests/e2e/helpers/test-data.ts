@@ -128,7 +128,6 @@ export async function createTestContact(
         
         if (response.ok) {
           await response.json(); // Read response but don't need the data
-          console.log(`[TEST] Cache invalidated for contact ${testContactId} (attempt ${attempt + 1})`);
           // Wait a bit for cache invalidation to propagate
           await new Promise(resolve => setTimeout(resolve, 200));
           break; // Success, exit retry loop

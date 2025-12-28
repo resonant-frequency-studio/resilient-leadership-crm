@@ -3,7 +3,6 @@ import { SyncJob } from "@/types/firestore";
 import { syncJobsPath } from "@/lib/firestore-paths";
 import { reportException } from "@/lib/error-reporting";
 import { convertTimestampToISO } from "@/util/timestamp-utils-server";
-import { unstable_cache } from "next/cache";
 
 /**
  * Convert a SyncJob document to have ISO string timestamps
@@ -76,22 +75,17 @@ async function getLastSyncForUserUncached(
 }
 
 /**
- * Get the most recent sync job for a user (cached)
+ * Get the most recent sync job for a user
  * 
  * @param userId - The user ID
  * @returns The most recent sync job or null if none exists
+ * 
+ * Note: Caching is handled by React Query on the client side
  */
 export async function getLastSyncForUser(
   userId: string
 ): Promise<SyncJob | null> {
-  return unstable_cache(
-    async () => getLastSyncForUserUncached(userId),
-    [`last-sync-${userId}`],
-    {
-      tags: [`sync-jobs`, `sync-jobs-${userId}`],
-      revalidate: 60, // 1 minute (sync jobs change more frequently)
-    }
-  )();
+  return getLastSyncForUserUncached(userId);
 }
 
 /**
@@ -145,23 +139,93 @@ async function getSyncHistoryForUserUncached(
 }
 
 /**
- * Get sync history for a user (cached)
+ * Get sync history for a user
  * 
  * @param userId - The user ID
  * @param limit - Maximum number of sync jobs to return (default: 10)
  * @returns Array of sync jobs ordered by startedAt descending
+ * 
+ * Note: Caching is handled by React Query on the client side
  */
 export async function getSyncHistoryForUser(
   userId: string,
   limit: number = 10
 ): Promise<SyncJob[]> {
-  return unstable_cache(
-    async () => getSyncHistoryForUserUncached(userId, limit),
-    [`sync-history-${userId}-${limit}`],
-    {
-      tags: [`sync-jobs`, `sync-jobs-${userId}`],
-      revalidate: 60, // 1 minute (sync jobs change more frequently)
+  return getSyncHistoryForUserUncached(userId, limit);
+}
+
+/**
+ * Internal function to fetch last sync for a specific service (uncached)
+ * Filters by service and returns the most recent sync job
+ */
+async function getLastSyncForServiceUncached(
+  userId: string,
+  service: "gmail" | "calendar"
+): Promise<SyncJob | null> {
+  try {
+    // Fetch all sync jobs and filter by service, then sort
+    // This avoids needing a composite index
+    const snapshot = await adminDb
+      .collection(syncJobsPath(userId))
+      .where("service", "==", service)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
     }
-  )();
+
+    // Sort by startedAt descending and get the first one
+    const syncJobs = snapshot.docs
+      .map((doc) => {
+        const data = {
+          ...(doc.data() as SyncJob),
+          syncJobId: doc.id,
+        };
+        return convertSyncJobTimestamps(data);
+      })
+      .sort((a, b) => {
+        const aTime = new Date(a.startedAt as string).getTime();
+        const bTime = new Date(b.startedAt as string).getTime();
+        return bTime - aTime; // Descending
+      });
+
+    return syncJobs[0] || null;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Check for quota errors
+    if (
+      errorMessage.includes("RESOURCE_EXHAUSTED") ||
+      errorMessage.includes("Quota exceeded")
+    ) {
+      reportException(error, {
+        context: "Getting last sync by service (quota exceeded)",
+        tags: { component: "sync-jobs-server", userId, service },
+      });
+      throw new Error("Database quota exceeded. Please wait a few hours or upgrade your plan.");
+    }
+
+    reportException(error, {
+      context: "Getting last sync by service",
+      tags: { component: "sync-jobs-server", userId, service },
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get the most recent sync job for a user filtered by service
+ * 
+ * @param userId - The user ID
+ * @param service - The service to filter by ("gmail" or "calendar")
+ * @returns The most recent sync job for the service or null if none exists
+ * 
+ * Note: Caching is handled by React Query on the client side
+ */
+export async function getLastSyncForService(
+  userId: string,
+  service: "gmail" | "calendar"
+): Promise<SyncJob | null> {
+  return getLastSyncForServiceUncached(userId, service);
 }
 

@@ -6,13 +6,11 @@ import { useUpdateContact } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
 import Skeleton from "@/components/Skeleton";
 import InfoPopover from "@/components/InfoPopover";
-import SaveButtonWithIndicator from "./SaveButtonWithIndicator";
 import SegmentSelect from "../SegmentSelect";
 import { reportException } from "@/lib/error-reporting";
-import { useSavingState } from "@/contexts/SavingStateContext";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
 import Input from "@/components/Input";
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import SavingIndicator from "@/components/contacts/SavingIndicator";
 
 interface TagsClassificationCardProps {
   contactId: string;
@@ -27,95 +25,127 @@ export default function TagsClassificationCard({
 }: TagsClassificationCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
-  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
-  const cardId = `tags-classification-${contactId}`;
+  const { schedule, flush } = useDebouncedAutosave();
   
   const prevContactIdRef = useRef<string | null>(null);
+  const lastSavedValuesRef = useRef<{ tags: string[]; segment: string | null; leadSource: string } | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [tagsInput, setTagsInput] = useState<string>(""); // Raw input string for free typing
   const [tags, setTags] = useState<string[]>([]); // Parsed tags array
   const [segment, setSegment] = useState<string | null>(null);
   const [leadSource, setLeadSource] = useState<string>("");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   
-  // Register/unregister save status with context
+  // Use refs to store current values so save function always reads latest state
+  const tagsRef = useRef<string[]>(tags);
+  const segmentRef = useRef<string | null>(segment);
+  const leadSourceRef = useRef<string>(leadSource);
+  
+  // Keep refs in sync with state
   useEffect(() => {
-    registerSaveStatus(cardId, saveStatus);
-    return () => {
-      unregisterSaveStatus(cardId);
-    };
-  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+    tagsRef.current = tags;
+  }, [tags]);
   
-  // Reset form state when contactId changes (different contact loaded)
-  // Using contactId prop as dependency ensures we only update when switching contacts
+  useEffect(() => {
+    segmentRef.current = segment;
+  }, [segment]);
+  
+  useEffect(() => {
+    leadSourceRef.current = leadSource;
+  }, [leadSource]);
+  
+  // Reset form state only when contactId changes (switching to a different contact)
+  // Don't reset when contact data updates from our own save
   useEffect(() => {
     if (!contact) return;
+    
+    // Only reset if we're switching to a different contact
     if (prevContactIdRef.current !== contact.contactId) {
       prevContactIdRef.current = contact.contactId;
+      lastSavedValuesRef.current = null; // Clear saved values when switching contacts
       // Batch state updates to avoid cascading renders
       const contactTags = contact.tags ?? [];
       setTags(contactTags);
       setTagsInput(contactTags.join(", ")); // Initialize input with tags joined by comma
       setSegment(contact.segment ?? null);
       setLeadSource(contact.leadSource ?? "");
-      setSaveStatus("idle");
+      return;
+    }
+    
+    // If contact data updated but it matches what we just saved, don't reset
+    if (lastSavedValuesRef.current) {
+      const saved = lastSavedValuesRef.current;
+      const contactTags = contact.tags ?? [];
+      const contactMatchesSaved = 
+        JSON.stringify(contactTags.sort()) === JSON.stringify(saved.tags.sort()) &&
+        (contact.segment ?? null) === saved.segment &&
+        (contact.leadSource ?? "") === saved.leadSource;
+      
+      if (contactMatchesSaved) {
+        // This update came from our save, don't reset form
+        return;
+      }
+    }
+    
+    // Only update if form values match the old contact values (user hasn't made changes)
+    const formMatchesOldContact = 
+      JSON.stringify(tags.sort()) === JSON.stringify((contact.tags ?? []).sort()) &&
+      segment === (contact.segment ?? null) &&
+      leadSource === (contact.leadSource ?? "");
+    
+    if (formMatchesOldContact) {
+      // Form hasn't been edited, safe to update from contact
+      const contactTags = contact.tags ?? [];
+      setTags(contactTags);
+      setTagsInput(contactTags.join(", "));
+      setSegment(contact.segment ?? null);
+      setLeadSource(contact.leadSource ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId]);
+  }, [contact?.contactId, contact?.tags, contact?.segment, contact?.leadSource]);
 
-  // Track changes using useMemo instead of useEffect
-  const hasUnsavedChanges = useMemo(() => {
-    if (!contact) return false;
-    const tagsChanged =
-      JSON.stringify([...tags].sort()) !== JSON.stringify([...(contact.tags ?? [])].sort());
-    const segmentChanged = segment !== (contact.segment ?? null);
-    const leadSourceChanged = leadSource !== (contact.leadSource ?? "");
-    return tagsChanged || segmentChanged || leadSourceChanged;
-  }, [tags, segment, leadSource, contact]);
-
-  const saveChanges = () => {
-    if (!hasUnsavedChanges || !contact) return;
-
-    setSaveStatus("saving");
-    updateMutation.mutate(
-      {
-        contactId,
-        updates: {
-          tags: tags.length > 0 ? tags : [],
-          segment: segment || null,
-          leadSource: leadSource || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        },
-        onError: (error) => {
-          setSaveStatus("error");
-          reportException(error, {
-            context: "Saving tags & classification in TagsClassificationCard",
-            tags: { component: "TagsClassificationCard", contactId },
-          });
-          setTimeout(() => setSaveStatus("idle"), 3000);
-        },
-      }
-    );
-  };
-
-  // Autosave every 30 seconds when there are unsaved changes
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const interval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        saveChanges();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [hasUnsavedChanges, saveChanges]);
+  // Save function for autosave - reads from refs to always get latest values
+  const saveTags = useMemo(() => {
+    return async () => {
+      if (!contact) return;
+      
+      // Read current form values from refs (always latest, even if scheduled before state update)
+      const currentTags = tagsRef.current.length > 0 ? tagsRef.current : [];
+      const currentSegment = segmentRef.current || null;
+      const currentLeadSource = leadSourceRef.current || null;
+      
+      return new Promise<void>((resolve, reject) => {
+        updateMutation.mutate(
+          {
+            contactId,
+            updates: {
+              tags: currentTags,
+              segment: currentSegment,
+              leadSource: currentLeadSource,
+            },
+          },
+          {
+            onSuccess: () => {
+              // Remember what we saved so we don't reset form when contact refetches
+              lastSavedValuesRef.current = {
+                tags: currentTags,
+                segment: currentSegment,
+                leadSource: currentLeadSource ?? "",
+              };
+              resolve();
+            },
+            onError: (error) => {
+              reportException(error, {
+                context: "Saving tags & classification in TagsClassificationCard",
+                tags: { component: "TagsClassificationCard", contactId },
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+    };
+  }, [contact, contactId, updateMutation]);
 
   // Parse tags input string into tags array
   const parseTags = (input: string): string[] => {
@@ -127,12 +157,28 @@ export default function TagsClassificationCard({
     setTagsInput(value); // Allow free typing
     const parsedTags = parseTags(value);
     setTags(parsedTags); // Update tags array for comparison
+    schedule("tags", saveTags);
   };
 
   const handleTagsBlur = () => {
     // Normalize the input on blur (remove extra spaces, etc.)
     const normalized = tags.join(", ");
     setTagsInput(normalized);
+    flush("tags");
+  };
+
+  const handleSegmentChange = (value: string | null) => {
+    setSegment(value);
+    schedule("tags", saveTags);
+  };
+
+  const handleLeadSourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLeadSource(e.target.value);
+    schedule("tags", saveTags);
+  };
+
+  const handleLeadSourceBlur = () => {
+    flush("tags");
   };
 
   if (!contact) {
@@ -144,8 +190,9 @@ export default function TagsClassificationCard({
   }
 
   return (
-    <Card padding="md">
-      <div className="flex items-center justify-between mb-2">
+    <Card padding="md" className="relative">
+      <SavingIndicator cardKey="tags" />
+      <div className="mb-2">
         <h2 className="text-lg font-semibold text-theme-darkest flex items-center gap-2">
           <svg
             className="w-5 h-5 text-gray-400"
@@ -162,11 +209,6 @@ export default function TagsClassificationCard({
           </svg>
           Tags & Classification
         </h2>
-        <SaveButtonWithIndicator
-          saveStatus={saveStatus}
-          hasUnsavedChanges={hasUnsavedChanges}
-          onSave={saveChanges}
-        />
       </div>
       <p className="text-sm text-theme-dark mb-4">
         Organize and categorize your contacts using tags, segments, and lead sources to better track relationships and tailor your communication strategies.
@@ -209,7 +251,7 @@ export default function TagsClassificationCard({
             </label>
             <SegmentSelect
               value={segment}
-              onChange={(value) => setSegment(value)}
+              onChange={handleSegmentChange}
               existingSegments={uniqueSegments}
               placeholder="Enter or select segment..."
             />
@@ -224,7 +266,8 @@ export default function TagsClassificationCard({
               id="contact-lead-source"
               name="contact-lead-source"
               value={leadSource}
-              onChange={(e) => setLeadSource(e.target.value)}
+              onChange={handleLeadSourceChange}
+              onBlur={handleLeadSourceBlur}
               placeholder="Enter lead source..."
             />
           </div>

@@ -6,18 +6,23 @@ import { Timestamp } from "firebase-admin/firestore";
 
 /**
  * POST /api/admin/cleanup-action-items
- * Bulk delete all action items from contacts whose last email was more than 90 days old
+ * Bulk delete all action items from contacts whose last email was more than specified days old
+ * 
+ * Body: { days: number } - defaults to 90 if not provided
  */
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const userId = await getUserId();
 
+    const body = await req.json().catch(() => ({}));
+    const days = typeof body.days === 'number' && body.days > 0 ? body.days : 90;
+
     const now = new Date();
-    const cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
+    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
     reportMessage(
-      `Cleaning up action items from contacts with lastEmailDate older than ${cutoffDate.toISOString()}`,
+      `Cleaning up action items from contacts with lastEmailDate older than ${days} days (${cutoffDate.toISOString()})`,
       ErrorLevel.INFO
     );
 
@@ -74,7 +79,7 @@ export async function POST() {
         continue;
       }
 
-      // Check if lastEmailDate is older than 90 days
+      // Check if lastEmailDate is older than specified days
       const lastEmailTimestamp = Timestamp.fromDate(dateObj);
       if (lastEmailTimestamp < cutoffTimestamp) {
         contactsToProcess.push({ id: doc.id, lastEmailDate: dateObj });

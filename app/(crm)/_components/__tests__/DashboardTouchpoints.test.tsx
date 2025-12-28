@@ -1,14 +1,16 @@
+import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardTouchpoints from "../DashboardTouchpoints";
-import { useContacts } from "@/hooks/useContacts";
+import { useContactsRealtime } from "@/hooks/useContactsRealtime";
 import { useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
 import { useAuth } from "@/hooks/useAuth";
-import { createMockContact, createMockUseQueryResult, createMockUseMutationResult } from "@/components/__tests__/test-utils";
+import { createMockContact, createMockUseMutationResult } from "@/components/__tests__/test-utils";
 import { Timestamp } from "firebase/firestore";
 import type { Contact } from "@/types/firestore";
 import type { User } from "firebase/auth";
 
-jest.mock("@/hooks/useContacts");
+jest.mock("@/hooks/useContactsRealtime");
 jest.mock("@/hooks/useContactMutations");
 jest.mock("@/hooks/useAuth");
 jest.mock("../ContactCard", () => ({
@@ -25,8 +27,35 @@ jest.mock("../ContactCard", () => ({
     </div>
   ),
 }));
+jest.mock("../TouchpointCard", () => ({
+  __esModule: true,
+  default: ({ contact, isSelected, onSelectChange }: { contact: Contact; isSelected: boolean; onSelectChange?: (id: string) => void }) => (
+    <div data-testid={`touchpoint-card-${contact.contactId}`} data-selected={isSelected}>
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => onSelectChange?.(contact.contactId)}
+        data-testid={`checkbox-${contact.contactId}`}
+      />
+      {contact.firstName} {contact.lastName}
+    </div>
+  ),
+}));
 
-const mockUseContacts = useContacts as jest.MockedFunction<typeof useContacts>;
+// Helper to render with QueryClientProvider
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  );
+};
+
+const mockUseContactsRealtime = useContactsRealtime as jest.MockedFunction<typeof useContactsRealtime>;
 const mockUseUpdateTouchpointStatus = useUpdateTouchpointStatus as jest.MockedFunction<typeof useUpdateTouchpointStatus>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
@@ -45,7 +74,7 @@ describe("DashboardTouchpoints", () => {
 
     const mockMutate = jest.fn();
     mockUseUpdateTouchpointStatus.mockReturnValue(
-      createMockUseMutationResult<unknown, Error, { contactId: string; status: "pending" | "completed" | "cancelled" | null; reason?: string | null }, { prev: Contact | undefined }>(
+      createMockUseMutationResult(
         mockMutate,
         mockMutateAsync
       ) as ReturnType<typeof useUpdateTouchpointStatus>
@@ -54,11 +83,14 @@ describe("DashboardTouchpoints", () => {
 
   describe("Loading Fallback", () => {
     it("shows loading fallback", () => {
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(undefined, true));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: [],
+        loading: true,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
       
-      const { container } = render(<DashboardTouchpoints userId={mockUserId} />);
-      // Suspense fallback renders a Card with animate-pulse div
-      // In test environment, Suspense may resolve immediately, so we check for the component rendering
+      const { container } = renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
       // If contacts are loading, the component should still render the structure
       expect(container).toBeTruthy();
     });
@@ -84,26 +116,31 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      // Wait for Today's Priorities section to render (which includes overdue)
+      // Wait for Focus for Today section to render
       await waitFor(() => {
-        expect(screen.getByText(/Today's Priorities/)).toBeInTheDocument();
+        expect(screen.getByText(/Focus for Today/)).toBeInTheDocument();
       });
       
-      // Find the "Overdue" subsection heading
+      // Find the "Follow-ups to close" subsection heading in Needs Attention
       await waitFor(() => {
-        expect(screen.getByText("Overdue")).toBeInTheDocument();
+        expect(screen.getByText(/Follow-ups to close/)).toBeInTheDocument();
       });
       
-      // Verify contact-1 is in the overdue section
-      expect(screen.getAllByTestId("contact-card-contact-1").length).toBeGreaterThan(0);
+      // Verify contact-1 is in the overdue section (now using TouchpointCard)
+      expect(screen.getAllByTestId("touchpoint-card-contact-1").length).toBeGreaterThan(0);
       
-      // Contact-2 should appear in upcoming section, not in overdue
+      // Contact-2 should appear in preparing ahead section, not in overdue
       // We verify contact-1 appears which proves overdue filtering works
-      expect(screen.getAllByTestId("contact-card-contact-1").length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId("touchpoint-card-contact-1").length).toBeGreaterThan(0);
     });
 
     it("filters upcoming touchpoints", async () => {
@@ -125,17 +162,31 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
+      // Wait for the "Preparing ahead" accordion to appear, then expand it
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
-        expect(screen.getAllByTestId("contact-card-contact-1").length).toBeGreaterThan(0);
+        expect(screen.getByText(/Preparing ahead/)).toBeInTheDocument();
+      });
+      
+      // Click to expand the accordion
+      const accordionButton = screen.getByText(/Preparing ahead/);
+      fireEvent.click(accordionButton);
+      
+      // Now wait for the touchpoint card to appear
+      await waitFor(() => {
+        expect(screen.getAllByTestId("touchpoint-card-contact-1").length).toBeGreaterThan(0);
       });
     });
 
-    it("shows recent contacts", () => {
+    it("shows recent contacts", async () => {
       const mockContacts = [
         createMockContact({
           contactId: "contact-1",
@@ -147,12 +198,17 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      waitFor(() => {
-        expect(screen.getByText("Recent Contacts")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Relationship Momentum")).toBeInTheDocument();
       });
     });
   });
@@ -171,13 +227,31 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
+
+      // Wait for the component to render
+      await waitFor(() => {
+        expect(screen.getByText(/Focus for Today/)).toBeInTheDocument();
+      });
+      
+      // The touchpoint is in the future, so it might be in "Preparing ahead" section
+      // Check if "Preparing ahead" exists and expand it
+      const preparingAheadText = screen.queryByText(/Preparing ahead/);
+      if (preparingAheadText) {
+        fireEvent.click(preparingAheadText);
+      }
 
       await waitFor(() => {
         const checkboxes = screen.getAllByTestId("checkbox-contact-1");
-        const checkbox = checkboxes[0]; // Use first one (from overdue section)
+        expect(checkboxes.length).toBeGreaterThan(0);
+        const checkbox = checkboxes[0];
         expect(checkbox).not.toBeChecked();
         
         fireEvent.click(checkbox);
@@ -207,22 +281,31 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
       mockMutateAsync.mockResolvedValue({});
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      // Wait for upcoming section to render
+      // Wait for preparing ahead section to render
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
+        expect(screen.getByText(/Preparing ahead/)).toBeInTheDocument();
       });
+      
+      // Expand the accordion (it's collapsed by default)
+      const accordionButton = screen.getByText(/Preparing ahead/);
+      fireEvent.click(accordionButton);
 
       // Select the checkboxes
       await waitFor(() => {
         const checkboxes1 = screen.getAllByTestId("checkbox-contact-1");
         const checkboxes2 = screen.getAllByTestId("checkbox-contact-2");
-        const checkbox1 = checkboxes1[0]; // Use first one (from upcoming section)
+        const checkbox1 = checkboxes1[0]; // Use first one (from preparing ahead section)
         const checkbox2 = checkboxes2[0];
         
         fireEvent.click(checkbox1);
@@ -261,27 +344,36 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
       mockMutateAsync.mockResolvedValue({});
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      // Wait for upcoming section to render
+      // Wait for preparing ahead section to render
       await waitFor(() => {
-        expect(screen.getByText(/Upcoming Touchpoints/)).toBeInTheDocument();
+        expect(screen.getByText(/Preparing ahead/)).toBeInTheDocument();
       });
+      
+      // Expand the accordion (it's collapsed by default)
+      const accordionButton = screen.getByText(/Preparing ahead/);
+      fireEvent.click(accordionButton);
 
       // Select the checkbox
       await waitFor(() => {
         const checkboxes = screen.getAllByTestId("checkbox-contact-1");
-        const checkbox = checkboxes[0]; // Use first one (from upcoming section)
+        const checkbox = checkboxes[0]; // Use first one (from preparing ahead section)
         fireEvent.click(checkbox);
       });
 
       // Wait for bulk actions to appear after selection
       await waitFor(() => {
-        const bulkButton = screen.getByText(/Skip Touchpoint/);
+        const bulkButton = screen.getByText(/Not needed right now/);
         fireEvent.click(bulkButton);
       });
 
@@ -295,7 +387,7 @@ describe("DashboardTouchpoints", () => {
   });
 
   describe("Select All", () => {
-    it("selects all touchpoints in section", () => {
+    it("selects all touchpoints in section", async () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 5);
 
@@ -314,16 +406,38 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      waitFor(() => {
-        const selectAllCheckbox = screen.getByText(/Select all/);
-        fireEvent.click(selectAllCheckbox);
+      // Wait for the component to render
+      await waitFor(() => {
+        expect(screen.getByText(/Focus for Today/)).toBeInTheDocument();
+      });
+      
+      // The touchpoints are in the future, so they might be in "Preparing ahead" section
+      // Check if "Preparing ahead" exists and expand it
+      const preparingAheadText = screen.queryByText(/Preparing ahead/);
+      if (preparingAheadText) {
+        fireEvent.click(preparingAheadText);
+      }
 
-        const checkbox1 = screen.getByTestId("checkbox-contact-1");
-        const checkbox2 = screen.getByTestId("checkbox-contact-2");
+      // Find and click the select all checkbox
+      await waitFor(() => {
+        const selectAllCheckboxes = screen.getAllByText(/Handle these together/);
+        expect(selectAllCheckboxes.length).toBeGreaterThan(0);
+        fireEvent.click(selectAllCheckboxes[0]);
+      });
+
+      // Wait for checkboxes to be checked
+      await waitFor(() => {
+        const checkbox1 = screen.getAllByTestId("checkbox-contact-1")[0];
+        const checkbox2 = screen.getAllByTestId("checkbox-contact-2")[0];
         
         expect(checkbox1).toBeChecked();
         expect(checkbox2).toBeChecked();
@@ -332,7 +446,7 @@ describe("DashboardTouchpoints", () => {
   });
 
   describe("Bulk Actions Display", () => {
-    it("renders bulk actions when items selected", () => {
+    it("renders bulk actions when items selected", async () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 5);
 
@@ -345,17 +459,39 @@ describe("DashboardTouchpoints", () => {
         }),
       ];
 
-      mockUseContacts.mockReturnValue(createMockUseQueryResult<Contact[]>(mockContacts));
+      mockUseContactsRealtime.mockReturnValue({
+        contacts: mockContacts,
+        loading: false,
+        error: null,
+        hasConfirmedNoContacts: false,
+      });
 
-      render(<DashboardTouchpoints userId={mockUserId} />);
+      renderWithQueryClient(<DashboardTouchpoints userId={mockUserId} />);
 
-      waitFor(() => {
-        const checkbox = screen.getByTestId("checkbox-contact-1");
+      // Wait for the component to render
+      await waitFor(() => {
+        expect(screen.getByText(/Focus for Today/)).toBeInTheDocument();
+      });
+      
+      // The touchpoint is in the future, so it might be in "Preparing ahead" section
+      // Check if "Preparing ahead" exists and expand it
+      const preparingAheadText = screen.queryByText(/Preparing ahead/);
+      if (preparingAheadText) {
+        fireEvent.click(preparingAheadText);
+      }
+
+      // Wait for checkbox to appear and click it
+      await waitFor(() => {
+        const checkboxes = screen.getAllByTestId("checkbox-contact-1");
+        expect(checkboxes.length).toBeGreaterThan(0);
+        const checkbox = checkboxes[0];
         fireEvent.click(checkbox);
+      });
 
-        expect(screen.getByText(/1 touchpoint selected/)).toBeInTheDocument();
+      // Wait for bulk actions to appear
+      await waitFor(() => {
         expect(screen.getByText(/Mark as Contacted/)).toBeInTheDocument();
-        expect(screen.getByText(/Skip Touchpoint/)).toBeInTheDocument();
+        expect(screen.getByText(/Not needed right now/)).toBeInTheDocument();
       });
     });
   });

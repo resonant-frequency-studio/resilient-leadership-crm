@@ -8,8 +8,20 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 - **View All Contacts** - Browse and manage your contact list with real-time updates
 - **Create New Contacts** - Manually add contacts with comprehensive information
 - **Edit Contacts** - Update contact details, tags, segments, and more
-- **Import Contacts** - Bulk import contacts from CSV files with flexible overwrite options
+- **Import Contacts** - Bulk import contacts from CSV files or Google Contacts with flexible overwrite options
 - **Delete Contacts** - Remove contacts with confirmation modal
+- **Export Contacts** - Export contacts to CSV or Google Contacts
+- **Bulk Operations** - Bulk update segments, tags, and other fields across multiple contacts
+
+### Schedule & Calendar Management
+- **Multiple Calendar Views** - Month, week, day, and agenda views for flexible scheduling
+- **Event Filtering** - Filter events by segment, tags, linked contacts, or search terms
+- **Event Types** - Categorize events as sessions, follow-ups, prep time, admin tasks, focus time, or hold slots
+- **Create & Manage Events** - Create new calendar events directly in the CRM
+- **Link Events to Contacts** - Associate calendar events with specific contacts for relationship tracking
+- **Theme-Aware Styling** - Calendar adapts to light/dark mode with optimized visibility
+- **Real-Time Sync** - Calendar events sync automatically from Google Calendar
+- **Touchpoint Integration** - View and manage touchpoints alongside calendar events
 
 ### Contact Information
 - Identity fields (email, first name, last name)
@@ -19,51 +31,104 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 - Sentiment analysis
 - Email thread tracking
 
-### Dashboard & Analytics
-- **Interactive Charts** - Visualize your contact data with elegant charts:
-  - Segment distribution (pie chart)
-  - Lead source breakdown (pie chart)
-  - Engagement levels (bar chart)
-  - Sentiment analysis (pie chart)
-  - Top tags (horizontal bar chart)
+### Dashboard
 - **Real-time Statistics** - View key metrics at a glance:
   - Total contacts
   - Active email threads
   - Average engagement score
   - Upcoming touchpoints
+- **Recent Contacts** - Quick access to recently updated contacts
+- **Touchpoint Overview** - See contacts with upcoming touchpoints in the next 60 days
+- **Suggested Focus** - AI-powered recommendations for which contacts to prioritize
+- **Follow-ups to Complete** - Track action items you've committed to
+- **Pipeline Snapshot** - Overview of your relationship pipeline
 
-### Data Visualization
-- Modern, clean chart designs using Recharts
-- Responsive layouts that work on all devices
-- Interactive tooltips and legends
-- Automatic grouping of small segments
+### Insights
+- **Relationship Health Analysis** - Identify relationships that need attention
+- **Suggested Focus Areas** - AI-powered recommendations for which contacts to prioritize
+- **Coverage Analysis** - Track segment, tag, and lead source coverage across your database
+- **Sentiment Alerts** - Get notified about contacts with negative sentiment trends
+- **Engagement Insights** - Understand engagement patterns and opportunities
+- **Data Quality Metrics** - Identify missing information and data gaps
 
 ### Authentication
 - Google Sign-In integration
 - Secure Firebase Authentication
 - Protected routes and automatic redirects
 
-### Search & Filtering
-- Search by email, first name, or last name
-- Filter by segment
-- Filter by tags (multiple selection)
-- Clear filters option
+### Touchpoints Management
+- **Today's Touchpoints** - View and manage all touchpoints due today
+- **Overdue Touchpoints** - Track and follow up on missed touchpoints
+- **Upcoming Touchpoints** - Plan ahead with upcoming touchpoint view
+- **Bulk Actions** - Update touchpoint statuses across multiple contacts
+- **Status Management** - Mark touchpoints as completed, rescheduled, or cancelled
+- **Touchpoint Reminders** - Never miss a follow-up with organized touchpoint tracking
 
-### Gmail Integration
-- **Automatic Email Sync** - Sync email threads from your Gmail account
-- **Incremental Sync** - Only syncs new messages since last sync
-- **Contact Matching** - Automatically matches emails to existing contacts
-- **Thread Tracking** - Tracks conversation threads per contact
-- **Scheduled Sync** - Automatic background synchronization
+### Search & Filtering
+- **Multi-field Search** - Search by email, first name, last name, or company
+- **Segment Filtering** - Filter by segment (single selection)
+- **Tag Filtering** - Filter by tags (multiple selection with searchable dropdown)
+- **Date Range Filtering** - Filter by last email date range with custom date pickers
+- **Custom Filters** - Quick filters for at-risk, warm, or needs-attention contacts
+- **Archive Toggle** - Show or hide archived contacts
+- **New Contacts Toggle** - Include or exclude contacts with no email history
+- **Real-time Filtering** - Filters apply instantly with pagination support
+- **Clear All Filters** - One-click reset of all active filters
+
+### Google Integration
+- **Gmail Sync**:
+  - Direct syncing via webhooks/cron jobs for automatic background synchronization
+  - Automatic email thread synchronization (runs every 15-30 minutes via cron)
+  - Incremental sync - only syncs new messages since last sync
+  - Contact matching - automatically matches emails to existing contacts
+  - Thread tracking - tracks conversation threads per contact
+  - Manual sync triggers available for immediate synchronization
+- **Google Calendar Sync**:
+  - Direct syncing via webhooks/cron jobs for automatic background synchronization
+  - Automatic calendar event synchronization (runs daily via cron)
+  - Event-to-contact linking
+  - Calendar subscription management
+  - Manual sync triggers available for immediate synchronization
+- **Google Contacts Integration**:
+  - Direct syncing via webhooks/cron jobs for automatic background synchronization
+  - Automatic contact import from Google Contacts (People API) - runs daily via cron
+  - Automatic contact enrichment with missing data (names, company, photos)
+  - People API enrichment for contacts missing first name, last name, company, or profile photos
+  - Manual import available for immediate synchronization
 
 ### Action Items
 - **AI-Generated Action Items** - Extract action items from email conversations
 - **Manage Tasks** - Track and manage follow-up tasks for each contact
 - **Import from Text** - Create action items from plain text
+- **Filter & Search** - Find action items by contact, status, or date
+- **Bulk Management** - Update multiple action items at once
 
-### White-Labeling
+### Sync Management
+- **Sync Status Page** - Comprehensive dashboard for all sync operations
+- **Manual Sync Triggers** - Manually trigger Gmail, Calendar, or Contacts sync
+- **Automatic Sync Jobs** - Cron-based automatic synchronization:
+  - Gmail sync: Every 15-30 minutes
+  - Calendar sync: Daily
+  - Contacts sync: Daily
+- **Sync History** - View detailed history of all sync operations
+- **Error Tracking** - Monitor and troubleshoot sync failures
+- **Real-Time Status** - See sync progress and status in real-time
+
+### Admin Tools
+- **Data Management** - Administrative tools for maintaining your CRM data
+- **Bulk Operations** - Clean up tags, touchpoints, and action items
+- **Contact Enrichment** - Bulk enrich contacts with People API data
+- **Data Cleanup** - Remove duplicate or outdated data
+- **Event Management** - Bulk unlink calendar events from contacts
+- **Segment Processing** - Process contacts in specific segments with Gmail sync and insights generation
+- **Google Account Reconnection** - Reconnect your Google account if sync issues occur
+
+### Theme & Customization
+- **Light/Dark Mode** - Toggle between light and dark themes
+- **Theme-Aware Components** - All components adapt to your selected theme
 - **Customizable CRM Name** - Configure the application name via environment variables
 - **Brand Identity** - Easy to rebrand for different organizations
+- **Coaching-First Language** - Executive-coach focused terminology throughout the interface
 
 ## Tech Stack
 
@@ -72,7 +137,7 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 - **Styling**: Tailwind CSS 4
 - **Backend**: Firebase (Firestore, Authentication)
 - **Data Fetching**: TanStack Query (React Query) v5
-- **Charts**: Recharts
+- **Product Tours**: @reactour/tour
 - **CSV Parsing**: PapaParse
 
 ## Project Structure
@@ -82,32 +147,78 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
 │   ├── (crm)/              # Protected CRM routes
 │   │   ├── _components/   # Server components with SSR data prefetching
 │   │   ├── contacts/       # Contact management pages
+│   │   ├── schedule/       # Calendar/Schedule pages
+│   │   ├── insights/       # Insights page
+│   │   ├── touchpoints/    # Touchpoints pages (today, overdue, upcoming)
+│   │   ├── action-items/   # Action items page
+│   │   ├── sync/           # Sync status page
+│   │   ├── admin/          # Admin tools pages
+│   │   ├── faq/            # FAQ page
 │   │   └── page.tsx        # Dashboard
+│   ├── api/                # API routes
+│   │   ├── gmail/          # Gmail sync endpoints
+│   │   ├── calendar/       # Calendar sync endpoints
+│   │   ├── contacts/       # Contacts sync endpoints
+│   │   └── ...             # Other API endpoints
 │   ├── login/              # Authentication page
+│   ├── providers/          # Global providers
+│   │   ├── GuidanceProvider.tsx # Product tour provider
+│   │   └── tour-styles.css # Tour styling
 │   ├── layout.tsx          # Root layout
-│   └── providers.tsx       # React Query provider setup
+│   └── providers.tsx       # React Query and other providers setup
 ├── components/
-│   ├── charts/             # Data visualization components
+│   ├── guidance/           # Product guidance components
+│   │   └── InlineNudge.tsx # Inline guidance messages
+│   ├── layout/             # Layout components (sidebar, navigation, etc.)
+│   │   ├── CrmLayoutWrapper.tsx
+│   │   ├── SidebarNavigation.tsx
+│   │   ├── SidebarTooltip.tsx
+│   │   ├── UserProfilePopover.tsx
+│   │   └── ...             # Other layout components
 │   └── ...                 # UI components
-├── hooks/                  # Custom React hooks (React Query)
-│   ├── useAuth.ts
+├── hooks/                  # Custom React hooks
+│   ├── useAuth.ts          # Authentication hook
 │   ├── useContacts.ts      # React Query hook for contacts
 │   ├── useDashboardStats.ts # React Query hook for dashboard
 │   ├── useActionItems.ts   # React Query hook for action items
 │   ├── useSyncJobs.ts      # React Query hook for sync jobs
+│   ├── useCalendarEventsRealtime.ts # Real-time calendar events
+│   ├── useContactsRealtime.ts # Real-time contacts listener
+│   ├── useSidebarState.ts  # Sidebar state management
+│   ├── useMobileMenu.ts    # Mobile menu state
+│   ├── useSessionManagement.ts # Session validation
+│   ├── useAuthRedirect.ts  # Auth redirect logic
+│   ├── useSidebarDrag.ts   # Sidebar drag/resize functionality
 │   └── ...                 # Other hooks
 ├── lib/                    # Library utilities
 │   ├── app-config.ts       # Application configuration (white-labeling)
 │   ├── query-client.ts     # React Query client for SSR
-│   ├── contacts-server.ts  # Server-side data fetching
+│   ├── contacts-server.ts   # Server-side data fetching
 │   ├── dashboard-stats-server.ts # Server-side stats fetching
+│   ├── navigation-config.tsx # Navigation configuration
+│   ├── layout-utils.ts     # Layout utility functions
 │   ├── firebase-client.ts
 │   ├── firebase-admin.ts
 │   ├── firestore-crud.ts
 │   ├── firestore-paths.ts
-│   └── contact-import.ts
+│   ├── contact-import.ts
+│   ├── gmail/              # Gmail sync utilities
+│   ├── calendar/           # Calendar sync utilities
+│   └── contacts/           # Contacts sync utilities
+├── src/
+│   └── guidance/           # Product tour/guidance system
+│       ├── routes.ts       # Route key mapping
+│       ├── tourRegistry.ts # Tour step registry
+│       ├── steps/          # Tour step definitions
+│       │   └── dashboard.tsx
+│       ├── user-preferences.ts # Firestore user preferences
+│       ├── guidance-policy.ts # Tour guardrails
+│       ├── validateGuidanceCopy.ts # Copy validation
+│       └── coach-voice.md  # Style guide
 ├── types/                  # TypeScript type definitions
-│   └── firestore.ts
+│   ├── firestore.ts
+│   ├── layout.ts           # Layout-related types
+│   └── guidance.ts         # Guidance/tour types
 └── util/                   # Utility functions
     ├── contact-utils.ts
     └── csv-utils.ts
@@ -123,6 +234,36 @@ A modern, elegant Customer Relationship Management (CRM) application built with 
   - OAuth 2.0 credentials configured for Gmail access
   - Google API Key with Gemini API enabled (for AI features)
   - Gmail API enabled
+
+### Deployment
+
+For production deployment instructions, see the [Deployment Guide](docs/deployment.md). This guide covers:
+- Setting up Vercel for staging and production environments
+- Configuring Google Cloud OAuth with proper redirect URIs
+- Firebase production setup and security
+- Environment variable configuration
+- Troubleshooting common deployment issues
+
+#### Automatic Sync Jobs (Cron Configuration)
+
+The CRM supports automatic background synchronization via cron jobs. Configure the following endpoints in your cron service (e.g., Vercel Cron Jobs):
+
+1. **Gmail Sync** (Recommended: Every 15-30 minutes)
+   - Endpoint: `POST /api/gmail/sync-scheduled`
+   - Headers: `Authorization: Bearer {CRON_SECRET}`
+   - Syncs email threads for all users
+
+2. **Calendar Sync** (Recommended: Daily)
+   - Endpoint: `POST /api/calendar/sync-scheduled`
+   - Headers: `Authorization: Bearer {CRON_SECRET}`
+   - Syncs calendar events for all users
+
+3. **Contacts Sync** (Recommended: Daily)
+   - Endpoint: `POST /api/contacts/sync-scheduled`
+   - Headers: `Authorization: Bearer {CRON_SECRET}`
+   - Syncs contacts from Google Contacts and enriches with People API data
+
+**Note**: Set the `CRON_SECRET` environment variable to secure these endpoints. The secret should match in both your environment variables and the Authorization header of your cron job requests.
 
 ### Installation
 
@@ -152,8 +293,23 @@ npm install
    - See `env.example` for detailed comments on each variable
 
 4. Configure Firestore security rules:
-   - Ensure users can only read/write their own contacts
-   - Rule should be: `match /users/{userId}/contacts/{contactId} { allow read, write: if request.auth != null && request.auth.uid == userId; }`
+   - Deploy the `firestore.rules` file to your Firebase project
+   - Rules allow authenticated users to read/write their own data in:
+     - `users/{userId}/contacts/{contactId}` and subcollections
+     - `users/{userId}/calendarEvents/{eventId}`
+     - `users/{userId}/syncJobs/{syncJobId}`
+     - `users/{userId}/threads/{threadId}` and subcollections (messages)
+     - `users/{userId}/contacts/{contactId}/actionItems/{actionItemId}`
+     - `users/{userId}/settings/{settingId}` (for user preferences like guidance settings)
+     - `users/{userId}/adminJobs/{jobId}` and `users/{userId}/exportJobs/{jobId}`
+   - Collection group queries supported for `actionItems` across all user paths
+   - Google account tokens stored in `googleAccounts/{userId}` (read-only for users)
+   - To deploy: `firebase deploy --only firestore:rules` (requires Firebase CLI)
+   - Or manually copy the rules from `firestore.rules` to Firebase Console > Firestore Database > Rules
+
+5. Create required Firestore indexes:
+   - See [Firestore Indexes Documentation](docs/firestore-indexes.md) for required composite indexes
+   - The action items page requires a collection group index for optimal performance
 
 5. Run the development server:
 ```bash
@@ -220,16 +376,34 @@ See [tests/e2e/README.md](tests/e2e/README.md) for detailed E2E testing document
 - Choose to overwrite existing contacts or skip them
 - Monitor import progress in real-time
 
-### Viewing Analytics
-- Visit the dashboard to see visualizations of your contact data
-- Charts update automatically as you add or modify contacts
-- Hover over chart elements for detailed information
+### Schedule & Calendar
+- Navigate to "Schedule" to view your calendar
+- Switch between month, week, day, and agenda views
+- Filter events by segment, tags, or search terms
+- Create new events and link them to contacts
+- Calendar events sync automatically from Google Calendar
 
-### Gmail Sync
+### Insights
+- Visit the "Insights" page for relationship health analysis
+- Review suggested focus areas to prioritize your outreach
+- Check coverage analysis for segments, tags, and lead sources
+- Monitor sentiment alerts and engagement insights
+
+### Touchpoints
+- View "Touchpoints: Today" for all touchpoints due today
+- Check "Touchpoints: Overdue" for missed follow-ups
+- Review "Touchpoints: Upcoming" to plan ahead
+- Use bulk actions to update multiple touchpoints at once
+
+### Sync Management
 - Navigate to "Sync Status" to view sync progress and history
-- Click "Sync Now" to manually trigger a sync
-- Gmail sync automatically runs in the background on a schedule
-- First sync may take longer depending on your email volume
+- Manually trigger Gmail, Calendar, or Contacts sync
+- Automatic syncs run in the background:
+  - Gmail: Every 15-30 minutes
+  - Calendar: Daily
+  - Contacts: Daily
+- First sync may take longer depending on your data volume
+- Monitor sync history and errors on the Sync Status page
 
 ### Managing Action Items
 - Action items are automatically extracted from email conversations using AI
@@ -250,7 +424,16 @@ See [tests/e2e/README.md](tests/e2e/README.md) for detailed E2E testing document
 - `NextTouchpointDate`, `NextTouchpointMessage` - Future actions
 - Other CRM fields as needed
 
-## White-Labeling & Customization
+## Theme & Customization
+
+### Light/Dark Mode
+
+The CRM includes a built-in theme toggle that switches between light and dark modes:
+- Click your profile in the sidebar to access the theme toggle
+- Theme preference is saved and persists across sessions
+- All components, including the calendar, adapt to your selected theme
+
+### White-Labeling
 
 The CRM name can be easily customized for your organization:
 
@@ -269,6 +452,17 @@ The custom name will appear in:
 - All other UI locations
 
 **Note**: If `NEXT_PUBLIC_CRM_NAME` is not set, it defaults to "Insight Loop CRM".
+
+### Product Tour & Guidance
+- **Interactive Product Tours** - Built with @reactour/tour for lightweight, composable tours
+- **Dashboard Orientation Tour** - 9-step tour covering dashboard content and sidebar navigation
+- **Auto-show for First-time Users** - Tour automatically appears for new users on the Dashboard
+- **Manual Tour Trigger** - Access "Start tour" from your profile menu to restart tours anytime
+- **Route-aware Tours** - Tours are scoped to specific routes (currently Dashboard only)
+- **Inline Nudges** - Contextual guidance for empty states (e.g., Contacts empty state)
+- **Coach-voice Language** - Tours use calm, permission-giving language focused on relationships
+- **Tour Preferences** - User preferences stored in Firestore (guidance settings)
+- **Tour Persistence** - Tour progress and dismissals are saved per user
 
 ## Architecture Highlights
 

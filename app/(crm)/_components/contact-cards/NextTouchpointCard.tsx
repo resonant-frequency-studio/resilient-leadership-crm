@@ -3,17 +3,20 @@
 import { Timestamp } from "firebase/firestore";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useContact } from "@/hooks/useContact";
-import { useUpdateContact } from "@/hooks/useContactMutations";
+import { useUpdateContact, useUpdateTouchpointStatus } from "@/hooks/useContactMutations";
 import Card from "@/components/Card";
 import Skeleton from "@/components/Skeleton";
-import SaveButtonWithIndicator from "./SaveButtonWithIndicator";
 import TouchpointStatusActions from "../TouchpointStatusActions";
 import Textarea from "@/components/Textarea";
 import { formatContactDate, getDisplayName } from "@/util/contact-utils";
 import { reportException } from "@/lib/error-reporting";
-import { useSavingState } from "@/contexts/SavingStateContext";
-
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+import { useDebouncedAutosave } from "@/hooks/useDebouncedAutosave";
+import SavingIndicator from "@/components/contacts/SavingIndicator";
+import { Button } from "@/components/Button";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import ContactGuardedLink from "@/components/contacts/ContactGuardedLink";
+import { Contact } from "@/types/firestore";
 
 interface NextTouchpointCardProps {
   contactId: string;
@@ -26,34 +29,172 @@ export default function NextTouchpointCard({
 }: NextTouchpointCardProps) {
   const { data: contact } = useContact(userId, contactId);
   const updateMutation = useUpdateContact(userId);
-  const { registerSaveStatus, unregisterSaveStatus } = useSavingState();
-  const cardId = `next-touchpoint-${contactId}`;
+  const updateTouchpointStatusMutation = useUpdateTouchpointStatus(userId);
+  const { schedule, flush } = useDebouncedAutosave();
+  const queryClient = useQueryClient();
+  const router = useRouter();
   
   const prevContactIdRef = useRef<string | null>(null);
+  const lastSavedValuesRef = useRef<{ date: string; message: string } | null>(null);
   
   // Initialize form state from contact using lazy initialization
   const [nextTouchpointDate, setNextTouchpointDate] = useState<string>("");
   const [nextTouchpointMessage, setNextTouchpointMessage] = useState<string>("");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [isConvertingToEvent, setIsConvertingToEvent] = useState(false);
+  const [showRestoreButton, setShowRestoreButton] = useState(false);
+  const [showStatusSection, setShowStatusSection] = useState(false); // Control visibility of entire status section
+  const restoreTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Register/unregister save status with context
+  // Use refs to store current values so save function always reads latest state
+  const nextTouchpointDateRef = useRef(nextTouchpointDate);
+  const nextTouchpointMessageRef = useRef(nextTouchpointMessage);
+  
+  // Keep refs in sync with state
   useEffect(() => {
-    registerSaveStatus(cardId, saveStatus);
-    return () => {
-      unregisterSaveStatus(cardId);
-    };
-  }, [saveStatus, cardId, registerSaveStatus, unregisterSaveStatus]);
+    nextTouchpointDateRef.current = nextTouchpointDate;
+  }, [nextTouchpointDate]);
   
-  // Reset form state ONLY when contactId changes (switching to a different contact)
-  // We don't update when updatedAt changes because that would reset our local state
-  // during optimistic updates and refetches. The local state is the source of truth
-  // until we switch to a different contact.
+  useEffect(() => {
+    nextTouchpointMessageRef.current = nextTouchpointMessage;
+  }, [nextTouchpointMessage]);
+
+  // Track previous status to detect changes
+  // Initialize with contact's current status to avoid triggering timer on mount
+  const prevStatusRef = useRef<Contact["touchpointStatus"] | null>(null);
+  const isInitialMountRef = useRef(true);
+  const prevContactIdForStatusRef = useRef<string | null>(null);
+  const hasInitializedStatusRef = useRef(false);
+  
+  // Reset initial mount flag when contactId changes
+  useEffect(() => {
+    if (prevContactIdForStatusRef.current !== contactId) {
+      prevContactIdForStatusRef.current = contactId;
+      isInitialMountRef.current = true;
+      prevStatusRef.current = null;
+      hasInitializedStatusRef.current = false;
+    }
+  }, [contactId]);
+
+  // Helper function to check if a date is in the future (not today or past)
+  const isDateInFuture = (dateString: string): boolean => {
+    if (!dateString || !dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return false;
+    }
+    // Parse date string components manually to avoid timezone issues
+    // new Date("2024-01-16") interprets as UTC midnight, which can shift dates
+    // when setHours is called in local timezone. Instead, parse components directly.
+    const [year, month, day] = dateString.split("-").map(Number);
+    // month is 0-indexed in Date constructor (0 = January, 11 = December)
+    const date = new Date(year, month - 1, day, 0, 0, 0, 0);
+    
+    // Get today's date in local timezone at midnight
+    const today = new Date();
+    const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    
+    return date > todayAtMidnight;
+  };
+
+  // Check if touchpoint is active (future date + non-empty message)
+  const isActiveTouchpoint = useMemo(() => {
+    return (
+      nextTouchpointDate.trim() !== "" &&
+      isDateInFuture(nextTouchpointDate) &&
+      nextTouchpointMessage.trim() !== ""
+    );
+  }, [nextTouchpointDate, nextTouchpointMessage]);
+
+  // Handle status changes - show restore button for 60 seconds, then clear inputs
+  useEffect(() => {
+    if (!contact) return;
+
+    const hasStatus = contact.touchpointStatus === "completed" || contact.touchpointStatus === "cancelled";
+    const prevStatus = prevStatusRef.current;
+    
+    // On initial mount for this contact, initialize the ref with current status to avoid false positives
+    if (!hasInitializedStatusRef.current) {
+      prevStatusRef.current = contact.touchpointStatus;
+      hasInitializedStatusRef.current = true;
+      isInitialMountRef.current = false;
+      return; // Don't trigger timer on initial mount
+    }
+    
+    // Check if status actually changed (only process if it changed)
+    if (prevStatus === contact.touchpointStatus) {
+      // Status hasn't changed, nothing to do
+      return;
+    }
+    
+    // Status changed - save old status before updating ref
+    const oldStatus = prevStatusRef.current;
+    prevStatusRef.current = contact.touchpointStatus;
+    
+    // Detect when status changes from null/pending to completed/cancelled
+    const statusJustChanged = 
+      (oldStatus === null || oldStatus === "pending") && 
+      (hasStatus);
+    
+    if (statusJustChanged) {
+      // Status was just set - show restore button and status section, start timer
+      setShowRestoreButton(true);
+      setShowStatusSection(true);
+      
+      // Clear any existing timer
+      if (restoreTimerRef.current) {
+        clearTimeout(restoreTimerRef.current);
+      }
+      
+      // Set timer to hide status section and clear inputs after 60 seconds
+      // NOTE: Only clear local state (UI), NOT database - keep date/message/status in DB for timeline
+      restoreTimerRef.current = setTimeout(() => {
+        setShowRestoreButton(false);
+        setShowStatusSection(false); // Hide entire status section
+        setNextTouchpointDate("");
+        setNextTouchpointMessage("");
+        // Clear the saved values ref so form doesn't repopulate
+        lastSavedValuesRef.current = null;
+      }, 60000); // 60 seconds
+    } else if (!hasStatus && showRestoreButton) {
+      // Status was cleared (restored to pending) - hide restore button and status section immediately
+      setShowRestoreButton(false);
+      setShowStatusSection(false);
+      if (restoreTimerRef.current) {
+        clearTimeout(restoreTimerRef.current);
+        restoreTimerRef.current = null;
+      }
+    }
+
+    // Cleanup timer on unmount
+    return () => {
+      if (restoreTimerRef.current) {
+        clearTimeout(restoreTimerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Note: showRestoreButton is intentionally NOT in dependencies to avoid clearing timer when it changes
+  }, [contact?.touchpointStatus]);
+  
+  // Reset form state only when contactId changes (switching to a different contact)
+  // Don't reset when contact data updates from our own save
+  // KEY: Don't populate form if touchpointStatus is completed/cancelled
   useEffect(() => {
     if (!contact) return;
     
-    // Only update if we're switching to a different contact
+    // KEY CHANGE: If touchpointStatus is completed or cancelled, don't populate form fields
+    // This keeps fields clear even after refresh/navigation for completed/skipped touchpoints
+    const isCompletedOrCancelled = 
+      contact.touchpointStatus === "completed" || 
+      contact.touchpointStatus === "cancelled";
+    
+    if (isCompletedOrCancelled) {
+      // Don't populate form - keep fields empty for completed/skipped touchpoints
+      // User must manually type to create a new active touchpoint
+      return;
+    }
+    
+    // Only reset if we're switching to a different contact
     if (prevContactIdRef.current !== contact.contactId) {
       prevContactIdRef.current = contact.contactId;
+      lastSavedValuesRef.current = null; // Clear saved values when switching contacts
       // Batch state updates to avoid cascading renders
       const dateValue =
         contact.nextTouchpointDate instanceof Timestamp
@@ -63,67 +204,136 @@ export default function NextTouchpointCard({
           : "";
       setNextTouchpointDate(dateValue);
       setNextTouchpointMessage(contact.nextTouchpointMessage ?? "");
-      setSaveStatus("idle");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.contactId]);
-
-  // Track changes using useMemo instead of useEffect
-  const hasUnsavedChanges = useMemo(() => {
-    if (!contact) return false;
+    
+    // If contact data updated but it matches what we just saved, don't reset
+    if (lastSavedValuesRef.current) {
+      const saved = lastSavedValuesRef.current;
+      const contactDate =
+        contact.nextTouchpointDate instanceof Timestamp
+          ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
+          : typeof contact.nextTouchpointDate === "string"
+          ? contact.nextTouchpointDate.split("T")[0]
+          : "";
+      const contactMessage = contact.nextTouchpointMessage ?? "";
+      
+      if (contactDate === saved.date && contactMessage === saved.message) {
+        // This update came from our save, don't reset form
+        return;
+      }
+    }
+    
+    // Only update if form values match the old contact values (user hasn't made changes)
     const contactDate =
       contact.nextTouchpointDate instanceof Timestamp
         ? contact.nextTouchpointDate.toDate().toISOString().split("T")[0]
         : typeof contact.nextTouchpointDate === "string"
         ? contact.nextTouchpointDate.split("T")[0]
         : "";
-    const dateChanged = nextTouchpointDate !== contactDate;
-    const messageChanged =
-      nextTouchpointMessage !== (contact.nextTouchpointMessage ?? "");
-    return dateChanged || messageChanged;
-  }, [nextTouchpointDate, nextTouchpointMessage, contact]);
+    const contactMessage = contact.nextTouchpointMessage ?? "";
+    
+    if (nextTouchpointDate === contactDate && nextTouchpointMessage === contactMessage) {
+      // Form hasn't been edited, safe to update from contact
+      setNextTouchpointDate(contactDate);
+      setNextTouchpointMessage(contactMessage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.contactId, contact?.nextTouchpointDate, contact?.nextTouchpointMessage, contact?.touchpointStatus]);
 
-  const saveChanges = () => {
-    if (!hasUnsavedChanges || !contact) return;
+  // Save function for autosave - reads from refs to always get latest values
+  const saveTouchpoint = useMemo(() => {
+    return async () => {
+      if (!contact) return;
+      
+      // Read current form values from refs (always latest, even if scheduled before state update)
+      const currentDate = nextTouchpointDateRef.current || null;
+      const currentMessage = nextTouchpointMessageRef.current || null;
+      
+      return new Promise<void>((resolve, reject) => {
+        updateMutation.mutate(
+          {
+            contactId,
+            updates: {
+              nextTouchpointDate: currentDate,
+              nextTouchpointMessage: currentMessage,
+            },
+          },
+          {
+            onSuccess: () => {
+              // Remember what we saved so we don't reset form when contact refetches
+              lastSavedValuesRef.current = {
+                date: currentDate ?? "",
+                message: currentMessage ?? "",
+              };
+              resolve();
+            },
+            onError: (error) => {
+              reportException(error, {
+                context: "Saving next touchpoint in NextTouchpointCard",
+                tags: { component: "NextTouchpointCard", contactId },
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+    };
+  }, [contact, contactId, updateMutation]);
 
-    setSaveStatus("saving");
-    updateMutation.mutate(
-      {
-        contactId,
-        updates: {
-          nextTouchpointDate: nextTouchpointDate || null,
-          nextTouchpointMessage: nextTouchpointMessage || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        },
-        onError: (error) => {
-          setSaveStatus("error");
-          reportException(error, {
-            context: "Saving next touchpoint in NextTouchpointCard",
-            tags: { component: "NextTouchpointCard", contactId },
-          });
-          setTimeout(() => setSaveStatus("idle"), 3000);
-        },
+  // Check if touchpoint is linked to a calendar event
+  const isLinkedToEvent = useMemo(() => {
+    if (!contact) return false;
+    return contact.linkedGoogleEventId && contact.linkStatus === "linked";
+  }, [contact]);
+
+  const handleConvertToMeeting = async () => {
+    if (!contact || !nextTouchpointDate) {
+      alert("Please set a touchpoint date first");
+      return;
+    }
+
+    // Flush any pending saves first
+    await flush("touchpoint");
+
+    setIsConvertingToEvent(true);
+    try {
+      const response = await fetch("/api/touchpoints/convert-to-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          contactId: contact.contactId,
+          touchpointDate: nextTouchpointDate,
+          message: nextTouchpointMessage || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to convert touchpoint to meeting");
       }
-    );
+
+      const data = await response.json();
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+
+      // Navigate to calendar or show success
+      if (data.event?.eventId) {
+        router.push(`/schedule?eventId=${data.event.eventId}`);
+      }
+    } catch (error) {
+      reportException(error, {
+        context: "Converting touchpoint to calendar event",
+        tags: { component: "NextTouchpointCard", contactId },
+      });
+      alert(error instanceof Error ? error.message : "Failed to convert touchpoint to meeting");
+    } finally {
+      setIsConvertingToEvent(false);
+    }
   };
-
-  // Autosave every 30 seconds when there are unsaved changes
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const interval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        saveChanges();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [hasUnsavedChanges, saveChanges]);
 
   if (!contact) {
     return (
@@ -134,29 +344,32 @@ export default function NextTouchpointCard({
   }
 
   return (
-    <Card padding="md">
+    <Card padding="md" className="relative">
+      <SavingIndicator cardKey="touchpoint" />
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold text-theme-darkest flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-          Next Touchpoint
-        </h2>
-        <SaveButtonWithIndicator
-          saveStatus={saveStatus}
-          hasUnsavedChanges={hasUnsavedChanges}
-          onSave={saveChanges}
-        />
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-theme-darkest flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            Next Touchpoint
+          </h2>
+          {isLinkedToEvent && (
+            <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-md">
+              Linked to Meeting
+            </span>
+          )}
+        </div>
       </div>
       <p className="text-sm text-theme-dark mb-4">
         Schedule and plan your next interaction with this contact. Set a date and add notes about what to discuss to maintain consistent, meaningful engagement.
@@ -173,12 +386,30 @@ export default function NextTouchpointCard({
             value={nextTouchpointDate}
             onChange={(e) => {
               const dateValue = e.target.value;
+              // Cancel restore timer if user is typing
+              if (restoreTimerRef.current) {
+                clearTimeout(restoreTimerRef.current);
+                restoreTimerRef.current = null;
+              }
+              
+              // Clear status if user edits date and there's a status (creating new active touchpoint)
+              if (contact?.touchpointStatus === "completed" || contact?.touchpointStatus === "cancelled") {
+                updateTouchpointStatusMutation.mutate({
+                  contactId,
+                  status: null,
+                });
+                setShowRestoreButton(false);
+              }
+              
               if (dateValue && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 setNextTouchpointDate(dateValue);
+                schedule("touchpoint", saveTouchpoint, 0); // Save immediately on date change
               } else if (!dateValue) {
                 setNextTouchpointDate("");
+                schedule("touchpoint", saveTouchpoint, 0);
               }
             }}
+            onBlur={() => flush("touchpoint")}
           />
         </div>
         <div>
@@ -190,24 +421,90 @@ export default function NextTouchpointCard({
             name="next-touchpoint-message"
             rows={3}
             value={nextTouchpointMessage}
-            onChange={(e) => setNextTouchpointMessage(e.target.value)}
+            onChange={(e) => {
+              // Cancel restore timer if user is typing
+              if (restoreTimerRef.current) {
+                clearTimeout(restoreTimerRef.current);
+                restoreTimerRef.current = null;
+              }
+              
+              // Clear status if user edits message and there's a status (creating new active touchpoint)
+              if (contact?.touchpointStatus === "completed" || contact?.touchpointStatus === "cancelled") {
+                updateTouchpointStatusMutation.mutate({
+                  contactId,
+                  status: null,
+                });
+                setShowRestoreButton(false);
+              }
+              
+              setNextTouchpointMessage(e.target.value);
+              schedule("touchpoint", saveTouchpoint);
+            }}
+            onBlur={() => flush("touchpoint")}
             placeholder="What should you discuss in the next touchpoint?"
           />
         </div>
       </div>
 
+      {/* Convert to Meeting Button */}
+      {nextTouchpointDate && !isLinkedToEvent && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <Button
+            onClick={handleConvertToMeeting}
+            disabled={isConvertingToEvent || !nextTouchpointDate}
+            loading={isConvertingToEvent}
+            variant="primary"
+            fullWidth
+          >
+            Convert to Meeting
+          </Button>
+          <p className="text-xs text-theme-dark mt-2 text-center">
+            Create a Google Calendar event from this touchpoint
+          </p>
+        </div>
+      )}
+
+      {/* Linked Event Info */}
+      {isLinkedToEvent && contact.linkedGoogleEventId && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-theme-darkest">Linked to Calendar Event</p>
+              <p className="text-xs text-theme-dark mt-1">
+                This touchpoint is connected to a Google Calendar event
+              </p>
+            </div>
+            <ContactGuardedLink
+              href={`/schedule?eventId=${contact.linkedGoogleEventId}`}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              View Event →
+            </ContactGuardedLink>
+          </div>
+        </div>
+      )}
+
       {/* Touchpoint Status Management */}
-      {(nextTouchpointDate || contact.touchpointStatus) && (
+      {/* Show status section only if: active touchpoint (future date + message) OR status section should be shown */}
+      {/* After 60 seconds, showStatusSection becomes false, hiding everything and returning to empty state */}
+      {(isActiveTouchpoint || showStatusSection) && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <TouchpointStatusActions
             contactId={contactId}
             contactName={getDisplayName(contact)}
             userId={userId}
+            showRestoreButton={showRestoreButton}
             onStatusUpdate={() => {
-              // No-op: React Query will automatically update the contact data
+              // When status is restored, cancel timer and hide status section
+              if (restoreTimerRef.current) {
+                clearTimeout(restoreTimerRef.current);
+                restoreTimerRef.current = null;
+              }
+              setShowRestoreButton(false);
+              setShowStatusSection(false);
             }}
           />
-          {contact.touchpointStatusUpdatedAt != null && (
+          {showStatusSection && contact.touchpointStatusUpdatedAt != null && (
             <p className="text-xs text-gray-500 mt-2">
               Status updated:{" "}
               {formatContactDate(contact.touchpointStatusUpdatedAt, {
@@ -215,7 +512,7 @@ export default function NextTouchpointCard({
               })}
             </p>
           )}
-          {contact.touchpointStatusReason && (
+          {showStatusSection && contact.touchpointStatusReason && (
             <div className="mt-3 p-3 bg-theme-lighter border border-gray-200 rounded-sm">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                 {contact.touchpointStatus === "completed" ? "Note" : "Reason"}

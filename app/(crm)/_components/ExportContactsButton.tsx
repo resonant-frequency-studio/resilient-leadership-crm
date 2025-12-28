@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { Contact } from "@/types/firestore";
 import Papa from "papaparse";
 import { Button } from "@/components/Button";
+import ExportToGoogleModal from "./ExportToGoogleModal";
 
 interface ContactWithId extends Contact {
   id: string;
@@ -14,7 +16,29 @@ interface ExportContactsButtonProps {
 }
 
 export default function ExportContactsButton({ contacts, disabled = false }: ExportContactsButtonProps) {
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
   const exportToCSV = () => {
+    setIsDropdownOpen(false);
     if (contacts.length === 0) {
       alert("No contacts to export");
       return;
@@ -80,31 +104,93 @@ export default function ExportContactsButton({ contacts, disabled = false }: Exp
     URL.revokeObjectURL(url);
   };
 
+  const handleExportToGoogle = () => {
+    setIsDropdownOpen(false);
+    setShowExportModal(true);
+  };
+
   return (
-    <Button
-      onClick={exportToCSV}
-      disabled={disabled || contacts.length === 0}
-      variant="secondary"
-      size="sm"
-      icon={
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+    <>
+      <div className="relative" ref={dropdownRef}>
+        <Button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          disabled={disabled || contacts.length === 0}
+          variant="secondary"
+          size="sm"
+          className="whitespace-nowrap shadow-sm"
+          icon={
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          }
+          iconPosition="right"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      }
-      className="w-full sm:w-auto shadow-[rgba(34,32,29,0.1)_0px_2px_4px]"
-    >
-      Export {contacts.length > 0 ? `(${contacts.length})` : ""}
-    </Button>
+          Export
+        </Button>
+
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <>
+            {/* Backdrop to close menu */}
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setIsDropdownOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute left-0 top-full mt-1 z-20 w-56 bg-card-highlight-light border border-theme-lighter rounded-sm shadow-lg py-1"
+              role="menu"
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleExportToGoogle();
+                }}
+                disabled={disabled || contacts.length === 0}
+                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-selected-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                role="menuitem"
+              >
+                Export to Google Contacts
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  exportToCSV();
+                }}
+                disabled={disabled || contacts.length === 0}
+                className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-selected-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                role="menuitem"
+              >
+                Download CSV
+              </button>
+              {/* Helper text inside dropdown */}
+              {contacts.length > 0 && (
+                <div className="px-4 py-2 border-t border-theme-light mt-1">
+                  <p className="text-xs text-theme-dark">
+                    Applies to {contacts.length} {contacts.length === 1 ? "contact" : "contacts"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      <ExportToGoogleModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        contacts={contacts}
+      />
+    </>
   );
 }
 

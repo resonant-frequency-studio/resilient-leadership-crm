@@ -40,7 +40,6 @@ export async function GET(req: Request) {
       .get();
     
     const allContactIds = contactsSnapshot.docs.map(doc => doc.id);
-    console.log(`[DEBUG] All contact IDs for userId ${userId}:`, allContactIds.slice(0, 10)); // First 10
     
     const doc = await adminDb
       .collection("users")

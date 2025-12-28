@@ -1,8 +1,7 @@
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
-import { Contact } from "@/types/firestore";
 import { normalizeContactId, csvRowToContact } from "@/util/csv-utils";
-import { reportException } from "@/lib/error-reporting";
+import { reportException, ErrorLevel } from "@/lib/error-reporting";
 
 export type OverwriteMode = "overwrite" | "skip";
 
@@ -114,8 +113,43 @@ export async function importContact(
     return { success: true, skipped: true };
   }
   
+  // Enrich contact data from Google People API (with fallback to email extraction)
+  // This runs silently - if it fails, we'll just use CSV data
+  let enrichedData: { firstName?: string | null; lastName?: string | null; company?: string | null; photoUrl?: string | null } | undefined;
+  try {
+    const enrichResponse = await fetch("/api/enrich-contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        userId,
+      }),
+    });
+
+    if (enrichResponse.ok) {
+      const enriched = await enrichResponse.json();
+      enrichedData = {
+        firstName: enriched.firstName,
+        lastName: enriched.lastName,
+        company: enriched.company,
+        photoUrl: enriched.photoUrl,
+      };
+    }
+    // If enrichment fails, we silently continue with CSV data only
+  } catch (error) {
+    // Silently continue - enrichment is optional
+    reportException(error, {
+      context: "Failed to enrich contact during import (non-critical)",
+      tags: { component: "contact-import", contactId },
+      level: ErrorLevel.WARNING,
+    });
+  }
+  
   // Prepare contact data (actionItems field is excluded by csvRowToContact)
-  const contactData = csvRowToContact(row, contactId);
+  // Pass enriched data to fill gaps in CSV data
+  const contactData = csvRowToContact(row, contactId, enrichedData);
   
   // Handle createdAt and archived status based on overwrite mode
   if (!exists) {
@@ -149,8 +183,26 @@ export async function importContact(
   try {
     await Promise.race([writePromise, timeoutPromise]);
     
-    // After successfully saving the contact, convert actionItems to subcollection format
-    if (actionItemsText && actionItemsText.length > 0) {
+    // Check if existing contact has action items in legacy format (string field)
+    // that need to be migrated to subcollection format
+    let legacyActionItemsText: string | null = null;
+    let hasLegacyField = false;
+    
+    if (exists) {
+      const existingData = docSnap.data();
+      if (existingData?.actionItems && typeof existingData.actionItems === "string") {
+        hasLegacyField = true;
+        // If CSV doesn't have action items, migrate the legacy ones
+        if (!actionItemsText) {
+          legacyActionItemsText = existingData.actionItems;
+        }
+      }
+    }
+    
+    // Migrate action items: prioritize CSV, fallback to legacy format if no CSV action items
+    const actionItemsToMigrate = actionItemsText || legacyActionItemsText;
+    
+    if (actionItemsToMigrate && actionItemsToMigrate.length > 0) {
       try {
         const response = await fetch("/api/action-items/import-from-text", {
           method: "POST",
@@ -159,7 +211,7 @@ export async function importContact(
           },
           body: JSON.stringify({
             contactId,
-            actionItemsText,
+            actionItemsText: actionItemsToMigrate,
           }),
         });
 
@@ -170,6 +222,20 @@ export async function importContact(
             tags: { component: "contact-import", contactId },
           });
           // Don't fail the contact import if action items conversion fails
+        } else if (hasLegacyField) {
+          // If contact had legacy actionItems field (regardless of whether we migrated it or CSV had new ones),
+          // remove the old string field to prevent confusion and ensure subcollection is the source of truth
+          try {
+            await updateDoc(docRef, {
+              actionItems: deleteField(),
+            });
+          } catch (deleteError) {
+            // Non-critical: if deletion fails, log but don't fail import
+            reportException(deleteError, {
+              context: "Failed to delete legacy actionItems field after migration",
+              tags: { component: "contact-import", contactId },
+            });
+          }
         }
       } catch (error) {
         reportException(error, {
@@ -177,6 +243,23 @@ export async function importContact(
           tags: { component: "contact-import", contactId },
         });
         // Don't fail the contact import if action items conversion fails
+      }
+    } else if (hasLegacyField && exists) {
+      // If CSV doesn't have action items and contact has legacy field,
+      // we should still delete it if we're overwriting (to clean up)
+      // But if we're just creating a new contact, there's nothing to delete
+      if (overwriteMode === "overwrite") {
+        try {
+          await updateDoc(docRef, {
+            actionItems: deleteField(),
+          });
+        } catch (deleteError) {
+          // Non-critical: if deletion fails, log but don't fail import
+          reportException(deleteError, {
+            context: "Failed to delete legacy actionItems field during import",
+            tags: { component: "contact-import", contactId },
+          });
+        }
       }
     }
     
@@ -202,7 +285,6 @@ export async function importContactsBatch(
   let errors = 0;
   const errorDetails: string[] = [];
   const total = rows.length;
-  const totalBatches = Math.ceil(rows.length / batchSize);
   
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
